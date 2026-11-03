@@ -30,6 +30,32 @@ export function createConstructionFx({ fxLayer }) {
       const element = spawn('fx-spark', x + random(-8, 8), y + random(-8, 8), { tag: 'img', src: 'assets/images/fx/sparkle-cluster.png', lifetime: 720 });
       element.style.width = `${small ? 64 : 96}px`;
     },
+    /**
+     * The fit: a weld flash at a joint (white-hot bloom, a shockwave ring, sparks flying out on an arc,
+     * and the sparkle sprite). Transform/opacity only, so it stays smooth on phones.
+     */
+    weld(x, y, { sparks = 12 } = {}) {
+      if (prefersReducedMotion()) {
+        spawn('fx-weld-flash fx-weld-flash--still', x, y, { lifetime: 420 });
+        return;
+      }
+      spawn('fx-weld-flash', x, y, { lifetime: 760 });
+      spawn('fx-weld-ring', x, y, { lifetime: 760 });
+      const turn = random(0, 360);
+      for (let i = 0; i < sparks; i += 1) {
+        spawn('fx-weld-spark', x, y, {
+          lifetime: 860,
+          vars: {
+            '--a': `${(turn + (360 / sparks) * i + random(-14, 14)).toFixed(0)}deg`,
+            '--d': `${random(95, 165).toFixed(0)}px`,
+            '--fall': `${random(24, 52).toFixed(0)}px`,
+            '--ms': `${random(560, 780).toFixed(0)}ms`,
+          },
+        });
+      }
+      const sprite = spawn('fx-spark', x, y, { tag: 'img', src: 'assets/images/fx/sparkle-cluster.png', lifetime: 720 });
+      sprite.style.width = '150px';
+    },
     /** Comic cartoon puff: three round cloud lobes that burst outward from a point and fade. */
     puff(x, y, { drift = 0 } = {}) {
       if (prefersReducedMotion()) return;

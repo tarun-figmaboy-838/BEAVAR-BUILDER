@@ -6,11 +6,12 @@
  *
  * `marks` are the PDF option cards' notation (pages 11-17), derived from the geometry:
  * tick marks for the side tasks, angle arcs and the right-angle square for the angle tasks.
+ * They are not drawn (SHOW_PDF_MARKS = false): the frames read as plain steel girders, by request.
  */
 import { BRIDGE_GEOMETRY, stageById } from './bridge-geometry.js';
 import { LEVELS, OPTION_GROUPS } from './levels.js';
 
-export const SHOW_PDF_MARKS = true;
+export const SHOW_PDF_MARKS = false;
 
 const OPTION_BOX = Object.freeze({ width: 300, height: 210 });
 const EQUAL_TOLERANCE = 0.06;

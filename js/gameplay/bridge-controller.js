@@ -195,10 +195,10 @@ export function createBridgeController({ bridgeEl, fxEl, fx, audio }) {
     return spot;
   }
 
-  const socket = document.createElement('button');
-  socket.type = 'button';
+  // The drop spot only marks the place: it is not tappable (joystick + PICK / DROP only).
+  const socket = document.createElement('div');
   socket.className = 'hotspot socket';
-  socket.setAttribute('aria-label', 'Drop zone on the bridge');
+  socket.setAttribute('aria-hidden', 'true');
   socket.innerHTML = HOTSPOT_MARKUP;
   bridgeEl.appendChild(socket);
 
@@ -210,11 +210,6 @@ export function createBridgeController({ bridgeEl, fxEl, fx, audio }) {
     return spot;
   });
 
-  const socketTapListeners = new Set();
-  socket.addEventListener('click', (event) => {
-    if (event.detail > 0) socket.blur();
-    for (const listener of socketTapListeners) listener();
-  });
 
   const builtStages = [];
   const reduced = () => prefersReducedMotion();
@@ -275,14 +270,12 @@ export function createBridgeController({ bridgeEl, fxEl, fx, audio }) {
     };
   }
 
-  /** The fit: one hammer hit per corner, each with a comic puff and a spark burst. */
+  /** The fit: each corner is welded in turn (white-hot flash, shockwave ring, flying sparks) with a hammer clank. */
   async function hammerIntoPlace(corners, signal) {
-    const [cx, cy] = centroid(corners);
     for (const [k, [x, y]] of corners.entries()) {
       audio.play('clank', { variant: k });
-      fx.puff(x, y, { drift: Math.sign(x - cx) * 18 });
-      fx.sparks(x, y);
-      await wait(reduced() ? 0 : 130, signal);
+      fx.weld(x, y);
+      await wait(reduced() ? 0 : 110, signal);
     }
     audio.play('bolt');
   }
@@ -476,10 +469,6 @@ export function createBridgeController({ bridgeEl, fxEl, fx, audio }) {
     /** Armed while a frame is carried: the spot brightens and calls the crane over. */
     setSocketArmed(armed) {
       socket.classList.toggle('is-armed', Boolean(armed));
-    },
-    onSocketTap(listener) {
-      socketTapListeners.add(listener);
-      return () => socketTapListeners.delete(listener);
     },
     showDemoSpots() {
       demoSpots.forEach((spot) => spot.classList.add('is-visible'));

@@ -19,9 +19,9 @@ writes `dist/`, the compressed copy to put online (about 2.8 MB instead of about
 ## Controls
 
 - **Joystick (bottom-left):** drag it, or use the arrow keys / WASD. Left and right move the trolley; up and down raise and lower the hook.
-- Each correct frame is drawn in code as an exact smaller copy of the bridge panel it fits (same shape and orientation), so after the drop it only grows in place. Frames carry the PDF's tick marks, angle arcs and right-angle square (`SHOW_PDF_MARKS` in `js/data/triangles.js`).
+- Each correct frame is drawn in code as an exact smaller copy of the bridge panel it fits (same shape and orientation), so after the drop it only grows in place. Frames are riveted steel girders like the bridge's own members, without notation marks (`SHOW_PDF_MARKS` in `js/data/triangles.js` turns the PDF's tick marks and angle marks back on). When a frame fits, each corner is welded in with a flash, a shockwave ring and flying sparks.
 - **Action button (bottom-right):** reads PICK when the claw is empty and flips to DROP while a frame is carried. It lights up only when it can be used. Space presses it.
-- Tapping a frame or the glowing spot also sends the crane there.
+- Frames and the glowing spot are not tappable: the crane is driven only with the joystick and the action button.
 - The ♪ button mutes all sound.
 
 ## Flow (from the PDF)

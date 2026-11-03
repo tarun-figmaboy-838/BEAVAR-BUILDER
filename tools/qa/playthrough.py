@@ -61,6 +61,8 @@ STATE_JS = """(() => {
 })()"""
 
 failures = []
+OPTION_OFFSET_JS = '(() => { const c = document.querySelector(\'.claw\').getBoundingClientRect(); const r = document.querySelector(\'.triangle--option[data-triangle-id="%s"]\').getBoundingClientRect(); return (r.left + r.width / 2) - (c.left + c.width / 2); })()'
+SOCKET_OFFSET_JS = "(() => { const s = document.querySelector('.socket').getBoundingClientRect(); const t = document.querySelector('.claw-cargo .triangle').getBoundingClientRect(); return (s.left + s.width / 2) - (t.left + t.width / 2); })()"
 
 
 def check(condition, message):
@@ -94,15 +96,32 @@ class Game:
     def click(self, selector):
         return self.page.click_selector(selector)
 
+    def steer(self, done, offset_js, timeout, label):
+        """Drive the crane with the arrow keys (frames and the drop spot are not tappable) until done(state)."""
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            state = self.state()
+            if done(state):
+                return state
+            dx = self.page.evaluate(offset_js, await_promise=False) or 0
+            key = "ArrowRight" if dx > 0 else "ArrowLeft"
+            self.page.key(key, key, hold=max(0.04, min(0.25, abs(dx) * 0.0012)))
+            self.page.pump(0.12)
+        raise TimeoutError(f"{label}; last state: {json.dumps(self.state())}")
+
+    def hover(self, triangle_id):
+        return self.steer(lambda s: s["crane"] == "hoveringOption" and s["pickEnabled"] and s["hovered"] == triangle_id,
+                          OPTION_OFFSET_JS % triangle_id, 15, f"hover over {triangle_id}")
+
     def pick(self, triangle_id):
-        self.click(f'.triangle--option[data-triangle-id="{triangle_id}"]')
-        self.wait(lambda s: s["crane"] == "hoveringOption" and s["pickEnabled"] and s["hovered"] == triangle_id, 12, f"hover over {triangle_id}")
+        self.hover(triangle_id)
         self.click("#action-button")
         return self.wait(lambda s: s["carried"] == triangle_id and s["crane"] in ("carrying", "hoveringTarget"), 12, f"carrying {triangle_id}")
 
     def carry_to_socket(self):
-        self.click(".socket")
-        return self.wait(lambda s: s["crane"] == "hoveringTarget" and s["dropEnabled"] and s["socketAligned"], 12, "aligned over the socket")
+        self.wait(lambda s: s["crane"] in ("carrying", "hoveringTarget"), 12, "carrying")
+        return self.steer(lambda s: s["crane"] == "hoveringTarget" and s["dropEnabled"] and s["socketAligned"],
+                          SOCKET_OFFSET_JS, 15, "aligned over the socket")
 
     def drop(self):
         self.click("#action-button")
@@ -189,8 +208,8 @@ def run():
         check(game.state()["craneX"] > after, "keyboard arrow moves the crane")
 
         # Wrong answer at task 1 (nothing built yet): collapse path with an empty bridge.
-        game.click('.triangle--option[data-triangle-id="equilateral"]')
-        game.wait(lambda s: s["crane"] == "hoveringOption" and s["pickEnabled"] and s["hovered"] == "equilateral", 12, "hover over equilateral")
+        check(page.evaluate("getComputedStyle(document.querySelector('.triangle--option')).pointerEvents === 'none' && document.querySelector('.socket').tagName !== 'BUTTON'", await_promise=False), "frames and the drop spot are not tappable (joystick + button only)")
+        game.hover("equilateral")
         for _ in range(4):
             game.click("#action-button")
         state = game.wait(lambda s: s["carried"] == "equilateral" and s["crane"] in ("carrying", "hoveringTarget"), 12, "carrying equilateral")

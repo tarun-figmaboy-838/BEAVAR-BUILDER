@@ -82,6 +82,9 @@
 .member line { fill: none; stroke-dashoffset: var(--hidden-offset); }
 .member.is-built line { stroke-dashoffset: 0; transition: stroke-dashoffset var(--draw-ms, 460ms) var(--ease-mech); }
 .member.is-instant line { transition: none; }
+.member line.tube__rivets { stroke-dashoffset: 0; opacity: 0; }
+.member.is-built line.tube__rivets { opacity: 1; transition: opacity 260ms var(--ease-out) var(--draw-ms, 460ms); }
+.member.is-instant line.tube__rivets { transition: none; }
 .member.is-fresh .tube__light { animation: fresh-paint 1100ms var(--ease-out) 1; }
 
 .truss-node { visibility: hidden; opacity: 0; transform-box: fill-box; transform-origin: center; transform: scale(0.2); }
@@ -139,7 +142,7 @@
 .frame__tick { stroke-width: 4; }
 .frame__arc, .frame__square { stroke-width: 3.5; }
 
-.triangle--option { pointer-events: auto; cursor: pointer; transition: transform 260ms var(--ease-out); }
+.triangle--option { pointer-events: none; transition: transform 260ms var(--ease-out); } /* not tappable: joystick + button only */
 .triangle--option .frame { transition: filter 200ms; }
 /* Hook over a frame: the beams glow (no fill), and the frame lifts a little. */
 .triangle--option.is-hovered { transform: translateY(-10px) scale(1.04); }
@@ -148,7 +151,6 @@
   transform-origin: 50% 100%;
   animation: frame-glow 1s ease-in-out infinite;
 }
-.triangle--option:focus-visible { outline-offset: 6px; border-radius: 16px; }
 .triangle--option.is-entering { animation: option-drop-in 560ms var(--ease-out) both; }
 .triangle--option.is-leaving { animation: option-slide-out 380ms var(--ease-in) forwards; }
 .triangle--option.is-focus-pulse { animation: option-focus 720ms var(--ease-out) 1; }
@@ -188,6 +190,27 @@
 .fx-drop { position: absolute; width: 10px; height: 14px; border-radius: 50%; background: rgba(230, 246, 255, 0.95); animation: drop-arc 720ms var(--ease-out) forwards; }
 .fx-confetti { position: absolute; width: 14px; height: 22px; border-radius: 3px; animation: confetti-fall var(--dur, 3200ms) linear forwards; animation-delay: var(--delay, 0ms); opacity: 0; }
 .fx-ding { position: absolute; width: 120px; transform: translate(-50%, -50%); animation: ding-pop 760ms var(--ease-out) forwards; }
+/* Weld flash where a frame locks into the bridge: bloom + shockwave ring + sparks on an arc (transform/opacity only). */
+.fx-weld-flash {
+  position: absolute; width: 260px; height: 260px; margin: -130px 0 0 -130px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, #fff 0 12%, rgba(255, 250, 215, 1) 20%, rgba(255, 214, 80, 0.8) 36%, rgba(255, 170, 20, 0.35) 52%, rgba(255, 150, 0, 0) 70%);
+  animation: weld-flash 720ms cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
+}
+.fx-weld-flash--still { animation: weld-flash-still 400ms ease-out forwards; }
+.fx-weld-ring {
+  position: absolute; width: 170px; height: 170px; margin: -85px 0 0 -85px; border-radius: 50%; pointer-events: none;
+  border: 7px solid rgba(255, 240, 160, 1);
+  box-shadow: 0 0 18px rgba(255, 200, 60, 1), inset 0 0 14px rgba(255, 220, 120, 0.8);
+  animation: weld-ring 720ms cubic-bezier(0.15, 0.7, 0.3, 1) forwards;
+}
+.fx-weld-spark {
+  position: absolute; width: 40px; height: 7px; margin-top: -3.5px; border-radius: 4px; pointer-events: none;
+  background: linear-gradient(90deg, rgba(255, 150, 0, 0), #ffb81f 40%, #fff6c8 80%, #fff);
+  box-shadow: 0 0 9px rgba(255, 200, 60, 1);
+  transform-origin: 0 50%;
+  opacity: 0;
+  animation: weld-spark var(--ms, 560ms) cubic-bezier(0.1, 0.7, 0.4, 1) forwards;
+}
 
 
 
@@ -209,7 +232,6 @@
 .hotspot.is-armed { opacity: 1; transform: scale(1); }
 .hotspot.is-aligned { --spot: 70, 226, 110; --spot-hi: 214, 255, 222; transform: scale(1.06); }
 .socket { pointer-events: none; border: 0; background: none; padding: 0; }
-.socket.is-visible { pointer-events: auto; cursor: pointer; }
 /* A straight band of light lying on the road, so the column rises out of the deck. */
 .hotspot__pad {
   position: absolute; left: -14px; right: -14px; bottom: -7px; height: 14px;

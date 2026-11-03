@@ -70,6 +70,20 @@ def run_device(pw, name, engine, width, height, dpr, touch):
         page.screenshot(path=path)
         shots.append(path)
 
+    def steer(done_js, offset_js, timeout=20):
+        """Arrow keys only: frames and the drop spot are not tappable."""
+        end = time.time() + timeout
+        while time.time() < end:
+            if page.evaluate(done_js):
+                return
+            dx = page.evaluate(offset_js) or 0
+            key = "ArrowRight" if dx > 0 else "ArrowLeft"
+            page.keyboard.down(key)
+            page.wait_for_timeout(max(40, min(250, abs(dx) * 1.2)))
+            page.keyboard.up(key)
+            page.wait_for_timeout(120)
+        raise TimeoutError("could not steer the crane into place")
+
     def press(selector):
         if touch:
             page.locator(selector).first.tap(timeout=15000, force=True)
@@ -98,15 +112,15 @@ def run_device(pw, name, engine, width, height, dpr, touch):
         page.wait_for_timeout(1500)
         shot("task1")
         result["layout_task1"] = page.evaluate(LAYOUT_JS)
-        press('.triangle--option[data-triangle-id="isosceles"]')
-        page.wait_for_function("document.querySelector('.triangle--option.is-hovered')?.dataset.triangleId === 'isosceles' && !document.getElementById('action-button').disabled", timeout=20000)
+        steer("document.querySelector('.triangle--option.is-hovered')?.dataset.triangleId === 'isosceles' && !document.getElementById('action-button').disabled",
+              '(() => { const c = document.querySelector(\'.claw\').getBoundingClientRect(); const r = document.querySelector(\'.triangle--option[data-triangle-id="isosceles"]\').getBoundingClientRect(); return (r.left + r.width / 2) - (c.left + c.width / 2); })()')
         shot("hover-isosceles")
         press("#action-button")
         page.wait_for_function("document.querySelector('.claw-cargo .triangle')?.dataset.triangleId === 'isosceles' && ['carrying', 'hoveringTarget'].includes(document.getElementById('crane').dataset.state)", timeout=20000)
         page.wait_for_timeout(300)
         shot("carrying")
-        press(".socket")
-        page.wait_for_function("!!document.querySelector('.socket.is-aligned') && document.getElementById('action-button').dataset.mode === 'drop' && !document.getElementById('action-button').disabled", timeout=20000)
+        steer("!!document.querySelector('.socket.is-aligned') && document.getElementById('action-button').dataset.mode === 'drop' && !document.getElementById('action-button').disabled",
+              "(() => { const s = document.querySelector('.socket').getBoundingClientRect(); const t = document.querySelector('.claw-cargo .triangle').getBoundingClientRect(); return (s.left + s.width / 2) - (t.left + t.width / 2); })()")
         page.wait_for_timeout(300)
         shot("aligned")
         press("#action-button")

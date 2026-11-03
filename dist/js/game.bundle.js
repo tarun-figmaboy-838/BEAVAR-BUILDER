@@ -2128,10 +2128,11 @@ __define('js/data/triangles.js', function () {
  *
  * `marks` are the PDF option cards' notation (pages 11-17), derived from the geometry:
  * tick marks for the side tasks, angle arcs and the right-angle square for the angle tasks.
+ * They are not drawn (SHOW_PDF_MARKS = false): the frames read as plain steel girders, by request.
  */
 const { BRIDGE_GEOMETRY, stageById } = __require('js/data/bridge-geometry.js');
 const { LEVELS, OPTION_GROUPS } = __require('js/data/levels.js');
-const SHOW_PDF_MARKS = true;
+const SHOW_PDF_MARKS = false;
 
 const OPTION_BOX = Object.freeze({ width: 300, height: 210 });
 const EQUAL_TOLERANCE = 0.06;
@@ -2198,14 +2199,15 @@ const INTRO_PILE = Object.freeze(['scalene', 'acute', 'right', 'isosceles', 'equ
 });
 __define('js/gameplay/svg-tubes.js', function () {
 /**
- * 3D-looking steel tubes in SVG: a dark rim, the body, a shaded underside, a lit band and a
- * specular line, offset along the tube's normal so light always comes from the upper left.
+ * Riveted steel girders in SVG (the bridge's members and the triangle frames): a dark outline, the
+ * painted web, a shaded lower flange, a lit upper flange with a bright edge, and a row of rivet heads
+ * down the middle; offsets follow the member's normal so light always comes from the upper left.
  */
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
 const TUBE_PALETTES = Object.freeze({
-  steel: Object.freeze({ rim: '#272e38', body: '#6c7786', shade: '#48515d', light: '#a9b4c1', spec: '#eef2f6' }),
-  paint: Object.freeze({ rim: '#5f3f00', body: '#e6a300', shade: '#b47800', light: '#ffcb3a', spec: '#fff4c4' }),
+  steel: Object.freeze({ rim: '#272e38', body: '#6c7786', shade: '#48515d', light: '#a9b4c1', spec: '#eef2f6', rivet: '#2f353e', rivetShine: '#d5dce4' }),
+  paint: Object.freeze({ rim: '#5f3f00', body: '#e6a300', shade: '#a86c00', light: '#ffc933', spec: '#fff4c4', rivet: '#7a4e00', rivetShine: '#ffe7a0' }),
 });
 
 function svgElement(name, attributes = {}) {
@@ -2225,13 +2227,17 @@ function litNormal(dx, dy, length) {
   return [nx, ny];
 }
 
+/** `trim` is how far (in member widths) a layer stops short of each joint; `dash` turns a line into a row of dots. */
 function tubeLayers(width, palette) {
+  const rivetPitch = Math.max(11, width * 0.85);
   return [
-    { className: 'tube__rim', color: palette.rim, strokeWidth: width, offset: 0, cap: 'round', trimmed: false },
-    { className: 'tube__body', color: palette.body, strokeWidth: width - 5, offset: 0, cap: 'round', trimmed: false },
-    { className: 'tube__shade', color: palette.shade, strokeWidth: width * 0.26, offset: -width * 0.22, cap: 'butt', trimmed: true },
-    { className: 'tube__light', color: palette.light, strokeWidth: width * 0.3, offset: width * 0.14, cap: 'butt', trimmed: true },
-    { className: 'tube__spec', color: palette.spec, strokeWidth: Math.max(1.5, width * 0.1), offset: width * 0.24, cap: 'butt', trimmed: true },
+    { className: 'tube__rim', color: palette.rim, strokeWidth: width, offset: 0, cap: 'round', trim: 0 },
+    { className: 'tube__body', color: palette.body, strokeWidth: width - 5, offset: 0, cap: 'round', trim: 0 },
+    { className: 'tube__shade', color: palette.shade, strokeWidth: width * 0.2, offset: -width * 0.26, cap: 'butt', trim: 0.45 },
+    { className: 'tube__light', color: palette.light, strokeWidth: width * 0.18, offset: width * 0.26, cap: 'butt', trim: 0.45 },
+    { className: 'tube__spec', color: palette.spec, strokeWidth: Math.max(1.2, width * 0.07), offset: width * 0.16, cap: 'butt', trim: 0.45 },
+    { className: 'tube__rivets', color: palette.rivet, strokeWidth: width * 0.25, offset: -width * 0.03, cap: 'round', trim: 1.3, dash: `0 ${rivetPitch.toFixed(1)}` },
+    { className: 'tube__rivets tube__rivets--shine', color: palette.rivetShine, strokeWidth: width * 0.1, offset: width * 0.03, cap: 'round', trim: 1.3, dash: `0 ${rivetPitch.toFixed(1)}` },
   ];
 }
 
@@ -2240,9 +2246,8 @@ function placeLines(tube, x1, y1, x2, y2) {
   const dy = y2 - y1;
   const length = Math.hypot(dx, dy) || 1;
   const [nx, ny] = litNormal(dx, dy, length);
-  const inset = Math.min(0.45, (tube.width * 0.45) / length);
   tube.layers.forEach((layer, index) => {
-    const trim = layer.trimmed ? inset : 0;
+    const trim = Math.min(0.45, (tube.width * layer.trim) / length);
     const ox = nx * layer.offset;
     const oy = ny * layer.offset;
     const line = tube.lines[index];
@@ -2268,6 +2273,7 @@ function createTube(x1, y1, x2, y2, { width = 16, palette = TUBE_PALETTES.steel,
       'stroke-linecap': layer.cap,
       class: layer.className,
     });
+    if (layer.dash) line.setAttribute('stroke-dasharray', layer.dash);
     group.appendChild(line);
     return line;
   });
@@ -2275,7 +2281,10 @@ function createTube(x1, y1, x2, y2, { width = 16, palette = TUBE_PALETTES.steel,
   placeLines(tube, x1, y1, x2, y2);
   if (drawable) {
     const length = tube.length;
-    lines.forEach((line) => line.setAttribute('stroke-dasharray', `${length.toFixed(1)} ${(length + 80).toFixed(1)}`));
+    // Rivet rows keep their dot pattern and fade in once the girder is drawn (gameplay.css).
+    lines.forEach((line, index) => {
+      if (!layers[index].dash) line.setAttribute('stroke-dasharray', `${length.toFixed(1)} ${(length + 80).toFixed(1)}`);
+    });
     group.style.setProperty('--hidden-offset', `${(length + 40).toFixed(1)}px`);
   }
   return tube;
@@ -2445,22 +2454,13 @@ function createTriangleController({ platformEl, placedLayerEl }) {
 
   const options = new Map();
   const pile = [];
-  const tapListeners = new Set();
-
-  optionsLayer.addEventListener('click', (event) => {
-    const target = event.target.closest('.triangle--option');
-    if (!target) return;
-    if (event.detail > 0) target.blur(); // a mouse/touch tap must not keep focus (Space belongs to PICK/DROP)
-    const option = options.get(target.dataset.triangleId);
-    if (option) for (const listener of tapListeners) listener(option);
-  });
+  // Frames are not tappable: the crane is driven only with the joystick and the PICK / DROP button.
 
   /** A frame element plus its geometry: size, corner positions, and the top corner the claw grabs. */
   function buildTriangleElement(definition, scale, { interactive }) {
     const frame = buildFrameSvg(definition, { scale });
-    const element = document.createElement(interactive ? 'button' : 'div');
+    const element = document.createElement('div');
     element.className = interactive ? 'triangle triangle--option' : 'triangle';
-    if (interactive) element.type = 'button';
     element.style.width = `${frame.width}px`;
     element.style.height = `${frame.height}px`;
     element.appendChild(frame.svg);
@@ -2513,10 +2513,6 @@ function createTriangleController({ platformEl, placedLayerEl }) {
   }
 
   return {
-    onOptionTap(listener) {
-      tapListeners.add(listener);
-      return () => tapListeners.delete(listener);
-    },
     /** Shows the group's options; existing frames in the right slot stay, missing ones drop in. */
     async showOptions(ids, { refreshAll = false } = {}) {
       const stale = [];
@@ -2841,10 +2837,10 @@ function createBridgeController({ bridgeEl, fxEl, fx, audio }) {
     return spot;
   }
 
-  const socket = document.createElement('button');
-  socket.type = 'button';
+  // The drop spot only marks the place: it is not tappable (joystick + PICK / DROP only).
+  const socket = document.createElement('div');
   socket.className = 'hotspot socket';
-  socket.setAttribute('aria-label', 'Drop zone on the bridge');
+  socket.setAttribute('aria-hidden', 'true');
   socket.innerHTML = HOTSPOT_MARKUP;
   bridgeEl.appendChild(socket);
 
@@ -2856,11 +2852,6 @@ function createBridgeController({ bridgeEl, fxEl, fx, audio }) {
     return spot;
   });
 
-  const socketTapListeners = new Set();
-  socket.addEventListener('click', (event) => {
-    if (event.detail > 0) socket.blur();
-    for (const listener of socketTapListeners) listener();
-  });
 
   const builtStages = [];
   const reduced = () => prefersReducedMotion();
@@ -2921,14 +2912,12 @@ function createBridgeController({ bridgeEl, fxEl, fx, audio }) {
     };
   }
 
-  /** The fit: one hammer hit per corner, each with a comic puff and a spark burst. */
+  /** The fit: each corner is welded in turn (white-hot flash, shockwave ring, flying sparks) with a hammer clank. */
   async function hammerIntoPlace(corners, signal) {
-    const [cx, cy] = centroid(corners);
     for (const [k, [x, y]] of corners.entries()) {
       audio.play('clank', { variant: k });
-      fx.puff(x, y, { drift: Math.sign(x - cx) * 18 });
-      fx.sparks(x, y);
-      await wait(reduced() ? 0 : 130, signal);
+      fx.weld(x, y);
+      await wait(reduced() ? 0 : 110, signal);
     }
     audio.play('bolt');
   }
@@ -3122,10 +3111,6 @@ function createBridgeController({ bridgeEl, fxEl, fx, audio }) {
     /** Armed while a frame is carried: the spot brightens and calls the crane over. */
     setSocketArmed(armed) {
       socket.classList.toggle('is-armed', Boolean(armed));
-    },
-    onSocketTap(listener) {
-      socketTapListeners.add(listener);
-      return () => socketTapListeners.delete(listener);
     },
     showDemoSpots() {
       demoSpots.forEach((spot) => spot.classList.add('is-visible'));
@@ -3332,6 +3317,32 @@ function createConstructionFx({ fxLayer }) {
       const element = spawn('fx-spark', x + random(-8, 8), y + random(-8, 8), { tag: 'img', src: 'assets/images/fx/sparkle-cluster.webp', lifetime: 720 });
       element.style.width = `${small ? 64 : 96}px`;
     },
+    /**
+     * The fit: a weld flash at a joint (white-hot bloom, a shockwave ring, sparks flying out on an arc,
+     * and the sparkle sprite). Transform/opacity only, so it stays smooth on phones.
+     */
+    weld(x, y, { sparks = 12 } = {}) {
+      if (prefersReducedMotion()) {
+        spawn('fx-weld-flash fx-weld-flash--still', x, y, { lifetime: 420 });
+        return;
+      }
+      spawn('fx-weld-flash', x, y, { lifetime: 760 });
+      spawn('fx-weld-ring', x, y, { lifetime: 760 });
+      const turn = random(0, 360);
+      for (let i = 0; i < sparks; i += 1) {
+        spawn('fx-weld-spark', x, y, {
+          lifetime: 860,
+          vars: {
+            '--a': `${(turn + (360 / sparks) * i + random(-14, 14)).toFixed(0)}deg`,
+            '--d': `${random(95, 165).toFixed(0)}px`,
+            '--fall': `${random(24, 52).toFixed(0)}px`,
+            '--ms': `${random(560, 780).toFixed(0)}ms`,
+          },
+        });
+      }
+      const sprite = spawn('fx-spark', x, y, { tag: 'img', src: 'assets/images/fx/sparkle-cluster.webp', lifetime: 720 });
+      sprite.style.width = '150px';
+    },
     /** Comic cartoon puff: three round cloud lobes that burst outward from a point and fade. */
     puff(x, y, { drift = 0 } = {}) {
       if (prefersReducedMotion()) return;
@@ -3513,16 +3524,6 @@ function createLevelEngine({ gameState, crane, claw, triangles, bridge, placemen
   input.on('primary', () => {
     if (input.isActionAvailable('pick')) handlePick();
     else if (input.isActionAvailable('drop')) handleDrop();
-  });
-  triangles.onOptionTap((option) => {
-    if (!active || busy || inputLocked() || crane.carried || crane.isBusy) return;
-    audio.play('uiTap');
-    crane.glideTo(triangles.grabPointOf(option).x, { signal: scope.signal }).catch(() => {});
-  });
-  bridge.onSocketTap(() => {
-    if (!active || busy || inputLocked() || !crane.carried || crane.isBusy) return;
-    audio.play('uiTap');
-    crane.glideTo(placement.craneXForSocket(crane.carried), { signal: scope.signal }).catch(() => {});
   });
 
   async function startLevel(index, { firstEntry = false } = {}) {

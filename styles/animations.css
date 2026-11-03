@@ -376,3 +376,26 @@
   68% { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(22deg); }
   82% { opacity: 0; transform: translate(-50%, -50%) scale(0.6) rotate(40deg); }
 }
+
+/* ----- Weld flash when a frame fits ----- */
+@keyframes weld-flash {
+  0% { opacity: 0; transform: scale(0.15); }
+  14% { opacity: 1; transform: scale(1); }
+  45% { opacity: 0.85; transform: scale(1.15); }
+  100% { opacity: 0; transform: scale(1.4); }
+}
+@keyframes weld-flash-still {
+  0% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1); }
+}
+@keyframes weld-ring {
+  0% { opacity: 0; transform: scale(0.2); }
+  20% { opacity: 1; }
+  100% { opacity: 0; transform: scale(1.7); }
+}
+@keyframes weld-spark {
+  0% { opacity: 1; transform: translateY(0) rotate(var(--a)) translateX(6px) scaleX(0.3); }
+  55% { opacity: 1; transform: translateY(calc(var(--fall) * 0.25)) rotate(var(--a)) translateX(calc(var(--d) * 0.8)) scaleX(1); }
+  100% { opacity: 0; transform: translateY(var(--fall)) rotate(var(--a)) translateX(var(--d)) scaleX(0.5); }
+}
+

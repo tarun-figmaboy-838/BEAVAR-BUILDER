@@ -16,22 +16,13 @@ export function createTriangleController({ platformEl, placedLayerEl }) {
 
   const options = new Map();
   const pile = [];
-  const tapListeners = new Set();
-
-  optionsLayer.addEventListener('click', (event) => {
-    const target = event.target.closest('.triangle--option');
-    if (!target) return;
-    if (event.detail > 0) target.blur(); // a mouse/touch tap must not keep focus (Space belongs to PICK/DROP)
-    const option = options.get(target.dataset.triangleId);
-    if (option) for (const listener of tapListeners) listener(option);
-  });
+  // Frames are not tappable: the crane is driven only with the joystick and the PICK / DROP button.
 
   /** A frame element plus its geometry: size, corner positions, and the top corner the claw grabs. */
   function buildTriangleElement(definition, scale, { interactive }) {
     const frame = buildFrameSvg(definition, { scale });
-    const element = document.createElement(interactive ? 'button' : 'div');
+    const element = document.createElement('div');
     element.className = interactive ? 'triangle triangle--option' : 'triangle';
-    if (interactive) element.type = 'button';
     element.style.width = `${frame.width}px`;
     element.style.height = `${frame.height}px`;
     element.appendChild(frame.svg);
@@ -84,10 +75,6 @@ export function createTriangleController({ platformEl, placedLayerEl }) {
   }
 
   return {
-    onOptionTap(listener) {
-      tapListeners.add(listener);
-      return () => tapListeners.delete(listener);
-    },
     /** Shows the group's options; existing frames in the right slot stay, missing ones drop in. */
     async showOptions(ids, { refreshAll = false } = {}) {
       const stale = [];

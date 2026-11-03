@@ -76,16 +76,6 @@ export function createLevelEngine({ gameState, crane, claw, triangles, bridge, p
     if (input.isActionAvailable('pick')) handlePick();
     else if (input.isActionAvailable('drop')) handleDrop();
   });
-  triangles.onOptionTap((option) => {
-    if (!active || busy || inputLocked() || crane.carried || crane.isBusy) return;
-    audio.play('uiTap');
-    crane.glideTo(triangles.grabPointOf(option).x, { signal: scope.signal }).catch(() => {});
-  });
-  bridge.onSocketTap(() => {
-    if (!active || busy || inputLocked() || !crane.carried || crane.isBusy) return;
-    audio.play('uiTap');
-    crane.glideTo(placement.craneXForSocket(crane.carried), { signal: scope.signal }).catch(() => {});
-  });
 
   async function startLevel(index, { firstEntry = false } = {}) {
     const level = LEVELS[index];
