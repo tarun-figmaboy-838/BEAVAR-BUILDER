@@ -10,7 +10,7 @@ The source sheets were removed from the working tree to keep the project small; 
 | Option platform | `images/bridge/yard-platform.png` | `Glossy Yellow Hazard Stripe Platform.png` (supplied) |
 | Pillars | `images/bridge/pillar-brick.png` | `ASSET/image copy 2.png` |
 | Road deck and railing (tiled) | `images/bridge/deck-*.png`, `railing-tile.png` | `ASSET/image copy.png` |
-| Sparkles, ripples, water glints | `images/fx/*` (the moving water itself is drawn on one canvas: soft highlights on a perspective plane, `js/gameplay/environment.js`) | `ASSET/image copy.png` |
+| Sparkles, ripples, water glints | `images/fx/*` (the moving water itself is drawn by the GPU (WebGL, with a 2D-canvas fallback): soft highlights on a perspective plane, `js/gameplay/environment.js`) | `ASSET/image copy.png` |
 | Tower crane, jib tiles, trolley, cable, claw states, beacons | `images/crane-kit/*` | `assets/images/crane kit.png` |
 | Claw icons on the PICK / DROP button | `images/crane-kit/claw-open.png`, `claw-closed.png` | `assets/images/crane kit.png` |
 | Beaver builder, 40 frames | `images/characters/builder/beaver-NN.png` | `assets/images/bever.png` |

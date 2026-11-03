@@ -370,3 +370,9 @@
   0%, 100% { transform: rotate(-5deg); }
   50% { transform: rotate(5deg); }
 }
+
+@keyframes glint-twinkle {
+  0%, 55%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(0.4) rotate(0deg); }
+  68% { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(22deg); }
+  82% { opacity: 0; transform: translate(-50%, -50%) scale(0.6) rotate(40deg); }
+}

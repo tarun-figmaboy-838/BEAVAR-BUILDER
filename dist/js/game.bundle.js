@@ -3697,13 +3697,14 @@ __define('js/gameplay/environment.js', function () {
 const { prefersReducedMotion } = __require('js/core/motion.js');
 const { STAGE } = __require('js/data/layout.js');
 /**
- * Living water over the painted canal, drawn on ONE small canvas.
+ * Living water over the painted canal: a ground plane in true perspective whose ripple glints and
+ * wave crests drift toward the viewer, a slow sun sheen, and a twinkling sun-glitter path.
  *
- * It reproduces the earlier CSS look (a ground plane in true perspective whose ripple glints and
- * wave crests drift toward the viewer, a sun-glitter path down the canal, a slow sheen), but the
- * CSS version needed seven 3D-transformed, blended layers of ~150 megapixels in all, which made
- * iPhone/iPad Safari kill the tab ("A problem repeatedly occurred") and low-end laptops flicker.
- * The canvas is the canal's bounding box at most (1920 x 675 stage px), redrawn at up to 60 fps.
+ * The plane is drawn by the GPU (WebGL): one quad, one small shader, two tiny ripple textures, so the
+ * main thread does almost nothing per frame on laptops, tablets and phones alike. (A CSS 3D version
+ * needed ~150 megapixels of layers and crashed iPhone Safari; a 2D-canvas version cost the CPU
+ * thousands of draw calls a frame.) Without WebGL the plane falls back to a lighter 2D canvas.
+ * The glitter sparkles are plain images animated by the compositor.
  */
 const HORIZON_Y = 405;                    // where the canal meets the sky in the background art
 const TOP = HORIZON_Y;                    // canvas top, stage px
@@ -3713,8 +3714,9 @@ const TILT = (80 * Math.PI) / 180;
 const SIN = Math.sin(TILT);
 const COS = Math.cos(TILT);
 const PLANE_DEPTH = 2600;                 // the plane's length into the distance
-const FRAME_MS = 1000 / 60;            // every frame on 60 Hz screens, every other frame on 120 Hz
 const GLITTER_COUNT = 34;
+const TEXTURE_W = 512;
+const TEXTURE_H = 256;
 /** The canal's water outline (stage px): banks converge on the horizon. */
 const CANAL = [[640, 408], [1280, 408], [1745, 648], [1920, 700], [1920, 1080], [0, 1080], [0, 700], [178, 648]];
 
@@ -3732,6 +3734,7 @@ const RIPPLES = [
   },
 ];
 const CRESTS = { period: 200, peak: 164, halfWidth: 24, alpha: 0.3, originY: -400, cycleMs: 3800 };
+const SHEEN = { cycleMs: 8000, width: STAGE.width * 0.4, top: 400, height: 680, alpha: 0.2 };
 
 /** Deterministic pseudo-random numbers, so the glitter path is the same on every load. */
 function seeded(seed) {
@@ -3744,237 +3747,352 @@ function seeded(seed) {
 
 const smooth = (t) => t * t * (3 - 2 * t);
 const lerp = (a, b, t) => a + (b - a) * t;
+const cycle = (now, ms) => (now % ms) / ms;
 
-/** Stage position and size factor of a point on the water plane (x across, d = distance from the front edge). */
-function project(x, d) {
-  const s = PERSPECTIVE / (PERSPECTIVE + d * SIN);
-  return { x: STAGE.centerX + (x - STAGE.centerX) * s, y: HORIZON_Y + (STAGE.height - HORIZON_Y - d * COS) * s, s };
+/** Time-dependent placement shared by both renderers. */
+function frameState(now) {
+  const ripples = RIPPLES.map((layer) => {
+    const f = cycle(now, layer.cycleMs);
+    return { offsetX: layer.originX + layer.driftX * f, offsetY: layer.originY + layer.driftY * f };
+  });
+  const crestOffset = CRESTS.originY + CRESTS.period * cycle(now, CRESTS.cycleMs);
+  const phase = cycle(now, SHEEN.cycleMs);
+  const sheenLeft = -SHEEN.width + smooth(phase) * SHEEN.width * 3.5;
+  const sheenOpacity = phase < 0.2 ? smooth(phase / 0.2) : phase > 0.8 ? 1 - smooth((phase - 0.8) / 0.2) : 1;
+  return { ripples, crestOffset, sheenLeft, sheenOpacity };
 }
-const projectY = (d) => HORIZON_Y + (STAGE.height - HORIZON_Y - d * COS) * (PERSPECTIVE / (PERSPECTIVE + d * SIN));
 
-/** The far end of the plane fades out (the old CSS mask: solid to 55 %, clear at 96 %). */
-function depthFade(d) {
-  const t = d / PLANE_DEPTH;
-  if (t <= 0.55) return 1;
-  if (t >= 0.96) return 0;
-  return (0.96 - t) / 0.41;
-}
-
-/** Left and right water edges at a stage row. */
-function canalSpan(y) {
-  if (y >= 700) return [0, STAGE.width];
-  if (y >= 648) {
-    const t = (700 - y) / 52;
-    return [lerp(0, 178, t), lerp(1920, 1745, t)];
+/** One ripple tile drawn into a power-of-two texture (alpha = glint strength), wrapping at the edges. */
+function makeRippleTexture(layer) {
+  const canvas = document.createElement('canvas');
+  canvas.width = TEXTURE_W;
+  canvas.height = TEXTURE_H;
+  const ctx = canvas.getContext('2d');
+  const sx = TEXTURE_W / layer.tileW;
+  const sy = TEXTURE_H / layer.tileH;
+  for (const [rx, ry, cx, cy, alpha] of layer.glints) {
+    for (const ox of [-TEXTURE_W, 0, TEXTURE_W]) {
+      for (const oy of [-TEXTURE_H, 0, TEXTURE_H]) {
+        ctx.save();
+        ctx.translate(cx * sx + ox, cy * sy + oy);
+        ctx.scale(rx * sx, ry * sy);
+        const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
+        gradient.addColorStop(0, `rgba(255, 255, 255, ${alpha * layer.opacity})`);
+        gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(-1, -1, 2, 2);
+        ctx.restore();
+      }
+    }
   }
-  const t = Math.min(1, (648 - y) / 240);
-  return [lerp(178, 640, t), lerp(1745, 1280, t)];
+  return canvas;
 }
 
-function makeGlowSprite() {
-  const sprite = document.createElement('canvas');
-  sprite.width = sprite.height = 64;
-  const ctx = sprite.getContext('2d');
-  const gradient = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+const VERTEX_SHADER = `
+attribute vec2 aPos;
+void main() { gl_Position = vec4(aPos, 0.0, 1.0); }`;
+
+const FRAGMENT_SHADER = `
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
+uniform float uCanvasH;     // canvas height, device px
+uniform float uRes;         // canvas px per stage px
+uniform sampler2D uTexA;
+uniform sampler2D uTexB;
+uniform vec4 uRipA;         // offsetX, offsetY, tileW, tileH
+uniform vec4 uRipB;
+uniform float uCrest;       // crest offset
+uniform vec2 uSheen;        // left, opacity
+const float H = ${HORIZON_Y.toFixed(1)};
+const float B = ${(STAGE.height - HORIZON_Y).toFixed(1)};
+const float P = ${PERSPECTIVE.toFixed(1)};
+const float SINT = ${SIN.toFixed(6)};
+const float COST = ${COS.toFixed(6)};
+const float DEPTH = ${PLANE_DEPTH.toFixed(1)};
+
+void main() {
+  float x = gl_FragCoord.x / uRes;
+  float y = ${TOP.toFixed(1)} + (uCanvasH - gl_FragCoord.y) / uRes;
+  // Canal outline: banks converge on the horizon (soft one-pixel edge).
+  float l; float r;
+  if (y >= 700.0) { l = 0.0; r = 1920.0; }
+  else if (y >= 648.0) { float t = (700.0 - y) / 52.0; l = mix(0.0, 178.0, t); r = mix(1920.0, 1745.0, t); }
+  else { float t = min(1.0, (648.0 - y) / 240.0); l = mix(178.0, 640.0, t); r = mix(1745.0, 1280.0, t); }
+  float inside = clamp(min(x - l, r - x) * uRes + 0.5, 0.0, 1.0) * step(408.0, y);
+  // Screen row -> distance along the water plane (inverse perspective).
+  float dy = y - H;
+  float d = P * (B - dy) / (dy * SINT + P * COST);
+  float s = P / (P + d * SINT);
+  float X = 960.0 + (x - 960.0) / s;
+  float py = DEPTH - d;
+  float k = d / DEPTH;
+  float fade = k <= 0.55 ? 1.0 : clamp((0.96 - k) / 0.41, 0.0, 1.0);
+  float a1 = texture2D(uTexA, vec2((X - uRipA.x) / uRipA.z, (py - uRipA.y) / uRipA.w)).a * fade;
+  float a2 = texture2D(uTexB, vec2((X - uRipB.x) / uRipB.z, (py - uRipB.y) / uRipB.w)).a * fade;
+  float cp = mod(py - uCrest, ${CRESTS.period.toFixed(1)});
+  float crest = ${CRESTS.alpha.toFixed(2)} * max(0.0, 1.0 - abs(cp - ${CRESTS.peak.toFixed(1)}) / ${CRESTS.halfWidth.toFixed(1)}) * fade;
+  // Sun sheen: a soft band sliding across at 100deg.
+  float sheen = 0.0;
+  if (x >= uSheen.x && x <= uSheen.x + ${SHEEN.width.toFixed(1)} && y >= ${SHEEN.top.toFixed(1)}) {
+    vec2 c = vec2(uSheen.x + ${(SHEEN.width / 2).toFixed(1)}, ${(SHEEN.top + SHEEN.height / 2).toFixed(1)});
+    vec2 dir = vec2(${Math.sin((100 * Math.PI) / 180).toFixed(6)}, ${(-Math.cos((100 * Math.PI) / 180)).toFixed(6)});
+    float halfLen = ${((SHEEN.width * Math.sin((100 * Math.PI) / 180) + SHEEN.height * Math.abs(Math.cos((100 * Math.PI) / 180))) / 2).toFixed(2)};
+    sheen = ${SHEEN.alpha.toFixed(2)} * max(0.0, 1.0 - abs(dot(vec2(x, y) - c, dir)) / halfLen) * uSheen.y;
+  }
+  float a = (1.0 - (1.0 - a1) * (1.0 - a2) * (1.0 - crest) * (1.0 - sheen)) * inside;
+  gl_FragColor = vec4(a, a, a, a);
+}`;
+
+/** WebGL renderer; returns null when WebGL is unavailable or software-only. */
+function createGlRenderer(canvas) {
+  const options = { alpha: true, premultipliedAlpha: true, antialias: false, depth: false, stencil: false, failIfMajorPerformanceCaveat: true, powerPreference: 'low-power' };
+  let gl = null;
+  try {
+    gl = canvas.getContext('webgl', options) || canvas.getContext('experimental-webgl', options);
+  } catch {
+    gl = null;
+  }
+  if (!gl) return null;
+  let program = null;
+  let uniforms = null;
+  let lost = false;
+
+  function compile(type, source) {
+    const shader = gl.createShader(type);
+    gl.shaderSource(shader, source);
+    gl.compileShader(shader);
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(shader) || 'shader compile failed');
+    return shader;
+  }
+
+  function texture(unit, source) {
+    const tex = gl.createTexture();
+    gl.activeTexture(gl.TEXTURE0 + unit);
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
+    gl.generateMipmap(gl.TEXTURE_2D);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    const aniso = gl.getExtension('EXT_texture_filter_anisotropic') || gl.getExtension('WEBKIT_EXT_texture_filter_anisotropic');
+    if (aniso) gl.texParameterf(gl.TEXTURE_2D, aniso.TEXTURE_MAX_ANISOTROPY_EXT, Math.min(8, gl.getParameter(aniso.MAX_TEXTURE_MAX_ANISOTROPY_EXT)));
+  }
+
+  function init() {
+    program = gl.createProgram();
+    gl.attachShader(program, compile(gl.VERTEX_SHADER, VERTEX_SHADER));
+    gl.attachShader(program, compile(gl.FRAGMENT_SHADER, FRAGMENT_SHADER));
+    gl.linkProgram(program);
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program) || 'link failed');
+    gl.useProgram(program);
+    const buffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+    const position = gl.getAttribLocation(program, 'aPos');
+    gl.enableVertexAttribArray(position);
+    gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
+    texture(0, makeRippleTexture(RIPPLES[0]));
+    texture(1, makeRippleTexture(RIPPLES[1]));
+    const at = (name) => gl.getUniformLocation(program, name);
+    uniforms = { canvasH: at('uCanvasH'), res: at('uRes'), texA: at('uTexA'), texB: at('uTexB'), ripA: at('uRipA'), ripB: at('uRipB'), crest: at('uCrest'), sheen: at('uSheen') };
+    gl.uniform1i(uniforms.texA, 0);
+    gl.uniform1i(uniforms.texB, 1);
+    gl.clearColor(0, 0, 0, 0);
+  }
+
+  try {
+    init();
+  } catch (error) {
+    console.warn('[water] WebGL unavailable, using the 2D fallback:', error.message);
+    return null;
+  }
+  canvas.addEventListener('webglcontextlost', (event) => {
+    event.preventDefault();
+    lost = true;
+  });
+  canvas.addEventListener('webglcontextrestored', () => {
+    try {
+      init();
+      lost = false;
+    } catch {
+      lost = true;
+    }
+  });
+
+  return {
+    kind: 'webgl',
+    draw(now, resolution) {
+      if (lost) return;
+      const state = frameState(now);
+      gl.viewport(0, 0, canvas.width, canvas.height);
+      gl.uniform1f(uniforms.canvasH, canvas.height);
+      gl.uniform1f(uniforms.res, resolution);
+      const [a, b] = state.ripples;
+      gl.uniform4f(uniforms.ripA, a.offsetX, a.offsetY, RIPPLES[0].tileW, RIPPLES[0].tileH);
+      gl.uniform4f(uniforms.ripB, b.offsetX, b.offsetY, RIPPLES[1].tileW, RIPPLES[1].tileH);
+      gl.uniform1f(uniforms.crest, state.crestOffset);
+      gl.uniform2f(uniforms.sheen, state.sheenLeft, state.sheenOpacity);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    },
+  };
+}
+
+/** Fallback without WebGL: the same plane on a 2D canvas, with the faint far glints skipped. */
+function create2dRenderer(canvas) {
+  const ctx = canvas.getContext('2d');
+  const glow = document.createElement('canvas');
+  glow.width = glow.height = 64;
+  const g = glow.getContext('2d');
+  const gradient = g.createRadialGradient(32, 32, 0, 32, 32, 32);
   gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
   gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, 64, 64);
-  return sprite;
+  g.fillStyle = gradient;
+  g.fillRect(0, 0, 64, 64);
+
+  const projectY = (d) => HORIZON_Y + (STAGE.height - HORIZON_Y - d * COS) * (PERSPECTIVE / (PERSPECTIVE + d * SIN));
+  const depthFade = (d) => {
+    const t = d / PLANE_DEPTH;
+    return t <= 0.55 ? 1 : t >= 0.96 ? 0 : (0.96 - t) / 0.41;
+  };
+  const canalSpan = (y) => {
+    if (y >= 700) return [0, STAGE.width];
+    if (y >= 648) {
+      const t = (700 - y) / 52;
+      return [lerp(0, 178, t), lerp(1920, 1745, t)];
+    }
+    const t = Math.min(1, (648 - y) / 240);
+    return [lerp(178, 640, t), lerp(1745, 1280, t)];
+  };
+
+  return {
+    kind: '2d',
+    draw(now, resolution) {
+      const state = frameState(now);
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.globalAlpha = 1;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.setTransform(resolution, 0, 0, resolution, 0, -TOP * resolution);
+      ctx.save();
+      ctx.beginPath();
+      CANAL.forEach(([x, y], index) => (index ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+      ctx.closePath();
+      ctx.clip();
+      RIPPLES.forEach((layer, index) => {
+        const { offsetX, offsetY } = state.ripples[index];
+        for (const [rx, ry, cx, cy, alpha] of layer.glints) {
+          const jMin = Math.ceil((PLANE_DEPTH * 0.04 - cy - offsetY - ry) / layer.tileH);
+          const jMax = Math.floor((PLANE_DEPTH + ry - cy - offsetY) / layer.tileH);
+          for (let j = jMin; j <= jMax; j += 1) {
+            const d = PLANE_DEPTH - (cy + j * layer.tileH + offsetY);
+            const strength = alpha * depthFade(d) * layer.opacity;
+            if (strength < 0.03) continue;
+            const s = PERSPECTIVE / (PERSPECTIVE + d * SIN);
+            const y = projectY(d);
+            const w = 2 * rx * s;
+            const yFar = projectY(d + ry);
+            const h = Math.max(0.35, projectY(Math.max(0, d - ry)) - yFar);
+            if (w * h < 1.2) continue;
+            const [left, right] = canalSpan(y);
+            const xMin = STAGE.centerX + (left - STAGE.centerX) / s - rx;
+            const xMax = STAGE.centerX + (right - STAGE.centerX) / s + rx;
+            ctx.globalAlpha = strength;
+            for (let i = Math.ceil((xMin - cx - offsetX) / layer.tileW), iMax = Math.floor((xMax - cx - offsetX) / layer.tileW); i <= iMax; i += 1) {
+              const x = STAGE.centerX + (cx + i * layer.tileW + offsetX - STAGE.centerX) * s;
+              ctx.drawImage(glow, x - w / 2, yFar, w, h);
+            }
+          }
+        }
+      });
+      ctx.restore();
+    },
+  };
 }
 
-/** The sun-glitter path: sparkles that twinkle, larger when closer (same seed and timings as before). */
-function makeGlitter() {
+/** The sun-glitter path: sparkles that twinkle, larger when closer; animated by the compositor (CSS). */
+function buildGlitter(waterLayer) {
+  const holder = document.createElement('div');
+  holder.className = 'water-glitter motion-ambient';
   const random = seeded(7);
-  const glitter = [];
   for (let i = 0; i < GLITTER_COUNT; i += 1) {
     const depth = Math.pow(random(), 0.8);                 // 0 = horizon, 1 = front
     const y = HORIZON_Y + 20 + depth * (STAGE.height - HORIZON_Y - 20);
     const spread = 40 + depth * 260;
     const x = STAGE.centerX + (random() * 2 - 1) * spread;
-    const width = 14 + depth * 46;
-    const cycleMs = 1800 + random() * 2600;
-    const delayMs = -random() * 4000;
-    glitter.push({ x, y, width, cycleMs, delayMs });
+    const glint = new Image();
+    glint.className = 'water-glint';
+    glint.src = 'assets/images/fx/sparkle-cluster.webp';
+    glint.alt = '';
+    glint.draggable = false;
+    glint.style.left = `${x.toFixed(0)}px`;
+    glint.style.top = `${y.toFixed(0)}px`;
+    glint.style.width = `${(14 + depth * 46).toFixed(0)}px`;
+    glint.style.setProperty('--glint-ms', `${(1800 + random() * 2600).toFixed(0)}ms`);
+    glint.style.setProperty('--glint-delay', `${(-random() * 4000).toFixed(0)}ms`);
+    holder.appendChild(glint);
   }
-  return glitter;
-}
-
-/** Twinkle keyframes: dark until 55 %, flash at 68 %, gone by 82 %. Returns [opacity, scale, degrees]. */
-function twinkle(phase) {
-  if (phase < 0.55) return [0, 0.4, 0];
-  if (phase < 0.68) { const t = smooth((phase - 0.55) / 0.13); return [t, lerp(0.4, 1, t), lerp(0, 22, t)]; }
-  if (phase < 0.82) { const t = smooth((phase - 0.68) / 0.14); return [1 - t, lerp(1, 0.6, t), lerp(22, 40, t)]; }
-  const t = smooth((phase - 0.82) / 0.18);
-  return [0, lerp(0.6, 0.4, t), lerp(40, 0, t)];
+  waterLayer.appendChild(holder);
 }
 
 function buildEnvironment({ waterLayer }) {
-  const canvas = document.createElement('canvas');
-  canvas.className = 'water-canvas';
-  canvas.setAttribute('aria-hidden', 'true');
+  const makeCanvas = () => {
+    const element = document.createElement('canvas');
+    element.className = 'water-canvas';
+    element.setAttribute('aria-hidden', 'true');
+    return element;
+  };
+  let canvas = makeCanvas();
   waterLayer.appendChild(canvas);
-  const ctx = canvas.getContext('2d');
-  const glow = makeGlowSprite();
-  const glitter = makeGlitter();
-  const sparkle = new Image();
-  sparkle.src = 'assets/images/fx/sparkle-cluster.webp';
+  buildGlitter(waterLayer);
   let resolution = 0;
-  let lastDraw = -Infinity;
 
   /** Backing store follows the on-screen size of the stage (never above stage resolution). */
   function fitResolution() {
     const stageScale = Math.min(window.innerWidth / STAGE.width, window.innerHeight / STAGE.height);
     const next = Math.round(Math.min(1, Math.max(0.5, stageScale * (window.devicePixelRatio || 1))) * 20) / 20;
-    if (next === resolution) return;
+    if (next === resolution) return false;
     resolution = next;
     canvas.width = Math.round(STAGE.width * resolution);
     canvas.height = Math.round(HEIGHT * resolution);
-    lastDraw = -Infinity;
+    return true;
   }
-
-  function drawRipples(layer, now) {
-    const f = (now % layer.cycleMs) / layer.cycleMs;
-    const offsetX = layer.originX + layer.driftX * f;
-    const offsetY = layer.originY + layer.driftY * f;
-    for (const [rx, ry, cx, cy, alpha] of layer.glints) {
-      // Plane-local row of this glint for tile row j: py = cy + j * tileH + offsetY; d = depth - py.
-      const jMin = Math.ceil((PLANE_DEPTH * 0.04 - cy - offsetY - ry) / layer.tileH);
-      const jMax = Math.floor((PLANE_DEPTH + ry - cy - offsetY) / layer.tileH);
-      for (let j = jMin; j <= jMax; j += 1) {
-        const d = PLANE_DEPTH - (cy + j * layer.tileH + offsetY);
-        const fade = depthFade(d);
-        if (fade <= 0) continue;
-        const { y, s } = project(STAGE.centerX, d);
-        const [left, right] = canalSpan(y);
-        const xMin = STAGE.centerX + (left - STAGE.centerX) / s - rx;
-        const xMax = STAGE.centerX + (right - STAGE.centerX) / s + rx;
-        const yFar = projectY(d + ry);
-        const yNear = projectY(Math.max(0, d - ry));
-        const w = 2 * rx * s;
-        const h = Math.max(0.35, yNear - yFar);
-        const strength = alpha * fade * layer.opacity;
-        if (strength < 0.03 || w * h < 1.2) continue; // too faint or too small to see: skip the draw calls
-        ctx.globalAlpha = strength;
-        const iMin = Math.ceil((xMin - cx - offsetX) / layer.tileW);
-        const iMax = Math.floor((xMax - cx - offsetX) / layer.tileW);
-        for (let i = iMin; i <= iMax; i += 1) {
-          const x = STAGE.centerX + (cx + i * layer.tileW + offsetX - STAGE.centerX) * s;
-          ctx.drawImage(glow, x - w / 2, yFar, w, h);
-        }
-      }
-    }
-  }
-
-  function drawCrests(now) {
-    const f = (now % CRESTS.cycleMs) / CRESTS.cycleMs;
-    const offsetY = CRESTS.originY + CRESTS.period * f;
-    const kMin = Math.ceil((-offsetY - CRESTS.peak - CRESTS.halfWidth) / CRESTS.period);
-    const kMax = Math.floor((PLANE_DEPTH - offsetY - CRESTS.peak + CRESTS.halfWidth) / CRESTS.period);
-    for (let k = kMin; k <= kMax; k += 1) {
-      const d = PLANE_DEPTH - (CRESTS.peak + k * CRESTS.period + offsetY);
-      const fade = depthFade(d);
-      if (fade <= 0) continue;
-      const yFar = projectY(d + CRESTS.halfWidth);
-      const yNear = projectY(Math.max(0, d - CRESTS.halfWidth));
-      const yPeak = projectY(Math.max(0, d));
-      if (yNear - yFar < 0.5) continue;
-      const gradient = ctx.createLinearGradient(0, yFar, 0, yNear);
-      const mid = Math.min(0.999, Math.max(0.001, (yPeak - yFar) / (yNear - yFar)));
-      gradient.addColorStop(0, 'rgba(255, 255, 255, 0)');
-      gradient.addColorStop(mid, `rgba(255, 255, 255, ${CRESTS.alpha})`);
-      gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
-      ctx.globalAlpha = fade;
-      ctx.fillStyle = gradient;
-      ctx.fillRect(0, yFar, STAGE.width, yNear - yFar);
-    }
-  }
-
-  /** A slow light sheen sliding across, like sun on a moving surface. */
-  function drawSheen(now) {
-    const phase = (now % 8000) / 8000;
-    const travel = smooth(phase);
-    const width = STAGE.width * 0.4;
-    const left = -width + travel * width * 3.5;
-    const opacity = phase < 0.2 ? smooth(phase / 0.2) : phase > 0.8 ? 1 - smooth((phase - 0.8) / 0.2) : 1;
-    if (opacity <= 0) return;
-    const top = 400;
-    const height = 680;
-    const cx = left + width / 2;
-    const cy = top + height / 2;
-    const dx = Math.sin((100 * Math.PI) / 180);
-    const dy = -Math.cos((100 * Math.PI) / 180);
-    const half = (Math.abs(width * dx) + Math.abs(height * dy)) / 2;
-    const gradient = ctx.createLinearGradient(cx - dx * half, cy - dy * half, cx + dx * half, cy + dy * half);
-    gradient.addColorStop(0, 'rgba(255, 255, 255, 0)');
-    gradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.2)');
-    gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
-    ctx.globalAlpha = opacity;
-    ctx.fillStyle = gradient;
-    ctx.fillRect(left, top, width, height);
-  }
-
-  function drawGlitter(now) {
-    if (!sparkle.complete || !sparkle.naturalWidth) return;
-    const aspect = sparkle.naturalHeight / sparkle.naturalWidth;
-    for (const glint of glitter) {
-      const phase = (((now - glint.delayMs) % glint.cycleMs) + glint.cycleMs) % glint.cycleMs / glint.cycleMs;
-      const [opacity, scale, degrees] = twinkle(phase);
-      if (opacity <= 0.01) continue;
-      const w = glint.width * scale;
-      const h = w * aspect;
-      ctx.save();
-      ctx.globalAlpha = opacity;
-      ctx.translate(glint.x, glint.y);
-      ctx.rotate((degrees * Math.PI) / 180);
-      ctx.drawImage(sparkle, -w / 2, -h / 2, w, h);
-      ctx.restore();
-    }
-  }
-
-  function draw(now) {
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.globalAlpha = 1;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.setTransform(resolution, 0, 0, resolution, 0, -TOP * resolution);
-    ctx.save();
-    ctx.beginPath();
-    CANAL.forEach(([x, y], index) => (index ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
-    ctx.closePath();
-    ctx.clip();
-    for (const layer of RIPPLES) drawRipples(layer, now);
-    drawCrests(now);
-    drawSheen(now);
-    drawGlitter(now);
-    ctx.restore();
-  }
-
-  // Smooth 60 fps where drawing is cheap; a slow device (water taking > 3 ms a frame) steps down to 30 fps
-  // so the crane and the rest of the game keep their frame rate.
-  let frameMs = FRAME_MS;
-  let drawCost = 0;
-  function frame(now) {
-    if (now - lastDraw >= frameMs - 2) {
-      lastDraw = now;
-      const start = performance.now();
-      draw(now);
-      drawCost = drawCost * 0.9 + (performance.now() - start) * 0.1;
-      frameMs = drawCost > 3 ? 1000 / 30 : drawCost < 2 ? FRAME_MS : frameMs;
-    }
-    requestAnimationFrame(frame);
-  }
-
   fitResolution();
-  window.addEventListener('resize', fitResolution);
-  if (prefersReducedMotion()) {
-    // Still water: one frame, redrawn only when the canvas is resized.
-    const still = () => draw(2600);
-    sparkle.addEventListener('load', still);
-    window.addEventListener('resize', () => requestAnimationFrame(still));
-    still();
-  } else {
-    requestAnimationFrame(frame);
+
+  let renderer = createGlRenderer(canvas);
+  if (!renderer) {
+    // A canvas that was asked for WebGL cannot give a 2D context: swap in a fresh one.
+    const fresh = makeCanvas();
+    fresh.width = canvas.width;
+    fresh.height = canvas.height;
+    canvas.replaceWith(fresh);
+    canvas = fresh;
+    renderer = create2dRenderer(canvas);
   }
+  // The GPU path redraws every frame (capped at 60 fps); the 2D fallback runs at 30 fps.
+  const frameMs = renderer.kind === 'webgl' ? 1000 / 60 : 1000 / 30;
+  let lastDraw = -Infinity;
+
+  if (prefersReducedMotion()) {
+    const still = () => renderer.draw(2600, resolution);
+    window.addEventListener('resize', () => fitResolution() && requestAnimationFrame(still));
+    still();
+    return;
+  }
+  window.addEventListener('resize', () => {
+    if (fitResolution()) lastDraw = -Infinity;
+  });
+  const frame = (now) => {
+    if (!document.hidden && now - lastDraw >= frameMs - 2) {
+      lastDraw = now;
+      renderer.draw(now, resolution);
+    }
+    requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
 }
   return { buildEnvironment };
 });
