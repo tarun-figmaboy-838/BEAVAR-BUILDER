@@ -376,9 +376,14 @@
   border-radius: 50%;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0;
   border: 9px solid #fff7d6;
+  -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
-  transition: transform 460ms var(--ease-back), filter var(--t-fast), box-shadow var(--t-micro) var(--ease-out);
+  /* Safari ignores backface-visibility while the face carries a filter (the disabled look), and showed the
+     mirrored DROP face over PICK; so the face turned away is also hidden outright, swapped mid-flip. */
+  transition: transform 460ms var(--ease-back), visibility 0s linear 100ms, filter var(--t-fast), box-shadow var(--t-micro) var(--ease-out);
 }
+.action-button[data-mode="pick"] .action-button__face--drop,
+.action-button[data-mode="drop"] .action-button__face--pick { visibility: hidden; }
 .action-button__face--pick {
   background: radial-gradient(circle at 38% 28%, #b6f59a 0%, #4fcf48 34%, #22962c 72%, #146b1d 100%);
   box-shadow: 0 12px 0 #0f4f16, 0 22px 30px rgba(0, 0, 0, 0.38), inset 0 -10px 0 rgba(0, 0, 0, 0.18), inset 0 8px 0 rgba(255, 255, 255, 0.35);

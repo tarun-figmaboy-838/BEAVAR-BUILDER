@@ -1,78 +1,10 @@
 
-/* ---------- Living water (over the painted canal) ---------- */
-.water-fx {
-  position: absolute; inset: 0;
-  clip-path: polygon(640px 408px, 1280px 408px, 1745px 648px, 1920px 700px, 1920px 1080px, 0 1080px, 0 700px, 178px 648px);
-  perspective: 520px;
-  perspective-origin: 960px 405px;
-  overflow: hidden;
-}
-/* A flat ground plane: its front edge at the bottom of the stage, receding to the horizon. */
-.water-fx__plane {
+/* ---------- Living water: one canvas over the painted canal (js/gameplay/environment.js) ---------- */
+.water-canvas {
   position: absolute;
-  left: -2400px; right: -2400px; bottom: 0; height: 2600px;
-  transform-origin: 50% 100%;
-  transform: rotateX(80deg);
-  -webkit-mask-image: linear-gradient(to top, #000 0%, #000 55%, transparent 96%);
-  mask-image: linear-gradient(to top, #000 0%, #000 55%, transparent 96%);
-}
-.water-fx__ripples {
-  position: absolute; left: 0; right: 0; top: -600px; bottom: -600px;
-  mix-blend-mode: screen;
-  will-change: transform;
-}
-/* Seamless wave glints (soft highlights placed away from the tile edges, two unrelated repeat sizes). */
-.water-fx__ripples--a {
-  filter: brightness(1.15);
-  background-image:
-    radial-gradient(ellipse 29px 3.2px at 139px 66px, rgba(255, 255, 255, 0.73), rgba(255, 255, 255, 0) 100%),
-    radial-gradient(ellipse 30px 3.2px at 152px 69px, rgba(255, 255, 255, 0.51), rgba(255, 255, 255, 0) 100%),
-    radial-gradient(ellipse 26px 3.2px at 180px 90px, rgba(255, 255, 255, 0.48), rgba(255, 255, 255, 0) 100%),
-    radial-gradient(ellipse 22px 3.2px at 57px 91px, rgba(255, 255, 255, 0.66), rgba(255, 255, 255, 0) 100%),
-    radial-gradient(ellipse 32px 3.2px at 260px 107px, rgba(255, 255, 255, 0.65), rgba(255, 255, 255, 0) 100%),
-    radial-gradient(ellipse 22px 3.2px at 72px 11px, rgba(255, 255, 255, 0.61), rgba(255, 255, 255, 0) 100%),
-    radial-gradient(ellipse 29px 3.2px at 79px 34px, rgba(255, 255, 255, 0.46), rgba(255, 255, 255, 0) 100%),
-    radial-gradient(ellipse 33px 3.2px at 136px 95px, rgba(255, 255, 255, 0.61), rgba(255, 255, 255, 0) 100%),
-    radial-gradient(ellipse 26px 3.2px at 150px 76px, rgba(255, 255, 255, 0.59), rgba(255, 255, 255, 0) 100%);
-  background-size: 300px 120px;
-  opacity: 1;
-  animation: water-roll-a 5.5s linear infinite;
-}
-.water-fx__ripples--b {
-  background-image:
-    radial-gradient(ellipse 49px 4.5px at 416px 176px, rgba(255, 255, 255, 0.51), rgba(255, 255, 255, 0) 100%),
-    radial-gradient(ellipse 33px 4.5px at 168px 51px, rgba(255, 255, 255, 0.39), rgba(255, 255, 255, 0) 100%),
-    radial-gradient(ellipse 41px 4.5px at 332px 79px, rgba(255, 255, 255, 0.52), rgba(255, 255, 255, 0) 100%),
-    radial-gradient(ellipse 36px 4.5px at 402px 152px, rgba(255, 255, 255, 0.33), rgba(255, 255, 255, 0) 100%),
-    radial-gradient(ellipse 41px 4.5px at 385px 90px, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 100%),
-    radial-gradient(ellipse 38px 4.5px at 79px 116px, rgba(255, 255, 255, 0.50), rgba(255, 255, 255, 0) 100%),
-    radial-gradient(ellipse 51px 4.5px at 85px 68px, rgba(255, 255, 255, 0.54), rgba(255, 255, 255, 0) 100%),
-    radial-gradient(ellipse 32px 4.5px at 96px 54px, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0) 100%);
-  background-size: 470px 190px;
-  opacity: 0.9;
-  animation: water-roll-b 8s linear infinite;
-}
-.water-fx__crests {
-  position: absolute; left: 0; right: 0; top: -400px; bottom: -400px;
-  background: repeating-linear-gradient(to bottom, rgba(255, 255, 255, 0) 0 140px, rgba(255, 255, 255, 0.3) 164px, rgba(255, 255, 255, 0) 188px, rgba(255, 255, 255, 0) 200px);
-  mix-blend-mode: screen;
-  animation: water-crests 3.8s linear infinite;
-  will-change: transform;
-}
-/* A slow light sheen sliding across, like sun on a moving surface. */
-.water-fx__sheen {
-  position: absolute; left: -40%; top: 400px; width: 40%; height: 680px;
-  background: linear-gradient(100deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.2) 50%, rgba(255, 255, 255, 0) 100%);
-  mix-blend-mode: screen;
-  animation: water-sheen 8s ease-in-out infinite;
-}
-.water-glint {
-  position: absolute;
-  opacity: 0;
-  mix-blend-mode: screen;
-  transform: translate(-50%, -50%) scale(0.5);
-  animation: glint-twinkle var(--glint-ms, 3000ms) ease-in-out infinite;
-  animation-delay: var(--glint-delay, 0ms);
+  left: 0; top: 405px;
+  width: 1920px; height: 675px;
+  pointer-events: none;
 }
 
 /* ---------- Bridge: pillars standing in the water ---------- */
@@ -192,7 +124,7 @@
 }
 
 /* ---------- Triangle frames (drawn in code from exact vertices: js/gameplay/frame-shapes.js) ---------- */
-.triangle { position: absolute; transform-origin: 50% 100%; will-change: transform; }
+.triangle { position: absolute; transform-origin: 50% 100%; }
 .frame { display: block; overflow: visible; filter: drop-shadow(0 8px 5px rgba(0, 0, 0, 0.3)); }
 .frame__marks { fill: none; stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; }
 .frame__tick { stroke-width: 4; }
@@ -248,7 +180,6 @@
 .fx-ding { position: absolute; width: 120px; transform: translate(-50%, -50%); animation: ding-pop 760ms var(--ease-out) forwards; }
 
 
-.water-fx.is-still .water-fx__ripples, .water-fx.is-still .water-fx__crests, .water-fx.is-still .water-fx__sheen, .water-fx.is-still .water-glint { animation: none; }
 
 /* ---------- Hotspot: a game checkpoint (glowing pad, light column, rising sparkles, bouncing chevrons) ----------
    Calm until a frame is carried, bright when armed, green and locked when the frame is lined up to drop. */

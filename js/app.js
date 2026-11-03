@@ -27,8 +27,9 @@ import { createHowToPlayScreen } from './screens/how-to-play-screen.js';
 import { createGameplayScreen } from './screens/gameplay-screen.js';
 import { createCompletionScreen } from './screens/completion-screen.js';
 
+// The canal backdrop is the page's own <img> (the production build serves it as AVIF with a WebP
+// fallback through <picture>), so boot waits on that element instead of fetching it a second time.
 const CRITICAL_IMAGES = [
-  'assets/images/background/canal.png',
   'assets/images/bridge/yard-platform.png',
   'assets/images/bridge/pillar-brick.png',
   'assets/images/bridge/deck-tile.png',
@@ -63,6 +64,17 @@ function queryElements() {
   };
 }
 
+function whenImageReady(image) {
+  if (!image || (image.complete && image.naturalWidth)) return Promise.resolve();
+  return new Promise((resolve) => {
+    image.addEventListener('load', resolve, { once: true });
+    image.addEventListener('error', () => {
+      console.error('[assets] required asset failed to load:', image.currentSrc || image.src);
+      resolve();
+    }, { once: true });
+  });
+}
+
 function fitStage(stageEl) {
   const scale = Math.min(window.innerWidth / STAGE.width, window.innerHeight / STAGE.height);
   stageEl.style.setProperty('--stage-scale', scale.toFixed(4));
@@ -90,11 +102,16 @@ async function boot() {
   const els = queryElements();
   fitStage(els.stage);
   window.addEventListener('resize', () => fitStage(els.stage));
+  // iOS reports the new size a moment after rotating; refit once it has settled.
+  window.addEventListener('orientationchange', () => setTimeout(() => fitStage(els.stage), 300));
 
   const loaderFill = els.loader.querySelector('.loader__fill');
-  const { missing } = await preloadImages(CRITICAL_IMAGES, (progress) => {
-    loaderFill.style.width = `${Math.round(progress * 100)}%`;
-  });
+  const [{ missing }] = await Promise.all([
+    preloadImages(CRITICAL_IMAGES, (progress) => {
+      loaderFill.style.width = `${Math.round(progress * 100)}%`;
+    }),
+    whenImageReady(els.stage.querySelector('.backdrop img')),
+  ]);
   if (missing.size) console.error('[assets] required assets failed to load:', [...missing]);
 
   const craneDom = buildCraneDom(els.crane, els.platform);

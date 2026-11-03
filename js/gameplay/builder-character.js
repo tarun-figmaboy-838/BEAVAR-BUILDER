@@ -2,7 +2,7 @@ import { prefersReducedMotion } from '../core/motion.js';
 import { CRANE_RIG } from '../data/layout.js';
 
 /**
- * The beaver builder (assets/images/characters/builder, sliced from bever.png) is the crane operator:
+ * The beaver builder (assets/images/characters/builder, sliced from the supplied beaver sheet) is the crane operator:
  * he sits in the cab window, behind the glass. Whole-frame sprite animation only: idle with blinks,
  * talking while a line plays, cheering, worrying.
  */

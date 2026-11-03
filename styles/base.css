@@ -10,7 +10,15 @@ html, body {
   overflow: hidden;
   overscroll-behavior: none;
   touch-action: manipulation;
+  /* Tablets: a long press must not select text or pop the callout/magnifier mid-game. */
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
 }
+
+/* The game never scrolls or zooms: one thumb on the joystick and one on PICK / DROP must not read as a pinch. */
+.viewport { touch-action: none; }
 
 [hidden] { display: none !important; }
 

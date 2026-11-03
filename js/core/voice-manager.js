@@ -45,8 +45,13 @@ export function createVoiceManager({ audio }) {
   let prefetchStarted = false;
   let settleCurrent = null; // resolves the line that is playing, so stop() never leaves a promise hanging
 
+  // The production build (dist/) ships every clip as small Ogg Opus too and marks <html data-vo-ogg>;
+  // browsers that can play it (Chrome, Firefox, Edge, newer Safari) take the Ogg, the rest keep the MP3.
+  const useOgg = Boolean(element) && document.documentElement.hasAttribute('data-vo-ogg')
+    && element.canPlayType('audio/ogg; codecs="opus"') !== '';
+  const fileFor = (clip) => (useOgg ? clip.file.replace(/\.mp3$/, '.ogg') : clip.file);
   const clipFor = (text) => VO_LINES[normalize(text)] ?? null;
-  const sourceFor = (clip) => blobUrls.get(clip.file) ?? VO_DIR + clip.file;
+  const sourceFor = (clip) => blobUrls.get(clip.file) ?? VO_DIR + fileFor(clip);
 
   function pickSpeechVoice() {
     const voices = speechSynthesis.getVoices();
@@ -201,7 +206,7 @@ export function createVoiceManager({ audio }) {
       (async () => {
         for (const file of files) {
           try {
-            const response = await fetch(VO_DIR + file);
+            const response = await fetch(VO_DIR + (useOgg ? file.replace(/\.mp3$/, '.ogg') : file));
             if (response.ok) blobUrls.set(file, URL.createObjectURL(await response.blob()));
           } catch {
             /* the clip streams when it is needed instead */
