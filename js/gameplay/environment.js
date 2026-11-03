@@ -254,10 +254,17 @@ export function buildEnvironment({ waterLayer }) {
     ctx.restore();
   }
 
+  // Smooth 60 fps where drawing is cheap; a slow device (water taking > 3 ms a frame) steps down to 30 fps
+  // so the crane and the rest of the game keep their frame rate.
+  let frameMs = FRAME_MS;
+  let drawCost = 0;
   function frame(now) {
-    if (now - lastDraw >= FRAME_MS - 2) {
+    if (now - lastDraw >= frameMs - 2) {
       lastDraw = now;
+      const start = performance.now();
       draw(now);
+      drawCost = drawCost * 0.9 + (performance.now() - start) * 0.1;
+      frameMs = drawCost > 3 ? 1000 / 30 : drawCost < 2 ? FRAME_MS : frameMs;
     }
     requestAnimationFrame(frame);
   }
