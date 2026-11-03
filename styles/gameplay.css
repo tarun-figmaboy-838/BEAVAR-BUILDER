@@ -135,7 +135,8 @@
 /* Hook over a frame: the beams glow (no fill), and the frame lifts a little. */
 .triangle--option.is-hovered { transform: translateY(-10px) scale(1.04); }
 .triangle--option.is-hovered .frame {
-  filter: drop-shadow(0 0 4px rgba(255, 250, 210, 1)) drop-shadow(0 0 12px rgba(255, 214, 60, 0.95)) drop-shadow(0 10px 6px rgba(0, 0, 0, 0.3));
+  filter: drop-shadow(0 0 5px rgba(255, 250, 210, 1)) drop-shadow(0 0 14px rgba(255, 214, 60, 1)) drop-shadow(0 10px 6px rgba(0, 0, 0, 0.3));
+  transform-origin: 50% 100%;
   animation: frame-glow 1s ease-in-out infinite;
 }
 .triangle--option:focus-visible { outline-offset: 6px; border-radius: 16px; }

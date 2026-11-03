@@ -8,7 +8,7 @@ import { STAGE } from '../data/layout.js';
  * wave crests drift toward the viewer, a sun-glitter path down the canal, a slow sheen), but the
  * CSS version needed seven 3D-transformed, blended layers of ~150 megapixels in all, which made
  * iPhone/iPad Safari kill the tab ("A problem repeatedly occurred") and low-end laptops flicker.
- * The canvas is the canal's bounding box at most (1920 x 675 stage px), redrawn at 30 fps.
+ * The canvas is the canal's bounding box at most (1920 x 675 stage px), redrawn at up to 60 fps.
  */
 const HORIZON_Y = 405;                    // where the canal meets the sky in the background art
 const TOP = HORIZON_Y;                    // canvas top, stage px
@@ -18,7 +18,7 @@ const TILT = (80 * Math.PI) / 180;
 const SIN = Math.sin(TILT);
 const COS = Math.cos(TILT);
 const PLANE_DEPTH = 2600;                 // the plane's length into the distance
-const FRAME_MS = 1000 / 30;
+const FRAME_MS = 1000 / 60;            // every frame on 60 Hz screens, every other frame on 120 Hz
 const GLITTER_COUNT = 34;
 /** The canal's water outline (stage px): banks converge on the horizon. */
 const CANAL = [[640, 408], [1280, 408], [1745, 648], [1920, 700], [1920, 1080], [0, 1080], [0, 700], [178, 648]];
@@ -158,7 +158,9 @@ export function buildEnvironment({ waterLayer }) {
         const yNear = projectY(Math.max(0, d - ry));
         const w = 2 * rx * s;
         const h = Math.max(0.35, yNear - yFar);
-        ctx.globalAlpha = alpha * fade * layer.opacity;
+        const strength = alpha * fade * layer.opacity;
+        if (strength < 0.03 || w * h < 1.2) continue; // too faint or too small to see: skip the draw calls
+        ctx.globalAlpha = strength;
         const iMin = Math.ceil((xMin - cx - offsetX) / layer.tileW);
         const iMax = Math.floor((xMax - cx - offsetX) / layer.tileW);
         for (let i = iMin; i <= iMax; i += 1) {
