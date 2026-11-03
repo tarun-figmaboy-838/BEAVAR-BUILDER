@@ -1,0 +1,183 @@
+[
+  {
+    "id": "vo001",
+    "speaker": "builder",
+    "line": "I have all these triangular frames, but I can't remember which ones go where!",
+    "spoken": "I have all these triangular frames, but I can't remember which ones go where!",
+    "where": [
+      "G0.1 Meet the Builder"
+    ],
+    "seconds": 5.57
+  },
+  {
+    "id": "vo002",
+    "speaker": "builder",
+    "line": "Can you help me choose the right frames?",
+    "spoken": "Can you help me choose the right frames?",
+    "where": [
+      "G0.2 Your Help Is Needed"
+    ],
+    "seconds": 2.9
+  },
+  {
+    "id": "vo003",
+    "speaker": "narrator",
+    "line": "Use the crane to pick the triangle we need and place it on the bridge.",
+    "spoken": "Use the crane to pick the triangle we need and place it on the bridge.",
+    "where": [
+      "G0.3 How to Play: intro"
+    ],
+    "seconds": 5.06
+  },
+  {
+    "id": "vo004",
+    "speaker": "narrator",
+    "line": "Move the crane",
+    "spoken": "Move the crane.",
+    "where": [
+      "G0.3 step 1"
+    ],
+    "seconds": 1.49
+  },
+  {
+    "id": "vo005",
+    "speaker": "narrator",
+    "line": "Pick the triangle",
+    "spoken": "Pick the triangle.",
+    "where": [
+      "G0.3 step 2"
+    ],
+    "seconds": 1.82
+  },
+  {
+    "id": "vo006",
+    "speaker": "narrator",
+    "line": "Place it on the bridge",
+    "spoken": "Place it on the bridge.",
+    "where": [
+      "G0.3 step 3"
+    ],
+    "seconds": 2.18
+  },
+  {
+    "id": "vo007",
+    "speaker": "builder",
+    "line": "Let's do a practice round first!",
+    "spoken": "Let's do a practice round first!",
+    "where": [
+      "G0.3 call to action"
+    ],
+    "seconds": 2.45
+  },
+  {
+    "id": "vo009",
+    "speaker": "narrator",
+    "line": "Choose a triangle with exactly 2 equal sides.",
+    "spoken": "Choose a triangle with exactly two equal sides.",
+    "where": [
+      "Task 1"
+    ],
+    "seconds": 4.1
+  },
+  {
+    "id": "vo010",
+    "speaker": "narrator",
+    "line": "Choose an equilateral triangle.",
+    "spoken": "Choose an equilateral triangle.",
+    "where": [
+      "Task 2",
+      "Task 3"
+    ],
+    "seconds": 2.66
+  },
+  {
+    "id": "vo011",
+    "speaker": "narrator",
+    "line": "Choose a triangle where all 3 sides have different lengths.",
+    "spoken": "Choose a triangle where all three sides have different lengths.",
+    "where": [
+      "Task 4"
+    ],
+    "seconds": 4.85
+  },
+  {
+    "id": "vo012",
+    "speaker": "narrator",
+    "line": "Choose an acute-angled triangle.",
+    "spoken": "Choose an acute-angled triangle.",
+    "where": [
+      "Task 5"
+    ],
+    "seconds": 3.02
+  },
+  {
+    "id": "vo013",
+    "speaker": "narrator",
+    "line": "Choose a triangle with one 90° angle.",
+    "spoken": "Choose a triangle with one ninety degree angle.",
+    "where": [
+      "Task 6"
+    ],
+    "seconds": 3.86
+  },
+  {
+    "id": "vo014",
+    "speaker": "narrator",
+    "line": "Choose a triangle with one angle greater than 90°.",
+    "spoken": "Choose a triangle with one angle greater than ninety degrees.",
+    "where": [
+      "Task 7"
+    ],
+    "seconds": 4.78
+  },
+  {
+    "id": "vo015",
+    "speaker": "narrator",
+    "line": "Great choice!",
+    "spoken": "Great choice!",
+    "where": [
+      "Correct placement"
+    ],
+    "seconds": 1.66
+  },
+  {
+    "id": "vo016",
+    "speaker": "narrator",
+    "line": "That frame does not fit.",
+    "spoken": "That frame does not fit.",
+    "where": [
+      "Incorrect placement"
+    ],
+    "seconds": 2.57
+  },
+  {
+    "id": "vo018",
+    "speaker": "narrator",
+    "line": "Excellent work! Our bridge is complete.",
+    "spoken": "Excellent work! Our bridge is complete.",
+    "where": [
+      "Completion banner (PDF p18)"
+    ],
+    "seconds": 3.53
+  },
+  {
+    "id": "vo019",
+    "speaker": "narrator",
+    "line": "BRIDGE BUILT! Great work, Engineer!",
+    "spoken": "Bridge built! Great work, Engineer!",
+    "where": [
+      "Celebration banner (PDF p19)"
+    ],
+    "seconds": 3.5
+  },
+  {
+    "id": "vo020",
+    "speaker": "builder",
+    "line": "The bridge is complete! Now the people of both towns can visit each other!",
+    "spoken": "The bridge is complete! Now the people of both towns can visit each other!",
+    "where": [
+      "Celebration (PDF p19)"
+    ],
+    "seconds": 5.18
+  }
+]

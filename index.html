@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light">
+  <title>Bridge Builder: Triangles</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="styles/tokens.css">
+  <link rel="stylesheet" href="styles/base.css">
+  <link rel="stylesheet" href="styles/layout.css">
+  <link rel="stylesheet" href="styles/components.css">
+  <link rel="stylesheet" href="styles/gameplay.css">
+  <link rel="stylesheet" href="styles/animations.css">
+  <link rel="stylesheet" href="styles/responsive.css">
+  <!-- One classic script (built from js/ by tools/build.py) so the game also runs when index.html is opened from disk. -->
+  <script src="js/game.bundle.js" defer></script>
+</head>
+<body>
+  <div id="viewport" class="viewport">
+    <div id="stage" class="stage" aria-label="Bridge Builder game stage">
+
+      <!-- World: everything the camera controller moves. -->
+      <div id="world" class="world">
+        <div id="shake" class="shake-layer">
+          <div class="backdrop"><img src="assets/images/background/canal.png" alt="" draggable="false"></div>
+          <div id="water" class="water-layer" aria-hidden="true"></div>
+          <div id="bridge" class="bridge"></div>
+          <div id="placed" class="placed-layer"></div>
+          <div id="focus-dim" class="focus-dim" aria-hidden="true"></div>
+          <div id="platform" class="platform"></div>
+          <!-- Fixed on screen while the camera moves, but behind the crane: the claw passes in front of the task card. -->
+          <div id="screen-fixed" class="screen-fixed">
+            <div id="instruction" class="instruction-banner" role="status" aria-live="polite" hidden></div>
+          </div>
+          <div id="crane" class="crane"></div>
+          <div id="fx" class="fx-layer" aria-hidden="true"></div>
+        </div>
+      </div>
+
+      <!-- HUD: fixed to the stage, never moved by the camera. -->
+      <div id="hud" class="hud">
+        <button id="mute" class="icon-button mute-button" type="button" aria-label="Mute sound" aria-pressed="false"></button>
+      </div>
+
+      <!-- Screen overlays: title banner, builder bubble, how-to card, completion. -->
+      <div id="overlays" class="overlays"></div>
+
+      <!-- Crane controls (the kit's joystick and PICK / DROP buttons): move on the left, one contextual action on the right. -->
+      <section id="controls" class="controls" aria-label="Crane controls" hidden>
+        <div class="joystick-dock">
+          <div id="joystick" class="joystick" role="application" tabindex="0"
+               aria-label="Crane joystick. Drag it, or use the arrow keys, to move the crane and the hook.">
+            <span class="joystick__base"></span>
+            <span class="joystick__face"></span>
+            <svg class="joystick__arrows" viewBox="0 0 250 250" aria-hidden="true">
+              <polygon class="joystick__arrow joystick__arrow--up" points="125,36 150,66 100,66"/>
+              <polygon class="joystick__arrow joystick__arrow--right" points="214,125 184,150 184,100"/>
+              <polygon class="joystick__arrow joystick__arrow--down" points="125,214 100,184 150,184"/>
+              <polygon class="joystick__arrow joystick__arrow--left" points="36,125 66,100 66,150"/>
+            </svg>
+            <span class="joystick__socket"></span>
+            <span class="joystick__stem"></span>
+            <span class="joystick__knob"></span>
+          </div>
+        </div>
+        <div class="action-dock">
+          <button id="action-button" class="action-button" type="button" data-mode="pick" aria-label="Pick the triangle" disabled>
+            <span class="action-button__halo"></span>
+            <span class="action-button__face action-button__face--pick">
+              <img class="action-button__icon" src="assets/images/crane-kit/claw-open.png" alt="" draggable="false">
+              <span class="action-button__label">PICK</span>
+            </span>
+            <span class="action-button__face action-button__face--drop">
+              <img class="action-button__icon" src="assets/images/crane-kit/claw-closed.png" alt="" draggable="false">
+              <span class="action-button__arrow"></span>
+              <span class="action-button__label">DROP</span>
+            </span>
+          </button>
+        </div>
+      </section>
+
+      <div id="debug" class="debug-overlay" hidden></div>
+      <div id="loader" class="loader" role="status"><div class="loader__bar"><span class="loader__fill"></span></div><p class="loader__text">Loading the construction site…</p></div>
+    </div>
+  </div>
+  <noscript><p style="color:#fff;font:20px sans-serif;text-align:center">Please enable JavaScript to play.</p></noscript>
+</body>
+</html>

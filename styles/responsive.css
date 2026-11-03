@@ -1,0 +1,14 @@
+/* The stage scales uniformly, so layout is preserved; these rules only guard edge cases. */
+@media (prefers-contrast: more) {
+  .socket { border-color: #fff; }
+  .instruction-banner { border: 3px solid var(--color-navy); }
+}
+
+@media (pointer: coarse) {
+  .dpad__button, .action-button, .cta-button { -webkit-tap-highlight-color: transparent; }
+}
+
+@media (max-aspect-ratio: 4/3) {
+  /* Portrait-ish windows: the stage letterboxes; keep the letterbox calm. */
+  html, body { background: var(--color-navy-deep); }
+}

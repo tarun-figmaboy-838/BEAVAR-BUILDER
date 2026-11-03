@@ -1,0 +1,69 @@
+/* Design tokens: colours, type, motion, spacing and the stage-space layout constants.
+   Positions are expressed in stage pixels (1920 x 1080 master composition). */
+:root {
+  --stage-w: 1920px;
+  --stage-h: 1080px;
+
+  /* Palette derived from the source deck: navy plates, green codes, sky-blue instruction card. */
+  --color-navy: #0f2d4d;
+  --color-navy-deep: #091d33;
+  --color-green: #1f8a44;
+  --color-green-bright: #3bc26a;
+  --color-red: #d8463b;
+  --color-red-deep: #a62f26;
+  --color-yellow: #f6c21a;
+  --color-yellow-deep: #d99a06;
+  --color-orange: #ff8f1f;
+  --color-sky-card: #d6e8f8;
+  --color-card: #fff8ea;
+  --color-tan: #e4c898;
+  --color-tan-deep: #b88d55;
+  --color-ink: #10243a;
+  --color-ink-soft: #40546b;
+  --color-steel: #7c8594;
+  --color-steel-dark: #3b4250;
+  --color-beam: #f7b400;
+  --color-beam-shine: #ffe27a;
+  --color-beam-edge: #5a4310;
+  --color-white: #ffffff;
+  --color-letterbox: #0b1a2b;
+
+  --font-display: "Arial Rounded MT Bold", "Nunito", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Avenir Next", "Segoe UI", "Helvetica Neue", Arial, system-ui, sans-serif;
+
+  --radius-s: 10px;
+  --radius-m: 18px;
+  --radius-l: 28px;
+  --shadow-card: 0 12px 28px rgba(6, 24, 48, 0.28);
+  --shadow-soft: 0 6px 14px rgba(6, 24, 48, 0.2);
+
+  --ease-out: cubic-bezier(0.22, 0.9, 0.3, 1);
+  --ease-mech: cubic-bezier(0.45, 0.02, 0.2, 1);
+  --ease-back: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-in: cubic-bezier(0.5, 0, 0.9, 0.4);
+
+  --t-micro: 120ms;
+  --t-fast: 220ms;
+  --t-mech: 420ms;
+  --t-slow: 720ms;
+
+  --space-1: 8px;
+  --space-2: 16px;
+  --space-3: 24px;
+  --space-4: 40px;
+  --safe: 40px;
+
+  /* Gameplay layout (stage space). Keep in sync with js/data/layout.js. */
+  --platform-left: 310px;
+  --platform-top: 890px;
+  --platform-width: 1300px;
+  --controls-side: 40px;
+  --controls-bottom: 36px;
+  --joystick-size: 236px;
+  --action-size: 214px;
+  --claw-height: 160px;
+
+  --steel-edge: #272e38;
+  --steel-body: #6c7786;
+  --steel-light: #a9b4c1;
+}

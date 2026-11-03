@@ -1,0 +1,394 @@
+/* Motion hierarchy: micro (fast) / mechanical (moderate) / reward (longer) / collapse (readable). */
+
+@keyframes camera-shake {
+  0% { transform: translate(0, 0); }
+  15% { transform: translate(var(--shake-px, 6px), calc(var(--shake-px, 6px) * -0.6)); }
+  30% { transform: translate(calc(var(--shake-px, 6px) * -0.9), calc(var(--shake-px, 6px) * 0.5)); }
+  45% { transform: translate(calc(var(--shake-px, 6px) * 0.7), calc(var(--shake-px, 6px) * 0.3)); }
+  60% { transform: translate(calc(var(--shake-px, 6px) * -0.5), calc(var(--shake-px, 6px) * -0.3)); }
+  80% { transform: translate(calc(var(--shake-px, 6px) * 0.2), 0); }
+  100% { transform: translate(0, 0); }
+}
+
+/* ----- Banners, plates, cards ----- */
+@keyframes banner-enter {
+  0% { opacity: 0; transform: translateY(-26px) scale(0.96); }
+  60% { opacity: 1; transform: translateY(4px) scale(1.02); }
+  80% { transform: translateY(-2px) scale(1); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes banner-swap {
+  0% { opacity: 1; transform: translateY(0); }
+  35% { opacity: 0; transform: translateY(-14px); }
+  36% { opacity: 0; transform: translateY(18px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+@keyframes banner-push {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.03); }
+  100% { transform: scale(1); }
+}
+@keyframes dock-enter-left {
+  0% { opacity: 0; transform: translateX(-80px) rotate(-8deg); }
+  70% { opacity: 1; transform: translateX(8px) rotate(1deg); }
+  100% { transform: translateX(0) rotate(0); }
+}
+@keyframes dock-enter-right {
+  0% { opacity: 0; transform: translateX(80px) rotate(8deg); }
+  70% { opacity: 1; transform: translateX(-8px) rotate(-1deg); }
+  100% { transform: translateX(0) rotate(0); }
+}
+@keyframes bubble-enter {
+  0% { opacity: 0; transform: scale(0.85) translateY(10px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes bubble-leave {
+  0% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0.92) translateY(8px); }
+}
+@keyframes card-leave {
+  0% { opacity: 1; transform: translateX(0); }
+  100% { opacity: 0; transform: translateX(-60px); }
+}
+@keyframes cta-enter {
+  0% { opacity: 0; transform: scale(0.8) translateY(14px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes button-ready {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.1); }
+  65% { transform: scale(0.97); }
+  100% { transform: scale(1); }
+}
+@keyframes button-denied {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-6px); }
+  50% { transform: translateX(6px); }
+  75% { transform: translateX(-3px); }
+}
+@keyframes star-pop {
+  0% { opacity: 0; transform: scale(0.3) rotate(-20deg); }
+  70% { opacity: 1; transform: scale(1.15) rotate(6deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0); }
+}
+
+/* ----- Title sign ----- */
+@keyframes letter-hop {
+  0% { transform: translateY(0) scale(1, 1); }
+  30% { transform: translateY(-34px) scale(0.92, 1.12); }
+  60% { transform: translateY(4px) scale(1.12, 0.88); }
+  80% { transform: translateY(-4px) scale(0.98, 1.02); }
+  100% { transform: translateY(0) scale(1, 1); }
+}
+/* ----- Crane & claw ----- */
+@keyframes motor-hum {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(0.8px); }
+}
+@keyframes claw-squeeze {
+  0% { transform: scale(1, 1); }
+  50% { transform: scale(1.04, 0.93); }
+  100% { transform: scale(1, 1); }
+}
+@keyframes claw-react {
+  0% { transform: rotate(0); }
+  20% { transform: rotate(-9deg) translateY(-6px); }
+  45% { transform: rotate(7deg); }
+  70% { transform: rotate(-3deg); }
+  100% { transform: rotate(0); }
+}
+@keyframes claw-relief {
+  0% { transform: translateY(0); }
+  35% { transform: translateY(-10px) scale(1.02, 0.98); }
+  70% { transform: translateY(3px); }
+  100% { transform: translateY(0); }
+}
+
+/* ----- Options & platform ----- */
+@keyframes option-drop-in {
+  0% { opacity: 0; transform: translateY(-48px); }
+  65% { opacity: 1; transform: translateY(6px); }
+  85% { transform: translateY(-3px); }
+  100% { transform: translateY(0); }
+}
+@keyframes option-slide-out {
+  0% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(70px); }
+}
+@keyframes option-focus {
+  0% { transform: translateY(0) scale(1); }
+  40% { transform: translateY(-12px) scale(1.03); }
+  100% { transform: translateY(0) scale(1); }
+}
+@keyframes option-settle {
+  0% { transform: translateY(-6px); }
+  60% { transform: translateY(3px); }
+  100% { transform: translateY(0); }
+}
+@keyframes platform-nudge {
+  0% { transform: translateY(0); }
+  35% { transform: translateY(5px); }
+  70% { transform: translateY(-2px); }
+  100% { transform: translateY(0); }
+}
+@keyframes platform-enter {
+  0% { opacity: 0; transform: translateY(80px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* ----- Triangle outcomes ----- */
+@keyframes triangle-seat {
+  0% { transform: scale(1.05); }
+  55% { transform: scale(0.97); }
+  100% { transform: scale(1); }
+}
+@keyframes triangle-dissolve {
+  0% { opacity: 1; filter: brightness(1); transform: scale(1); }
+  100% { opacity: 0; filter: brightness(1.8); transform: scale(0.94); }
+}
+@keyframes triangle-reject {
+  0% { transform: translateX(0) rotate(0); }
+  20% { transform: translateX(-10px) rotate(-2deg); }
+  40% { transform: translateX(9px) rotate(2deg); }
+  60% { transform: translateX(-6px) rotate(-1deg); }
+  80% { transform: translateX(4px); }
+  100% { transform: translateX(0); }
+}
+@keyframes triangle-fall {
+  0% { opacity: 1; transform: translateY(0) rotate(0); }
+  80% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(460px) rotate(34deg); }
+}
+
+/* ----- Truss ----- */
+@keyframes truss-warning {
+  0%, 100% { transform: translate(0, 0); }
+  10% { transform: translate(1.5px, -1px); }
+  20% { transform: translate(-1.5px, 1px); }
+  30% { transform: translate(1px, 1px); }
+  40% { transform: translate(-1px, -1.5px); }
+  50% { transform: translate(2px, 0); }
+  60% { transform: translate(-2px, 1px); }
+  70% { transform: translate(1.5px, -1px); }
+  80% { transform: translate(-1px, 0.5px); }
+  90% { transform: translate(1px, -0.5px); }
+}
+@keyframes truss-sway {
+  0% { transform: rotate(0); }
+  18% { transform: rotate(1.2deg); }
+  36% { transform: rotate(-1.8deg); }
+  54% { transform: rotate(2.6deg); }
+  72% { transform: rotate(-3.4deg); }
+  90% { transform: rotate(3.6deg); }
+  100% { transform: rotate(-2.4deg); }
+}
+@keyframes member-fall {
+  0% { transform: translate(0, 0) rotate(0); opacity: 1; }
+  20% { transform: translate(0, 6px) rotate(calc(var(--fall-rot, 20deg) * 0.15)); }
+  80% { opacity: 1; }
+  100% { transform: translate(var(--fall-dx, 0px), 560px) rotate(var(--fall-rot, 20deg)); opacity: 0; }
+}
+@keyframes node-fall {
+  0% { transform: translate(0, 0) scale(1); opacity: 1; }
+  80% { opacity: 1; }
+  100% { transform: translate(var(--fall-dx, 0px), 560px) scale(0.8); opacity: 0; }
+}
+@keyframes truss-settle {
+  0% { transform: translateY(-4px); }
+  45% { transform: translateY(3px); }
+  75% { transform: translateY(-1px); }
+  100% { transform: translateY(0); }
+}
+@keyframes truss-proud {
+  0% { transform: translateY(0) scale(1); }
+  35% { transform: translateY(-8px) scale(1.012); }
+  70% { transform: translateY(2px) scale(1); }
+  100% { transform: translateY(0) scale(1); }
+}
+@keyframes pillar-impact {
+  0% { transform: translateY(0); }
+  40% { transform: translateY(4px); }
+  100% { transform: translateY(0); }
+}
+@keyframes pillar-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-3px); }
+  40% { transform: translateX(3px); }
+  60% { transform: translateX(-2px); }
+  80% { transform: translateX(2px); }
+}
+/* ----- Water ----- */
+@keyframes glint-twinkle {
+  0%, 55%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(0.4) rotate(0deg); }
+  68% { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(22deg); }
+  82% { opacity: 0; transform: translate(-50%, -50%) scale(0.6) rotate(40deg); }
+}
+@keyframes reflection-wobble {
+  0%, 100% { transform: scaleY(-0.6) skewX(0deg); }
+  50% { transform: scaleY(-0.62) skewX(2.5deg); }
+}
+
+/* ----- FX ----- */
+@keyframes spark-burst {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.3) rotate(0); }
+  25% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.25) rotate(25deg); }
+}
+@keyframes dust-puff {
+  0% { opacity: 0.85; transform: translate(-50%, -50%) scale(0.4); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(2.1); }
+}
+@keyframes ripple-grow {
+  0% { opacity: 0.95; transform: translate(-50%, -50%) scale(0.45); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.7); }
+}
+@keyframes drop-arc {
+  0% { opacity: 1; transform: translate(0, 0); }
+  50% { transform: translate(var(--dx, 20px), -60px); }
+  100% { opacity: 0; transform: translate(calc(var(--dx, 20px) * 2), 30px); }
+}
+@keyframes confetti-fall {
+  0% { opacity: 1; transform: translateY(-40px) rotate(0); }
+  100% { opacity: 1; transform: translateY(1160px) rotate(720deg); }
+}
+@keyframes ding-pop {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
+  40% { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
+  100% { opacity: 0; transform: translate(-50%, -70%) scale(1); }
+}
+
+/* ----- Ambient ----- */
+/* ----- Kit crane, hotspot, builder ----- */
+@keyframes beacon-flash { 0% { opacity: 1; } 100% { opacity: 0.15; } }
+@keyframes joystick-invite {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-6px) scale(1.04); }
+}
+@keyframes glow-blink { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
+@keyframes builder-hop {
+  0%, 100% { transform: translateY(0) scale(1, 1); }
+  30% { transform: translateY(-34px) scale(0.96, 1.05); }
+  55% { transform: translateY(0) scale(1.05, 0.95); }
+  75% { transform: translateY(-10px); }
+}
+@keyframes builder-shake {
+  0%, 100% { transform: translateX(0) rotate(0); }
+  20% { transform: translateX(-8px) rotate(-3deg); }
+  40% { transform: translateX(8px) rotate(3deg); }
+  60% { transform: translateX(-5px) rotate(-2deg); }
+  80% { transform: translateX(4px) rotate(1deg); }
+}
+@keyframes fresh-paint { 0% { stroke: #ffffff; } 100% { stroke: #ffcb3a; } }
+
+@keyframes start-breathe {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); }
+  50% { transform: translate(-50%, -50%) scale(1.06); }
+}
+@keyframes start-leave {
+  0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(0.7); }
+}
+
+@keyframes builder-hop-cab {
+  0%, 100% { transform: translateY(0); }
+  30% { transform: translateY(-10px); }
+  55% { transform: translateY(2px); }
+  75% { transform: translateY(-4px); }
+}
+
+@keyframes halo-pulse {
+  0%, 100% { transform: scale(0.96); opacity: 0.7; }
+  50% { transform: scale(1.06); opacity: 1; }
+}
+
+@keyframes card-leave-right {
+  0% { opacity: 1; transform: translateX(0); }
+  100% { opacity: 0; transform: translateX(60px); }
+}
+
+/* ----- Hotspot checkpoint ----- */
+@keyframes pad-pulse {
+  0%, 100% { transform: scaleX(0.94); opacity: 0.8; }
+  50% { transform: scaleX(1.04); opacity: 1; }
+}
+@keyframes column-breathe {
+  0%, 100% { transform: scaleY(0.95); opacity: 0.85; }
+  50% { transform: scaleY(1.03); opacity: 1; }
+}
+@keyframes spark-rise {
+  0% { opacity: 0; transform: translateY(0) scale(0.6); }
+  20% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-150px) scale(1); }
+}
+@keyframes chevron-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(16px); }
+}
+@keyframes chevron-chase {
+  0%, 100% { opacity: 0.55; }
+  40% { opacity: 1; }
+}
+@keyframes chevron-lock {
+  0%, 100% { transform: translateY(20px) scale(1); }
+  50% { transform: translateY(20px) scale(1.14); }
+}
+
+/* ----- Colour plates ----- */
+@keyframes plate-pop {
+  0% { transform: scale(0.6); }
+  70% { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+@keyframes plate-shine {
+  0% { fill-opacity: 0.82; }
+  100% { fill-opacity: 1; }
+}
+
+@keyframes arrow-invite {
+  0%, 100% { fill: #f3f5fa; stroke: #f3f5fa; }
+  50% { fill: #ffd34a; stroke: #ffd34a; }
+}
+
+@keyframes puff-burst {
+  0% { opacity: 0.95; transform: translate(0, 0) scale(0.3); }
+  45% { opacity: 1; transform: translate(calc(var(--dx) * 0.8 + var(--drift, 0px)), calc(var(--dy) * 0.8)) scale(1.1); }
+  100% { opacity: 0; transform: translate(calc(var(--dx) * 1.3 + var(--drift, 0px)), calc(var(--dy) * 1.3 - 14px)) scale(1.35); }
+}
+
+/* ----- Water: the plane's texture rolls toward the viewer (positive y in plane space) ----- */
+@keyframes water-roll-a {
+  0% { transform: translate3d(0, 0, 0); }
+  100% { transform: translate3d(-300px, 240px, 0); }
+}
+@keyframes water-roll-b {
+  0% { transform: translate3d(0, 0, 0); }
+  100% { transform: translate3d(470px, 190px, 0); }
+}
+@keyframes water-crests {
+  0% { transform: translate3d(0, 0, 0); }
+  100% { transform: translate3d(0, 200px, 0); }
+}
+@keyframes water-sheen {
+  0% { transform: translateX(0); opacity: 0; }
+  20% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { transform: translateX(350%); opacity: 0; }
+}
+
+@keyframes frame-glow {
+  0%, 100% { filter: drop-shadow(0 0 3px rgba(255, 250, 210, 0.9)) drop-shadow(0 0 9px rgba(255, 214, 60, 0.8)) drop-shadow(0 10px 6px rgba(0, 0, 0, 0.3)); }
+  50% { filter: drop-shadow(0 0 5px rgba(255, 250, 210, 1)) drop-shadow(0 0 16px rgba(255, 214, 60, 1)) drop-shadow(0 10px 6px rgba(0, 0, 0, 0.3)); }
+}
+
+/* ----- Completion sign ----- */
+@keyframes sign-drop {
+  0% { opacity: 0; transform: translateY(-420px) rotate(0deg); }
+  45% { opacity: 1; transform: translateY(16px) rotate(2.5deg); }
+  65% { transform: translateY(-6px) rotate(-1.6deg); }
+  82% { transform: translateY(2px) rotate(0.7deg); }
+  100% { opacity: 1; transform: translateY(0) rotate(0deg); }
+}
+@keyframes pennant-sway {
+  0%, 100% { transform: rotate(-5deg); }
+  50% { transform: rotate(5deg); }
+}
