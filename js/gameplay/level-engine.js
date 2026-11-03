@@ -152,15 +152,9 @@ export function createLevelEngine({ gameState, crane, claw, triangles, bridge, p
     syncUi();
   }
 
-  /**
-   * How low to lower the frame: its centre at the centre of the place it fits, as far as the hook
-   * can reach, and never below the road.
-   */
-  function dropGripY(option, socket) {
-    const centreToGrip = option.centroid[1] - option.grabY;
-    const highest = CRANE_LAYOUT.restY + CRANE_LAYOUT.gripOffsetY;
-    const lowest = BRIDGE_GEOMETRY.deckY - (option.baseOffset - option.grabY);
-    return Math.min(lowest, Math.max(highest, socket.y - centreToGrip));
+  /** Lower the frame until its base stands on the road, inside the hotspot. */
+  function dropGripY(option) {
+    return BRIDGE_GEOMETRY.deckY - (option.baseOffset - option.grabY);
   }
 
   async function placeOnBridge(option) {
@@ -169,7 +163,7 @@ export function createLevelEngine({ gameState, crane, claw, triangles, bridge, p
     const socket = placement.activeStage.socket;
     camera.focus({ x: socket.x, y: socket.y, scale: 1.28, pull: 0.55, duration: 900, signal: scope.signal }).catch(() => {});
     const released = await crane.lowerAndRelease(
-      { craneX: placement.craneXForSocket(option), gripY: dropGripY(option, socket) },
+      { craneX: placement.craneXForSocket(option), gripY: dropGripY(option) },
       { signal: scope.signal }
     );
     triangles.placeInWorld(option, released.left, released.top);

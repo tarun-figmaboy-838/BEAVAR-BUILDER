@@ -231,13 +231,10 @@
 }
 .completion__headline { position: relative; margin: 0; font-family: var(--font-display); font-size: 86px; line-height: 1.04; white-space: nowrap; filter: drop-shadow(0 7px 0 #2a1605) drop-shadow(0 12px 10px rgba(0, 0, 0, 0.35)); }
 .completion__headline .cartoon-letter {
-  color: transparent;
-  background: linear-gradient(180deg, #fffbe0 0%, #ffe066 38%, #ffb81c 62%, #f08a00 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-stroke: 8px #2a1605;
+  color: #ffd84a;
+  -webkit-text-stroke: 9px #2a1605;
   paint-order: stroke fill;
-  text-shadow: none;
+  text-shadow: 0 -3px 0 #fff3b0, 0 5px 0 #e98a00;
 }
 .completion__sign.is-entering .cartoon-letter { animation: letter-hop 560ms var(--ease-back) both; animation-delay: calc(500ms + var(--i) * 50ms); }
 .completion__subline { position: relative; margin: 10px 0 0; font-family: var(--font-display); font-size: 34px; color: #fff; -webkit-text-stroke: 5px #2a1605; paint-order: stroke fill; filter: drop-shadow(0 3px 0 #2a1605); }
