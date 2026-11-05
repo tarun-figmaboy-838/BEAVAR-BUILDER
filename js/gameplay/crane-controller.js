@@ -41,45 +41,33 @@ function sprite(className, src, style = {}) {
   return image;
 }
 
-/** Tower = top (jib root + cab) + repeated mast sections + base, so the jib can run along the top edge. */
-function buildTower(tower) {
-  const element = document.createElement('div');
-  element.className = 'crane-tower';
-  Object.assign(element.style, { left: `${tower.left}px`, top: `${tower.top}px`, width: `${tower.width}px` });
-  const mast = document.createElement('div');
-  mast.className = 'crane-tower__part crane-tower__mast';
-  Object.assign(mast.style, {
-    height: `${(tower.mastHeight * tower.mastSections).toFixed(2)}px`,
-    backgroundImage: `url("${tower.mastSrc}")`,
-    backgroundSize: `${tower.width}px ${tower.mastHeight}px`,
-  });
-  element.append(
-    sprite('crane-tower__part', tower.topSrc, { height: `${tower.topHeight}px` }),
-    mast,
-    sprite('crane-tower__part', tower.baseSrc, { height: `${tower.baseHeight}px` }),
-  );
-  return element;
-}
-
-/** The kit's tower crane: tower + cabin + base on the left quay, jib tiled across, tip at the far end. */
+/** Raster crane kit, recomposed around a larger three-quarter operator cabin. */
 function buildStructure() {
-  const { tower, jibTile, jibStartX, jibTiles, jibTip } = CRANE_RIG;
+  const { tower, jibTile, jibTip, cabin, cabinMount } = CRANE_RIG;
+  const mount = document.createElement('span');
+  mount.className = 'crane-cabin-mount';
+  Object.assign(mount.style, { left: `${cabinMount.left}px`, top: `${cabinMount.top}px`, width: `${cabinMount.width}px`, height: `${cabinMount.height}px` });
   const structure = document.createElement('div');
   structure.className = 'crane-structure';
+  const mast = document.createElement('div');
+  mast.className = 'crane-tower__mast';
+  Object.assign(mast.style, {
+    position: 'absolute', left: '-20px', top: '70px', width: '312.8px', height: '552px',
+    backgroundImage: `url("${tower.mastSrc}")`, backgroundSize: '312.8px 42.84px',
+  });
   const jib = document.createElement('div');
   jib.className = 'crane-jib';
   Object.assign(jib.style, {
-    left: `${jibStartX}px`,
-    top: `${tower.top}px`,
-    width: `${jibTile.width * jibTiles}px`,
-    height: `${jibTile.height}px`,
-    backgroundImage: `url("${jibTile.src}")`,
-    backgroundSize: `${jibTile.width}px ${jibTile.height}px`,
+    left: '0px', top: '15.5px', width: '1806px', height: '82px',
+    backgroundImage: `url("${jibTile.src}")`, backgroundSize: '129px 82px',
   });
-  structure.append(
+  structure.append(mast,
+    // The base stands on the quay walkway left of the bridge (the deck's end cap starts at x 168).
+    sprite('crane-base', tower.baseSrc, { position: 'absolute', left: '5px', top: '620.5px', width: '160px', height: '60.5px' }),
     jib,
-    sprite('crane-jib-tip', jibTip.src, { left: `${jibStartX + jibTile.width * jibTiles}px`, top: `${tower.top}px`, width: `${jibTip.width}px`, height: `${jibTip.height}px` }),
-    buildTower(tower),
+    sprite('crane-jib-tip', jibTip.src, { left: '1806px', top: '15.5px', width: '119px', height: '82px' }),
+    mount,
+    sprite('crane-cabin', cabin.src, { position: 'absolute', left: `${cabin.left}px`, top: `${cabin.top}px`, width: `${cabin.width}px`, height: `${cabin.height}px` }),
   );
   return structure;
 }
@@ -105,7 +93,8 @@ export function buildCraneDom(craneEl, platformEl) {
   const beacon = document.createElement('span');
   beacon.className = 'cab-beacon';
   Object.assign(beacon.style, { left: `${cabBeacon.left}px`, top: `${cabBeacon.top}px`, width: `${cabBeacon.size}px`, height: `${cabBeacon.size}px` });
-  beacon.innerHTML = `<img class="cab-beacon__light cab-beacon__light--orange" src="assets/images/crane-kit/beacon-orange.png" alt="" draggable="false"><img class="cab-beacon__light cab-beacon__light--red" src="assets/images/crane-kit/beacon-red.png" alt="" draggable="false">`;
+  // Glows over the beacon painted on the cab roof (no second beacon picture on top of it).
+  beacon.innerHTML = '<span class="cab-beacon__light cab-beacon__light--orange"></span><span class="cab-beacon__light cab-beacon__light--red"></span>';
   craneEl.append(rig, beacon);
   buildClawFrames(rig.querySelector('.claw'));
   const shadow = document.createElement('div');

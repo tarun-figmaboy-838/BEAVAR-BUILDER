@@ -1,23 +1,29 @@
-import { prefersReducedMotion } from '../core/motion.js';
 import { CRANE_RIG } from '../data/layout.js';
+import { prefersReducedMotion } from '../core/motion.js';
 
-/**
- * The beaver builder (assets/images/characters/builder, sliced from the supplied beaver sheet) is the crane operator:
- * he sits in the cab window, behind the glass. Whole-frame sprite animation only: idle with blinks,
- * talking while a line plays, cheering, worrying.
- */
-const frameSrc = (index) => `assets/images/characters/builder/beaver-${String(index).padStart(2, '0')}.png`;
-
-const POSES = Object.freeze({
-  idle: { frames: [0, 1, 2, 1], ms: 460 },
-  blink: { frames: [3, 4, 3], ms: 70 },
-  talk: { frames: [16, 18, 17, 19, 21, 20, 22, 19], ms: 120 },
-  point: { frames: [27, 28, 29, 28], ms: 170 },
-  cheer: { frames: [35, 36, 37, 36], ms: 130 },
-  worry: { frames: [4, 3, 4, 13], ms: 160 },
-});
-
-export const BUILDER_FRAME_SOURCES = [...new Set(Object.values(POSES).flatMap((pose) => pose.frames))].map(frameSrc);
+// Codex's polished operator: one 2 x 2 atlas per pose family, all framed alike (whole frames, same
+// scale, the beaver seated at his joystick box), so poses switch without the beaver jumping.
+export const BUILDER_FRAME_SOURCES = [
+  'assets/images/characters/operator/beaver-idle-atlas.png',
+  'assets/images/characters/operator/beaver-talk-atlas.png',
+  'assets/images/characters/operator/beaver-happy-atlas.png',
+  'assets/images/characters/operator/beaver-sad-atlas.png',
+  'assets/images/characters/operator/beaver-drive-atlas.png',
+  'assets/images/characters/operator/beaver-actions-atlas.png',
+];
+const POSES = {
+  idle: { sheet: 0, frames: [0, 1, 2, 1, 0], durations: [3200, 70, 90, 70, 1200] },
+  talk: { sheet: 1, frames: [0, 1, 2, 3, 1, 3], ms: 140 },
+  cheer: { sheet: 2, frames: [0, 1, 2, 3, 1, 0], ms: 260, once: true },
+  worry: { sheet: 3, frames: [0, 1, 2, 1, 3], ms: 300, once: true },
+  point: { sheet: 2, frames: [0, 1, 3, 0], ms: 300, once: true },
+  drive: { sheet: 4, frames: [0], ms: 200 },
+  pick: { sheet: 5, frames: [0], ms: 200 },
+  carry: { sheet: 5, frames: [1], ms: 200 },
+  drop: { sheet: 5, frames: [2], ms: 200 },
+  complete: { sheet: 5, frames: [3], ms: 200 },
+};
+const REACTIONS = new Set(['talk', 'cheer', 'worry', 'point']);
 
 export function createBuilderCharacter({ hostEl }) {
   const { cabWindow } = CRANE_RIG;
@@ -26,91 +32,114 @@ export function createBuilderCharacter({ hostEl }) {
   root.hidden = true;
   root.setAttribute('aria-hidden', 'true');
   Object.assign(root.style, { left: `${cabWindow.left}px`, top: `${cabWindow.top}px`, width: `${cabWindow.width}px`, height: `${cabWindow.height}px` });
-  root.innerHTML = '<div class="builder__body"><img class="builder__frame" alt="" draggable="false"></div><span class="builder__glass"></span>';
+  // Two frame layers: each new frame fades in over the last one, so poses change smoothly, never snap.
+  root.innerHTML = '<div class="builder__body"><div class="builder__frame is-on"></div><div class="builder__frame"></div></div>';
   hostEl.appendChild(root);
-  const body = root.querySelector('.builder__body');
-  const image = root.querySelector('.builder__frame');
-
+  const frames = [...root.querySelectorAll('.builder__frame')];
+  let front = 0;
+  let shownKey = '';
+  let underTimer = 0;
+  const FADE_MS = 110;
   let pose = 'idle';
-  let frameIndex = 0;
-  let timer = 0;
+  let interval = 0;
   let returnTimer = 0;
-  let nextBlinkAt = performance.now() + 2500;
-
-  function show(frame) {
-    const src = frameSrc(frame);
-    if (image.getAttribute('src') !== src) image.setAttribute('src', src);
+  let index = 0;
+  let revision = 0;
+  let axis = { x: 0, y: 0 };
+  let machinePose = 'idle';
+  let completed = false;
+  const driving = () => Math.hypot(axis.x, axis.y) > 0.05;
+  const restingPose = () => completed ? 'complete' : driving() ? 'drive' : machinePose;
+  function paint(layer, sheet, number) {
+    layer.style.backgroundImage = `url("${BUILDER_FRAME_SOURCES[sheet]}")`;
+    layer.style.backgroundPosition = `${(number % 2) * 100}% ${Math.floor(number / 2) * 100}%`;
   }
-
-  function tick() {
-    const definition = POSES[pose];
-    frameIndex = (frameIndex + 1) % definition.frames.length;
-    if (pose === 'idle' && performance.now() > nextBlinkAt) {
-      nextBlinkAt = performance.now() + 2200 + Math.random() * 2400;
-      setPose('blink', { thenIdleAfter: 230 });
-      return;
+  function show(number) {
+    const sheet = POSES[pose].sheet;
+    const key = `${sheet}:${number}`;
+    if (key !== shownKey) {
+      shownKey = key;
+      if (root.hidden || prefersReducedMotion()) {
+        paint(frames[front], sheet, number);
+      } else {
+        const next = 1 - front;
+        clearTimeout(underTimer);
+        frames[next].classList.remove('is-under');
+        paint(frames[next], sheet, number);
+        frames[front].classList.remove('is-on');
+        frames[front].classList.add('is-under');       // stays solid underneath while the new frame fades in
+        frames[next].classList.add('is-on');
+        const previous = frames[front];
+        underTimer = setTimeout(() => previous.classList.remove('is-under'), FADE_MS + 30);
+        front = next;
+      }
     }
-    show(definition.frames[frameIndex]);
+    root.dataset.facing = ['idle', 'drive', 'pick', 'carry', 'drop'].includes(pose) ? 'controls' : 'user';
+    root.dataset.frame = String(number);
+    root.dataset.sheet = String(sheet);
   }
-
+  function driveFrame() {
+    if (Math.abs(axis.y) > Math.abs(axis.x)) return axis.y < 0 ? 2 : 1;
+    return axis.x < -.12 ? 1 : axis.x > .12 ? 3 : 0;
+  }
+  function advance() {
+    const definition = POSES[pose];
+    if (root.hidden || document.hidden || prefersReducedMotion() || definition.frames.length < 2) return;
+    interval = setTimeout(() => {
+      if (definition.once && index === definition.frames.length - 1) return;
+      index = (index + 1) % definition.frames.length;
+      show(definition.frames[index]);
+      advance();
+    }, definition.durations?.[index] ?? definition.ms);
+  }
   function setPose(name, { thenIdleAfter = 0 } = {}) {
+    clearTimeout(interval);
     clearTimeout(returnTimer);
+    interval = 0;
+    revision += 1;
     pose = POSES[name] ? name : 'idle';
-    frameIndex = 0;
-    show(POSES[pose].frames[0]);
-    clearInterval(timer);
-    if (!prefersReducedMotion() || pose === 'talk') timer = setInterval(tick, POSES[pose].ms);
-    if (thenIdleAfter) returnTimer = setTimeout(() => setPose('idle'), thenIdleAfter);
+    root.dataset.pose = pose;
+    index = 0;
+    show(pose === 'drive' ? driveFrame() : POSES[pose].frames[0]);
+    advance();
+    if (thenIdleAfter) returnTimer = setTimeout(() => setPose(restingPose()), thenIdleAfter);
   }
 
-  function bounce(className, ms) {
-    body.classList.remove(className);
-    void body.offsetWidth;
-    body.classList.add(className);
-    setTimeout(() => body.classList.remove(className), ms);
-  }
-
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { clearTimeout(interval); interval = 0; }
+    else if (!root.hidden) setPose(restingPose());
+  });
   return {
-    /** The operator is always in the cab; the camera decides how close we are. */
-    show() {
-      root.hidden = false;
-      if (!timer) setPose('idle');
-    },
-    /** Centre of the cab window in stage coordinates (camera focus target, bubble anchor). */
-    get cabCenter() {
-      return { x: cabWindow.left + cabWindow.width / 2, y: cabWindow.top + cabWindow.height / 2 };
-    },
-    get cabWindow() {
-      return cabWindow;
-    },
-    hide() {
-      root.hidden = true;
-      clearInterval(timer);
-      timer = 0;
-    },
+    show() { root.hidden = false; setPose(restingPose()); },
+    hide() { root.hidden = true; axis = { x: 0, y: 0 }; setPose('idle'); },
+    get cabCenter() { return { x: cabWindow.left + cabWindow.width / 2, y: cabWindow.top + cabWindow.height / 2 }; },
+    get cabWindow() { return cabWindow; },
+    get bubbleAnchor() { return { x: CRANE_RIG.cabin.left + CRANE_RIG.cabin.width, y: cabWindow.top }; },
     setPose,
-    /** Talk until `finished` resolves (the narration's own clock), then settle back to idle. */
-    async talkUntil(finished) {
-      setPose('talk');
-      try {
-        await finished;
-      } finally {
-        if (pose === 'talk') setPose('idle');
+    setGameState(state) {
+      completed = state.completed;
+      machinePose = ['lowering', 'grabbing'].includes(state.craneState) ? 'pick'
+        : ['carrying', 'hoveringTarget'].includes(state.craneState) ? 'carry'
+        : ['dropping', 'placing', 'returning'].includes(state.craneState) ? 'drop' : 'idle';
+      if (!REACTIONS.has(pose) && restingPose() !== pose) setPose(restingPose());
+    },
+    setAxis(next) {
+      axis = next;
+      root.dataset.lean = axis.x < -0.12 ? 'left' : axis.x > 0.12 ? 'right' : axis.y < -0.3 ? 'up' : axis.y > 0.3 ? 'down' : '';
+      if (!REACTIONS.has(pose)) {
+        const nextPose = restingPose();
+        if (nextPose !== pose) setPose(nextPose);
+        else if (pose === 'drive') show(driveFrame());
       }
     },
-    cheer() {
-      setPose('cheer', { thenIdleAfter: 1700 });
-      bounce('is-hopping', 900);
+    async talkUntil(finished) {
+      setPose('talk');
+      const token = revision;
+      try { await finished; } finally { if (token === revision) setPose(restingPose()); }
     },
-    worry() {
-      setPose('worry', { thenIdleAfter: 1500 });
-      bounce('is-shaking', 700);
-    },
-    point() {
-      setPose('point', { thenIdleAfter: 1400 });
-    },
-    get element() {
-      return root;
-    },
+    cheer() { setPose('cheer', { thenIdleAfter: 2300 }); },
+    worry() { setPose('worry', { thenIdleAfter: 2100 }); },
+    point() { setPose('point', { thenIdleAfter: 1600 }); },
+    get element() { return root; },
   };
 }

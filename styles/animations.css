@@ -255,6 +255,7 @@
 /* ----- Ambient ----- */
 /* ----- Kit crane, hotspot, builder ----- */
 @keyframes beacon-flash { 0% { opacity: 1; } 100% { opacity: 0.15; } }
+@keyframes beacon-glow { 0% { opacity: 0.15; transform: scale(0.85); } 100% { opacity: 1; transform: scale(1.08); } }
 @keyframes joystick-invite {
   0%, 100% { transform: translateY(0) scale(1); }
   50% { transform: translateY(-6px) scale(1.04); }

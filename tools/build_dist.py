@@ -174,10 +174,8 @@ def main():
     bundle = read("js/game.bundle.js")
     css = "\n".join(read(f"styles/{name}.css") for name in STYLES)
 
-    # Every image the game references, plus the beaver frames (built from a template in code).
+    # Raster scenery, crane parts, cabin, and the seated operator sprite atlas.
     images = set(PNG_RE.findall(html + bundle + css.replace("../assets/", "assets/")))
-    builder_dir = "assets/images/characters/builder"
-    images |= {f"{builder_dir}/{name}" for name in os.listdir(os.path.join(ROOT, builder_dir)) if name.endswith(".png")}
     missing = [path for path in images if not os.path.isfile(os.path.join(ROOT, path))]
     if missing:
         raise SystemExit(f"referenced images not found: {missing}")
@@ -203,11 +201,6 @@ def main():
 
     # Point every reference at the compressed files.
     webp = lambda text: PNG_RE.sub(lambda m: m.group(0)[:-4] + ".webp", text)
-    # The beaver frame paths are a template literal (`.../beaver-${nn}.png`), which PNG_RE cannot see.
-    frame_template = "padStart(2, '0')}.png`"
-    if frame_template not in bundle:
-        raise SystemExit("beaver frame path template not found in the bundle; update build_dist.py")
-    bundle = bundle.replace(frame_template, "padStart(2, '0')}.webp`")
     write("js/game.bundle.js", webp(bundle))
     write("styles/app.css", minify_css(webp(css)))
 

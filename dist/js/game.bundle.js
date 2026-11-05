@@ -49,10 +49,18 @@ const CRANE_RIG = Object.freeze({
   jibTiles: 13,
   jibTip: Object.freeze({ src: 'assets/images/crane-kit/jib-tip.webp', width: 119, height: 109 }),
   trolley: Object.freeze({ src: 'assets/images/crane-kit/trolley.webp', width: 233, height: 67, top: 8.5 }),
-  /** The cab's glass inside the tower sprite (measured), where the beaver operator sits. */
-  cabWindow: Object.freeze({ left: 58, top: 211.5, width: 93, height: 92 }),
-  /** The warning light painted on the cab roof; a lit copy flashes over it. */
-  cabBeacon: Object.freeze({ left: 42, top: 121.5, size: 62 }),
+  /**
+   * The operator cabin (art 1312 x 1199, shown at 300 x 274), hung under the jib on a steel mount, its
+   * dark back plate over the mast lattice and its roof beacon clear of the jib. `operator-cabin-clear`
+   * is the supplied cabin with its dashboard painted out: the operator's own joystick box is the control.
+   */
+  cabin: Object.freeze({ src: 'assets/images/crane-v2/operator-cabin-clear.webp', left: 10, top: 94, width: 300, height: 274 }),
+  /** Steel mount from the jib down to the cabin's back plate. */
+  cabinMount: Object.freeze({ left: 44, top: 90, width: 34, height: 44 }),
+  /** The seated operator (2 x 2 atlas cells): back against the seat back, feet and joystick box on the cab floor. */
+  cabWindow: Object.freeze({ left: 85.5, top: 181.6, width: 144, height: 144 }),
+  /** A glow centred on the beacon painted on the cab roof; it pulses while the crane moves. */
+  cabBeacon: Object.freeze({ left: 97.6, top: 74.7, size: 90 }),
   claw: Object.freeze({
     states: Object.freeze([
       Object.freeze({ id: 'open', src: 'assets/images/crane-kit/claw-open.webp', width: 124, height: 191 }),
@@ -1613,6 +1621,7 @@ function createInputManager({ controlsEl, audio }) {
     showDemoAxis(axis) {
       demoAxis = axis ? { x: axis.x, y: axis.y } : null;
       joystickEl.classList.toggle('is-keyboard', Boolean(demoAxis));
+      emit('demo-axis', demoAxis ?? { x: 0, y: 0 });
       publishAxis();
     },
     async demoPress(mode) {
@@ -1812,45 +1821,33 @@ function sprite(className, src, style = {}) {
   return image;
 }
 
-/** Tower = top (jib root + cab) + repeated mast sections + base, so the jib can run along the top edge. */
-function buildTower(tower) {
-  const element = document.createElement('div');
-  element.className = 'crane-tower';
-  Object.assign(element.style, { left: `${tower.left}px`, top: `${tower.top}px`, width: `${tower.width}px` });
-  const mast = document.createElement('div');
-  mast.className = 'crane-tower__part crane-tower__mast';
-  Object.assign(mast.style, {
-    height: `${(tower.mastHeight * tower.mastSections).toFixed(2)}px`,
-    backgroundImage: `url("${tower.mastSrc}")`,
-    backgroundSize: `${tower.width}px ${tower.mastHeight}px`,
-  });
-  element.append(
-    sprite('crane-tower__part', tower.topSrc, { height: `${tower.topHeight}px` }),
-    mast,
-    sprite('crane-tower__part', tower.baseSrc, { height: `${tower.baseHeight}px` }),
-  );
-  return element;
-}
-
-/** The kit's tower crane: tower + cabin + base on the left quay, jib tiled across, tip at the far end. */
+/** Raster crane kit, recomposed around a larger three-quarter operator cabin. */
 function buildStructure() {
-  const { tower, jibTile, jibStartX, jibTiles, jibTip } = CRANE_RIG;
+  const { tower, jibTile, jibTip, cabin, cabinMount } = CRANE_RIG;
+  const mount = document.createElement('span');
+  mount.className = 'crane-cabin-mount';
+  Object.assign(mount.style, { left: `${cabinMount.left}px`, top: `${cabinMount.top}px`, width: `${cabinMount.width}px`, height: `${cabinMount.height}px` });
   const structure = document.createElement('div');
   structure.className = 'crane-structure';
+  const mast = document.createElement('div');
+  mast.className = 'crane-tower__mast';
+  Object.assign(mast.style, {
+    position: 'absolute', left: '-20px', top: '70px', width: '312.8px', height: '552px',
+    backgroundImage: `url("${tower.mastSrc}")`, backgroundSize: '312.8px 42.84px',
+  });
   const jib = document.createElement('div');
   jib.className = 'crane-jib';
   Object.assign(jib.style, {
-    left: `${jibStartX}px`,
-    top: `${tower.top}px`,
-    width: `${jibTile.width * jibTiles}px`,
-    height: `${jibTile.height}px`,
-    backgroundImage: `url("${jibTile.src}")`,
-    backgroundSize: `${jibTile.width}px ${jibTile.height}px`,
+    left: '0px', top: '15.5px', width: '1806px', height: '82px',
+    backgroundImage: `url("${jibTile.src}")`, backgroundSize: '129px 82px',
   });
-  structure.append(
+  structure.append(mast,
+    // The base stands on the quay walkway left of the bridge (the deck's end cap starts at x 168).
+    sprite('crane-base', tower.baseSrc, { position: 'absolute', left: '5px', top: '620.5px', width: '160px', height: '60.5px' }),
     jib,
-    sprite('crane-jib-tip', jibTip.src, { left: `${jibStartX + jibTile.width * jibTiles}px`, top: `${tower.top}px`, width: `${jibTip.width}px`, height: `${jibTip.height}px` }),
-    buildTower(tower),
+    sprite('crane-jib-tip', jibTip.src, { left: '1806px', top: '15.5px', width: '119px', height: '82px' }),
+    mount,
+    sprite('crane-cabin', cabin.src, { position: 'absolute', left: `${cabin.left}px`, top: `${cabin.top}px`, width: `${cabin.width}px`, height: `${cabin.height}px` }),
   );
   return structure;
 }
@@ -1876,7 +1873,8 @@ function buildCraneDom(craneEl, platformEl) {
   const beacon = document.createElement('span');
   beacon.className = 'cab-beacon';
   Object.assign(beacon.style, { left: `${cabBeacon.left}px`, top: `${cabBeacon.top}px`, width: `${cabBeacon.size}px`, height: `${cabBeacon.size}px` });
-  beacon.innerHTML = `<img class="cab-beacon__light cab-beacon__light--orange" src="assets/images/crane-kit/beacon-orange.webp" alt="" draggable="false"><img class="cab-beacon__light cab-beacon__light--red" src="assets/images/crane-kit/beacon-red.webp" alt="" draggable="false">`;
+  // Glows over the beacon painted on the cab roof (no second beacon picture on top of it).
+  beacon.innerHTML = '<span class="cab-beacon__light cab-beacon__light--orange"></span><span class="cab-beacon__light cab-beacon__light--red"></span>';
   craneEl.append(rig, beacon);
   buildClawFrames(rig.querySelector('.claw'));
   const shadow = document.createElement('div');
@@ -4192,25 +4190,31 @@ function buildEnvironment({ waterLayer }) {
   return { buildEnvironment };
 });
 __define('js/gameplay/builder-character.js', function () {
-const { prefersReducedMotion } = __require('js/core/motion.js');
 const { CRANE_RIG } = __require('js/data/layout.js');
-/**
- * The beaver builder (assets/images/characters/builder, sliced from the supplied beaver sheet) is the crane operator:
- * he sits in the cab window, behind the glass. Whole-frame sprite animation only: idle with blinks,
- * talking while a line plays, cheering, worrying.
- */
-const frameSrc = (index) => `assets/images/characters/builder/beaver-${String(index).padStart(2, '0')}.webp`;
-
-const POSES = Object.freeze({
-  idle: { frames: [0, 1, 2, 1], ms: 460 },
-  blink: { frames: [3, 4, 3], ms: 70 },
-  talk: { frames: [16, 18, 17, 19, 21, 20, 22, 19], ms: 120 },
-  point: { frames: [27, 28, 29, 28], ms: 170 },
-  cheer: { frames: [35, 36, 37, 36], ms: 130 },
-  worry: { frames: [4, 3, 4, 13], ms: 160 },
-});
-
-const BUILDER_FRAME_SOURCES = [...new Set(Object.values(POSES).flatMap((pose) => pose.frames))].map(frameSrc);
+const { prefersReducedMotion } = __require('js/core/motion.js');
+// Codex's polished operator: one 2 x 2 atlas per pose family, all framed alike (whole frames, same
+// scale, the beaver seated at his joystick box), so poses switch without the beaver jumping.
+const BUILDER_FRAME_SOURCES = [
+  'assets/images/characters/operator/beaver-idle-atlas.webp',
+  'assets/images/characters/operator/beaver-talk-atlas.webp',
+  'assets/images/characters/operator/beaver-happy-atlas.webp',
+  'assets/images/characters/operator/beaver-sad-atlas.webp',
+  'assets/images/characters/operator/beaver-drive-atlas.webp',
+  'assets/images/characters/operator/beaver-actions-atlas.webp',
+];
+const POSES = {
+  idle: { sheet: 0, frames: [0, 1, 2, 1, 0], durations: [3200, 70, 90, 70, 1200] },
+  talk: { sheet: 1, frames: [0, 1, 2, 3, 1, 3], ms: 140 },
+  cheer: { sheet: 2, frames: [0, 1, 2, 3, 1, 0], ms: 260, once: true },
+  worry: { sheet: 3, frames: [0, 1, 2, 1, 3], ms: 300, once: true },
+  point: { sheet: 2, frames: [0, 1, 3, 0], ms: 300, once: true },
+  drive: { sheet: 4, frames: [0], ms: 200 },
+  pick: { sheet: 5, frames: [0], ms: 200 },
+  carry: { sheet: 5, frames: [1], ms: 200 },
+  drop: { sheet: 5, frames: [2], ms: 200 },
+  complete: { sheet: 5, frames: [3], ms: 200 },
+};
+const REACTIONS = new Set(['talk', 'cheer', 'worry', 'point']);
 
 function createBuilderCharacter({ hostEl }) {
   const { cabWindow } = CRANE_RIG;
@@ -4219,92 +4223,115 @@ function createBuilderCharacter({ hostEl }) {
   root.hidden = true;
   root.setAttribute('aria-hidden', 'true');
   Object.assign(root.style, { left: `${cabWindow.left}px`, top: `${cabWindow.top}px`, width: `${cabWindow.width}px`, height: `${cabWindow.height}px` });
-  root.innerHTML = '<div class="builder__body"><img class="builder__frame" alt="" draggable="false"></div><span class="builder__glass"></span>';
+  // Two frame layers: each new frame fades in over the last one, so poses change smoothly, never snap.
+  root.innerHTML = '<div class="builder__body"><div class="builder__frame is-on"></div><div class="builder__frame"></div></div>';
   hostEl.appendChild(root);
-  const body = root.querySelector('.builder__body');
-  const image = root.querySelector('.builder__frame');
-
+  const frames = [...root.querySelectorAll('.builder__frame')];
+  let front = 0;
+  let shownKey = '';
+  let underTimer = 0;
+  const FADE_MS = 110;
   let pose = 'idle';
-  let frameIndex = 0;
-  let timer = 0;
+  let interval = 0;
   let returnTimer = 0;
-  let nextBlinkAt = performance.now() + 2500;
-
-  function show(frame) {
-    const src = frameSrc(frame);
-    if (image.getAttribute('src') !== src) image.setAttribute('src', src);
+  let index = 0;
+  let revision = 0;
+  let axis = { x: 0, y: 0 };
+  let machinePose = 'idle';
+  let completed = false;
+  const driving = () => Math.hypot(axis.x, axis.y) > 0.05;
+  const restingPose = () => completed ? 'complete' : driving() ? 'drive' : machinePose;
+  function paint(layer, sheet, number) {
+    layer.style.backgroundImage = `url("${BUILDER_FRAME_SOURCES[sheet]}")`;
+    layer.style.backgroundPosition = `${(number % 2) * 100}% ${Math.floor(number / 2) * 100}%`;
   }
-
-  function tick() {
-    const definition = POSES[pose];
-    frameIndex = (frameIndex + 1) % definition.frames.length;
-    if (pose === 'idle' && performance.now() > nextBlinkAt) {
-      nextBlinkAt = performance.now() + 2200 + Math.random() * 2400;
-      setPose('blink', { thenIdleAfter: 230 });
-      return;
+  function show(number) {
+    const sheet = POSES[pose].sheet;
+    const key = `${sheet}:${number}`;
+    if (key !== shownKey) {
+      shownKey = key;
+      if (root.hidden || prefersReducedMotion()) {
+        paint(frames[front], sheet, number);
+      } else {
+        const next = 1 - front;
+        clearTimeout(underTimer);
+        frames[next].classList.remove('is-under');
+        paint(frames[next], sheet, number);
+        frames[front].classList.remove('is-on');
+        frames[front].classList.add('is-under');       // stays solid underneath while the new frame fades in
+        frames[next].classList.add('is-on');
+        const previous = frames[front];
+        underTimer = setTimeout(() => previous.classList.remove('is-under'), FADE_MS + 30);
+        front = next;
+      }
     }
-    show(definition.frames[frameIndex]);
+    root.dataset.facing = ['idle', 'drive', 'pick', 'carry', 'drop'].includes(pose) ? 'controls' : 'user';
+    root.dataset.frame = String(number);
+    root.dataset.sheet = String(sheet);
   }
-
+  function driveFrame() {
+    if (Math.abs(axis.y) > Math.abs(axis.x)) return axis.y < 0 ? 2 : 1;
+    return axis.x < -.12 ? 1 : axis.x > .12 ? 3 : 0;
+  }
+  function advance() {
+    const definition = POSES[pose];
+    if (root.hidden || document.hidden || prefersReducedMotion() || definition.frames.length < 2) return;
+    interval = setTimeout(() => {
+      if (definition.once && index === definition.frames.length - 1) return;
+      index = (index + 1) % definition.frames.length;
+      show(definition.frames[index]);
+      advance();
+    }, definition.durations?.[index] ?? definition.ms);
+  }
   function setPose(name, { thenIdleAfter = 0 } = {}) {
+    clearTimeout(interval);
     clearTimeout(returnTimer);
+    interval = 0;
+    revision += 1;
     pose = POSES[name] ? name : 'idle';
-    frameIndex = 0;
-    show(POSES[pose].frames[0]);
-    clearInterval(timer);
-    if (!prefersReducedMotion() || pose === 'talk') timer = setInterval(tick, POSES[pose].ms);
-    if (thenIdleAfter) returnTimer = setTimeout(() => setPose('idle'), thenIdleAfter);
+    root.dataset.pose = pose;
+    index = 0;
+    show(pose === 'drive' ? driveFrame() : POSES[pose].frames[0]);
+    advance();
+    if (thenIdleAfter) returnTimer = setTimeout(() => setPose(restingPose()), thenIdleAfter);
   }
 
-  function bounce(className, ms) {
-    body.classList.remove(className);
-    void body.offsetWidth;
-    body.classList.add(className);
-    setTimeout(() => body.classList.remove(className), ms);
-  }
-
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { clearTimeout(interval); interval = 0; }
+    else if (!root.hidden) setPose(restingPose());
+  });
   return {
-    /** The operator is always in the cab; the camera decides how close we are. */
-    show() {
-      root.hidden = false;
-      if (!timer) setPose('idle');
-    },
-    /** Centre of the cab window in stage coordinates (camera focus target, bubble anchor). */
-    get cabCenter() {
-      return { x: cabWindow.left + cabWindow.width / 2, y: cabWindow.top + cabWindow.height / 2 };
-    },
-    get cabWindow() {
-      return cabWindow;
-    },
-    hide() {
-      root.hidden = true;
-      clearInterval(timer);
-      timer = 0;
-    },
+    show() { root.hidden = false; setPose(restingPose()); },
+    hide() { root.hidden = true; axis = { x: 0, y: 0 }; setPose('idle'); },
+    get cabCenter() { return { x: cabWindow.left + cabWindow.width / 2, y: cabWindow.top + cabWindow.height / 2 }; },
+    get cabWindow() { return cabWindow; },
+    get bubbleAnchor() { return { x: CRANE_RIG.cabin.left + CRANE_RIG.cabin.width, y: cabWindow.top }; },
     setPose,
-    /** Talk until `finished` resolves (the narration's own clock), then settle back to idle. */
-    async talkUntil(finished) {
-      setPose('talk');
-      try {
-        await finished;
-      } finally {
-        if (pose === 'talk') setPose('idle');
+    setGameState(state) {
+      completed = state.completed;
+      machinePose = ['lowering', 'grabbing'].includes(state.craneState) ? 'pick'
+        : ['carrying', 'hoveringTarget'].includes(state.craneState) ? 'carry'
+        : ['dropping', 'placing', 'returning'].includes(state.craneState) ? 'drop' : 'idle';
+      if (!REACTIONS.has(pose) && restingPose() !== pose) setPose(restingPose());
+    },
+    setAxis(next) {
+      axis = next;
+      root.dataset.lean = axis.x < -0.12 ? 'left' : axis.x > 0.12 ? 'right' : axis.y < -0.3 ? 'up' : axis.y > 0.3 ? 'down' : '';
+      if (!REACTIONS.has(pose)) {
+        const nextPose = restingPose();
+        if (nextPose !== pose) setPose(nextPose);
+        else if (pose === 'drive') show(driveFrame());
       }
     },
-    cheer() {
-      setPose('cheer', { thenIdleAfter: 1700 });
-      bounce('is-hopping', 900);
+    async talkUntil(finished) {
+      setPose('talk');
+      const token = revision;
+      try { await finished; } finally { if (token === revision) setPose(restingPose()); }
     },
-    worry() {
-      setPose('worry', { thenIdleAfter: 1500 });
-      bounce('is-shaking', 700);
-    },
-    point() {
-      setPose('point', { thenIdleAfter: 1400 });
-    },
-    get element() {
-      return root;
-    },
+    cheer() { setPose('cheer', { thenIdleAfter: 2300 }); },
+    worry() { setPose('worry', { thenIdleAfter: 2100 }); },
+    point() { setPose('point', { thenIdleAfter: 1600 }); },
+    get element() { return root; },
   };
 }
   return { BUILDER_FRAME_SOURCES, createBuilderCharacter };
@@ -4577,14 +4604,13 @@ function createTitleScreen({ els, audio, voice, camera, builder, screenManager }
 __define('js/screens/story-screens.js', function () {
 const { COPY } = __require('js/data/copy.js');
 const { createSequenceScope, wait } = __require('js/core/motion.js');
-const CAB_ZOOM = 2.2;
+const CAB_ZOOM = 2.1;
 
 /** Zoom into the crane cab, where the beaver operator sits, and return where his bubble should go. */
 async function zoomToCab({ camera, builder, signal, duration = 1300 }) {
   const { x, y } = builder.cabCenter;
   await camera.focus({ x, y, scale: CAB_ZOOM, duration, signal });
-  const { left, top, width } = builder.cabWindow;
-  const anchor = camera.project(left + width, top);
+  const anchor = camera.project(builder.bubbleAnchor.x, builder.bubbleAnchor.y);
   return { x: anchor.x + 40, y: Math.max(40, anchor.y - 20) };
 }
 
@@ -5020,18 +5046,16 @@ const CRITICAL_IMAGES = [
   'assets/images/bridge/deck-tile.webp',
   'assets/images/bridge/deck-right.webp',
   'assets/images/bridge/deck-bracket.webp',
-  CRANE_RIG.tower.topSrc,
+  CRANE_RIG.cabin.src,
   CRANE_RIG.tower.mastSrc,
   CRANE_RIG.tower.baseSrc,
   CRANE_RIG.jibTile.src,
   CRANE_RIG.jibTip.src,
+  ...BUILDER_FRAME_SOURCES,
   CRANE_RIG.trolley.src,
   ...CRANE_RIG.claw.states.map((state) => state.src),
   'assets/images/crane-kit/cable-tile.webp',
-  'assets/images/crane-kit/beacon-orange.webp',
-  'assets/images/crane-kit/beacon-red.webp',
   'assets/images/crane/bolt.webp',
-  ...BUILDER_FRAME_SOURCES,
   'assets/images/fx/sparkle-cluster.webp',
   'assets/images/fx/sparkle-big.webp',
   'assets/images/fx/ripple-1.webp',
@@ -5115,6 +5139,9 @@ async function boot() {
   const bridge = createBridgeController({ bridgeEl: els.bridge, fxEl: els.fx, fx, audio });
   const placement = createPlacementController({ triangles });
   const builder = createBuilderCharacter({ hostEl: els.crane });
+  input.on('axis', (axis) => builder.setAxis(axis));
+  input.on('demo-axis', (axis) => builder.setAxis(axis));
+  gameState.subscribe((state) => builder.setGameState(state));
   const feedback = createFeedbackController({ hudEl: els.hud, overlaysEl: els.overlays, voice, builder });
   const screenManager = createScreenManager({ gameState, onError: (error) => console.error('[screen]', error) });
   const levelEngine = createLevelEngine({

@@ -285,10 +285,24 @@
 .trolley { position: absolute; filter: drop-shadow(0 6px 6px rgba(0, 0, 0, 0.3)); }
 .trolley.is-running { animation: motor-hum 90ms linear infinite alternate; }
 .cab-beacon { position: absolute; pointer-events: none; }
-.cab-beacon__light { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; }
-.cab-beacon.is-flashing .cab-beacon__light--orange { animation: beacon-flash 520ms steps(2, jump-none) infinite; }
+.cab-beacon__light { position: absolute; inset: 0; border-radius: 50%; opacity: 0; mix-blend-mode: screen; }
+.cab-beacon__light--orange { background: radial-gradient(circle, rgba(255, 246, 200, 1) 0 14%, rgba(255, 190, 60, 0.85) 30%, rgba(255, 140, 0, 0.35) 52%, rgba(255, 140, 0, 0) 70%); }
+.cab-beacon__light--red { background: radial-gradient(circle, rgba(255, 230, 220, 1) 0 14%, rgba(255, 80, 60, 0.85) 30%, rgba(230, 30, 20, 0.35) 52%, rgba(230, 30, 20, 0) 70%); }
+.cab-beacon.is-flashing .cab-beacon__light--orange { animation: beacon-glow 700ms ease-in-out infinite alternate; }
 .cab-beacon.is-alarm .cab-beacon__light--orange { opacity: 0; animation: none; }
-.cab-beacon.is-alarm .cab-beacon__light--red { animation: beacon-flash 260ms steps(2, jump-none) infinite; }
+.cab-beacon.is-alarm .cab-beacon__light--red { animation: beacon-glow 300ms ease-in-out infinite alternate; }
+/* Steel mount holding the cabin under the jib. */
+.crane-cabin-mount {
+  position: absolute; border-radius: 5px;
+  background: linear-gradient(90deg, #333c58, #6a7696 45%, #3d4764);
+  border: 2px solid #1f2639; box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.18);
+}
+.crane-cabin-mount::before, .crane-cabin-mount::after {
+  content: ""; position: absolute; left: 50%; width: 9px; height: 9px; margin-left: -4.5px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #e4e9f2, #8b96ad 60%, #4c566f);
+}
+.crane-cabin-mount::before { top: 6px; }
+.crane-cabin-mount::after { top: 20px; }
 .pendulum {
   position: absolute; left: 0; top: 71.5px; width: 0; height: 0;
   transform-origin: 0 0;
@@ -309,22 +323,29 @@
 .claw.is-relieved { animation: claw-relief 520ms var(--ease-out) 1; }
 .claw-cargo { position: absolute; left: 0; top: 176px; }
 
-/* ---------- The beaver operator in the cab window (behind the glass) ---------- */
-.builder {
-  position: absolute;
-  overflow: hidden;
-  border-radius: 12px 40px 30px 10px / 12px 48px 40px 10px;
-  pointer-events: none;
-  background: rgba(120, 200, 245, 0.35);
+/* Painted sprites stay registered inside the three-quarter cabin. */
+.crane-cabin { filter: drop-shadow(0 7px 4px #17364b30); }
+.builder { position: absolute; overflow: visible; pointer-events: none; }   /* never clip the operator sprite */
+.builder__body { position: absolute; left: 0; top: 0; width: 144px; height: 144px; transform-origin: 50% 92%; transition: transform 240ms var(--ease-out); animation: operator-breathe 3.4s ease-in-out infinite; }
+.builder__frame { position: absolute; inset: 0; background-image: url("../assets/images/characters/operator/beaver-idle-atlas.png"); background-size: 200% 200%; background-repeat: no-repeat; opacity: 0; }
+.builder__frame.is-on { opacity: 1; z-index: 1; transition: opacity 110ms ease-out; }
+.builder__frame.is-under { opacity: 1; z-index: 0; }
+/* Each pose has its own gentle motion on top of the frames. */
+.builder[data-pose="talk"] .builder__body { animation: operator-talk 560ms ease-in-out infinite; }
+.builder[data-pose="cheer"] .builder__body, .builder[data-pose="complete"] .builder__body { animation: operator-cheer 680ms var(--ease-out) infinite; }
+.builder[data-pose="point"] .builder__body { animation: operator-cheer 900ms var(--ease-out) 1; }
+.builder[data-pose="worry"] .builder__body { animation: operator-worry 1.5s ease-in-out infinite; }
+.builder[data-pose="pick"] .builder__body, .builder[data-pose="drop"] .builder__body { animation: operator-dip 420ms var(--ease-out) 1; }
+.builder[data-pose="drive"] .builder__body, .builder[data-pose="carry"] .builder__body { animation: none; }
+.builder[data-pose="drive"][data-lean="left"] .builder__body, .builder[data-pose="carry"][data-lean="left"] .builder__body { transform: translateX(-2px) rotate(-2.2deg); }
+.builder[data-pose="drive"][data-lean="right"] .builder__body, .builder[data-pose="carry"][data-lean="right"] .builder__body { transform: translateX(2px) rotate(2.2deg); }
+.builder[data-pose="drive"][data-lean="up"] .builder__body, .builder[data-pose="carry"][data-lean="up"] .builder__body { transform: translateY(-1.5px); }
+.builder[data-pose="drive"][data-lean="down"] .builder__body, .builder[data-pose="carry"][data-lean="down"] .builder__body { transform: translateY(1.5px) scale(1, 0.99); }
+@keyframes operator-breathe { 0%, 100% { transform: translateY(0) scale(1, 1); } 50% { transform: translateY(-1.2px) scale(1, 1.012); } }
+@keyframes operator-talk { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-1.6px) rotate(-0.8deg); } }
+@keyframes operator-cheer { 0%, 100% { transform: translateY(0) scale(1, 1); } 35% { transform: translateY(-5px) scale(0.985, 1.025); } 70% { transform: translateY(0) scale(1.02, 0.98); } }
+@keyframes operator-worry { 0%, 100% { transform: rotate(-1.1deg) translateX(-0.6px); } 50% { transform: rotate(1.1deg) translateX(0.6px); } }
+@keyframes operator-dip { 0% { transform: translateY(0); } 40% { transform: translateY(2px) scale(1.01, 0.985); } 100% { transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) {
+  .builder *, .trolley.is-running, .cab-beacon__light { animation: none !important; transition: none !important; }
 }
-.builder__body { position: absolute; left: -26px; top: -4px; width: 132px; transform-origin: 50% 100%; }
-.builder__frame { display: block; width: 100%; height: auto; }
-.builder__glass {
-  position: absolute; inset: 0;
-  background: linear-gradient(118deg, rgba(255,255,255,0) 22%, rgba(255,255,255,0.38) 30%, rgba(255,255,255,0) 38%, rgba(255,255,255,0) 60%, rgba(255,255,255,0.2) 66%, rgba(255,255,255,0) 72%);
-  box-shadow: inset 0 0 0 3px rgba(30, 60, 110, 0.35);
-  border-radius: inherit;
-}
-.builder__body.is-hopping { animation: builder-hop-cab 900ms var(--ease-out) 1; }
-.builder__body.is-shaking { animation: builder-shake 700ms var(--ease-out) 1; }
-

@@ -1,7 +1,7 @@
 /* ---------- Instruction panel: simple, high contrast, the key words in the highlight colour ---------- */
 .instruction-banner {
   position: absolute;
-  left: 236px;            /* right of the crane cab */
+  left: 340px;            /* right of the operator cab */
   top: 138px;             /* just under the crane's jib */
   display: flex;
   align-items: center;

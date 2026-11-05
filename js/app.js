@@ -37,18 +37,16 @@ const CRITICAL_IMAGES = [
   'assets/images/bridge/deck-tile.png',
   'assets/images/bridge/deck-right.png',
   'assets/images/bridge/deck-bracket.png',
-  CRANE_RIG.tower.topSrc,
+  CRANE_RIG.cabin.src,
   CRANE_RIG.tower.mastSrc,
   CRANE_RIG.tower.baseSrc,
   CRANE_RIG.jibTile.src,
   CRANE_RIG.jibTip.src,
+  ...BUILDER_FRAME_SOURCES,
   CRANE_RIG.trolley.src,
   ...CRANE_RIG.claw.states.map((state) => state.src),
   'assets/images/crane-kit/cable-tile.png',
-  'assets/images/crane-kit/beacon-orange.png',
-  'assets/images/crane-kit/beacon-red.png',
   'assets/images/crane/bolt.png',
-  ...BUILDER_FRAME_SOURCES,
   'assets/images/fx/sparkle-cluster.png',
   'assets/images/fx/sparkle-big.png',
   'assets/images/fx/ripple-1.png',
@@ -132,6 +130,9 @@ async function boot() {
   const bridge = createBridgeController({ bridgeEl: els.bridge, fxEl: els.fx, fx, audio });
   const placement = createPlacementController({ triangles });
   const builder = createBuilderCharacter({ hostEl: els.crane });
+  input.on('axis', (axis) => builder.setAxis(axis));
+  input.on('demo-axis', (axis) => builder.setAxis(axis));
+  gameState.subscribe((state) => builder.setGameState(state));
   const feedback = createFeedbackController({ hudEl: els.hud, overlaysEl: els.overlays, voice, builder });
   const screenManager = createScreenManager({ gameState, onError: (error) => console.error('[screen]', error) });
   const levelEngine = createLevelEngine({

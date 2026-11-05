@@ -21,10 +21,18 @@ export const CRANE_RIG = Object.freeze({
   jibTiles: 13,
   jibTip: Object.freeze({ src: 'assets/images/crane-kit/jib-tip.png', width: 119, height: 109 }),
   trolley: Object.freeze({ src: 'assets/images/crane-kit/trolley.png', width: 233, height: 67, top: 8.5 }),
-  /** The cab's glass inside the tower sprite (measured), where the beaver operator sits. */
-  cabWindow: Object.freeze({ left: 58, top: 211.5, width: 93, height: 92 }),
-  /** The warning light painted on the cab roof; a lit copy flashes over it. */
-  cabBeacon: Object.freeze({ left: 42, top: 121.5, size: 62 }),
+  /**
+   * The operator cabin (art 1312 x 1199, shown at 300 x 274), hung under the jib on a steel mount, its
+   * dark back plate over the mast lattice and its roof beacon clear of the jib. `operator-cabin-clear`
+   * is the supplied cabin with its dashboard painted out: the operator's own joystick box is the control.
+   */
+  cabin: Object.freeze({ src: 'assets/images/crane-v2/operator-cabin-clear.png', left: 10, top: 94, width: 300, height: 274 }),
+  /** Steel mount from the jib down to the cabin's back plate. */
+  cabinMount: Object.freeze({ left: 44, top: 90, width: 34, height: 44 }),
+  /** The seated operator (2 x 2 atlas cells): back against the seat back, feet and joystick box on the cab floor. */
+  cabWindow: Object.freeze({ left: 85.5, top: 181.6, width: 144, height: 144 }),
+  /** A glow centred on the beacon painted on the cab roof; it pulses while the crane moves. */
+  cabBeacon: Object.freeze({ left: 97.6, top: 74.7, size: 90 }),
   claw: Object.freeze({
     states: Object.freeze([
       Object.freeze({ id: 'open', src: 'assets/images/crane-kit/claw-open.png', width: 124, height: 191 }),

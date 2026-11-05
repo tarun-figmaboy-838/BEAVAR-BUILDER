@@ -16,6 +16,12 @@ python3 tools/build_dist.py
 
 writes `dist/`, the compressed copy to put online (about 2.8 MB instead of about 7 MB): sprites as WebP, the canal backdrop as AVIF with a WebP fallback, narration as Ogg Opus with the MP3 kept for browsers that cannot play Ogg (older iPhones and iPads), and one minified stylesheet. `vercel.json` tells Vercel to serve `dist/`, so commit `dist/` after each build. The build needs Pillow (`pip3 install pillow`) and macOS `afconvert`.
 
+## Beaver and cabin artwork
+
+The operator now sits in an enlarged three-quarter cabin. Illustrated raster sprites cover idle blinking, talking toward the player, happiness, disappointment and recovery, side-console joystick operation, picking, carrying, dropping and completion. Joystick direction changes the operator's grip; narration drives the talking loop. Reduced-motion preferences stop repeated animation.
+
+Run `python3 tools/qa/builder_animation.py` for animation-state and reduced-motion checks. See `docs/ASSETS.md` for asset paths and generation briefs.
+
 ## Controls
 
 - **Joystick (bottom-left):** drag it, or use the arrow keys / WASD. Left and right move the trolley; up and down raise and lower the hook.

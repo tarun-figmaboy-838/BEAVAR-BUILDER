@@ -1,14 +1,13 @@
 import { COPY } from '../data/copy.js';
 import { createSequenceScope, wait } from '../core/motion.js';
 
-const CAB_ZOOM = 2.2;
+const CAB_ZOOM = 2.1;
 
 /** Zoom into the crane cab, where the beaver operator sits, and return where his bubble should go. */
 export async function zoomToCab({ camera, builder, signal, duration = 1300 }) {
   const { x, y } = builder.cabCenter;
   await camera.focus({ x, y, scale: CAB_ZOOM, duration, signal });
-  const { left, top, width } = builder.cabWindow;
-  const anchor = camera.project(left + width, top);
+  const anchor = camera.project(builder.bubbleAnchor.x, builder.bubbleAnchor.y);
   return { x: anchor.x + 40, y: Math.max(40, anchor.y - 20) };
 }
 

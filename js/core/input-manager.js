@@ -221,6 +221,7 @@ export function createInputManager({ controlsEl, audio }) {
     showDemoAxis(axis) {
       demoAxis = axis ? { x: axis.x, y: axis.y } : null;
       joystickEl.classList.toggle('is-keyboard', Boolean(demoAxis));
+      emit('demo-axis', demoAxis ?? { x: 0, y: 0 });
       publishAxis();
     },
     async demoPress(mode) {
