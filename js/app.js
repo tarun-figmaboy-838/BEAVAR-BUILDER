@@ -103,6 +103,7 @@ function wireSkipToEnd({ els, audio, voice, bridge, gameState, levelEngine, scre
     if (busy || screenManager.currentName === 'complete') return;
     busy = true;
     audio.unlock();
+    audio.startMusic();
     voice.unlock?.();
     voice.stop();
     await levelEngine.resetAll();

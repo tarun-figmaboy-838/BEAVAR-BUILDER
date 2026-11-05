@@ -218,7 +218,7 @@
   transform-origin: 50% -23px;
 }
 .completion__sign.is-entering { animation: sign-drop 1100ms var(--ease-out) both; }
-.completion__art { position: relative; display: block; width: 100%; height: auto; filter: drop-shadow(0 16px 18px rgba(6, 24, 48, 0.35)); }
+.completion__art { position: relative; display: block; width: 112%; max-width: none; margin: -6% -6% -12% -6%; height: auto; filter: drop-shadow(0 16px 18px rgba(6, 24, 48, 0.35)); }
 .completion__rope {
   position: absolute; top: -24px; width: 12px; height: 84px;
   background: url("../assets/images/crane-kit/cable-tile.png") 0 0 / 12px 20px repeat-y;
@@ -229,10 +229,10 @@
 /* The button stays put (centred); only its picture breathes and presses, so a tap always lands on it. */
 .completion__replay.icon-cta { left: 50%; top: 860px; right: auto; bottom: auto; width: 160px; height: 174px; transform: translate(-50%, -50%); background: none; border: 0; box-shadow: none; padding: 0; animation: none; }
 .completion__replay.icon-cta:active, .completion__replay.icon-cta.is-pressed { transform: translate(-50%, -50%); box-shadow: none; }
-.completion__replay.icon-cta img { width: 100%; height: auto; display: block; filter: drop-shadow(0 14px 14px rgba(6, 24, 48, 0.35)); animation: start-breathe 1.7s ease-in-out infinite; }
+.completion__replay.icon-cta img { width: 112%; max-width: none; margin: -6% -6% -12% -6%; height: auto; display: block; filter: drop-shadow(0 14px 14px rgba(6, 24, 48, 0.35)); animation: start-breathe 1.7s ease-in-out infinite; }
 .completion__replay.icon-cta:active img { animation: none; transform: translateY(8px) scale(0.96); }
 .completion__replay.icon-cta.is-entering { animation: none; }
-.completion__replay.icon-cta.is-entering img { animation: logo-pop 520ms var(--ease-back) both, start-breathe 1.7s ease-in-out 520ms infinite; }
+.completion__replay.icon-cta.is-entering img { animation: logo-pop 520ms var(--ease-back) both; }   /* then it breathes (base rule) */
 
 /* ---------- Debug overlay ---------- */
 .debug-overlay {
@@ -336,11 +336,16 @@
   transition: transform var(--t-micro) var(--ease-out);
 }
 .action-button__halo {
-  position: absolute; inset: -18px; border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 236, 140, 0) 58%, rgba(255, 220, 90, 0.75) 66%, rgba(255, 200, 60, 0) 76%);
-  opacity: 0; transition: opacity 200ms;
+  /* A soft glow behind the button (no ring): bright at the button's rim, fading out, coloured like the face. */
+  position: absolute; inset: -64px; border-radius: 50%;
+  --glow: 196, 255, 120;
+  background: radial-gradient(circle closest-side, rgba(var(--glow), 0.95) 58%, rgba(var(--glow), 0.62) 70%, rgba(var(--glow), 0.26) 84%, rgba(var(--glow), 0) 100%);
+  opacity: 0; transition: opacity 200ms; pointer-events: none;
 }
-.action-button:not(:disabled) .action-button__halo { opacity: 1; animation: halo-pulse 1.2s ease-in-out infinite; }
+.action-button[data-mode="drop"] .action-button__halo { --glow: 255, 196, 100; }
+.action-button:not(:disabled) .action-button__halo { opacity: 1; animation: glow-pulse 1.3s ease-in-out infinite; }
+/* ...and the button itself breathes with it (scale property: never fights the flip or the press). */
+.action-button:not(:disabled) .action-button__art { animation: button-pulse 1.3s ease-in-out infinite; }
 .action-button__face {
   position: absolute; inset: 0;
   display: grid; place-items: center;
@@ -348,7 +353,7 @@
   transition: transform 460ms var(--ease-back), filter var(--t-fast), visibility 0s linear 100ms;
 }
 /* The painted PICK / DROP buttons (generated for this game); the face flips between them. */
-.action-button__art { width: 100%; height: auto; display: block; filter: drop-shadow(0 12px 12px rgba(6, 24, 48, 0.35)); }
+.action-button__art { width: 112%; max-width: none; margin: -6% -6% -12% -6%; height: auto; display: block; filter: drop-shadow(0 12px 12px rgba(6, 24, 48, 0.35)); }
 .action-button__face--drop { transform: rotateY(180deg); }
 .action-button[data-mode="drop"] .action-button__face--pick { transform: rotateY(-180deg); }
 .action-button[data-mode="drop"] .action-button__face--drop { transform: rotateY(0deg); }
@@ -373,12 +378,12 @@
 }
 .start-button > * { position: absolute; pointer-events: none; }
 .start-button__glow {
-  width: 196px; height: 196px; border-radius: 50%; margin-top: -14px;
-  border: 6px solid rgba(255, 236, 140, 0.9);
-  animation: start-ripple 1.7s ease-out infinite;
+  width: 300px; height: 300px; border-radius: 50%; margin-top: -14px;
+  background: radial-gradient(circle, rgba(255, 226, 120, 0.7) 0%, rgba(255, 214, 90, 0.42) 40%, rgba(255, 200, 70, 0.14) 58%, rgba(255, 200, 70, 0) 70%);
+  animation: glow-pulse 1.7s ease-in-out infinite;
 }
 .start-button__face {
-  width: 220px; height: auto; display: block;
+  width: 246.4px; max-width: none; margin: -13.2px -13.2px -26.4px; height: auto; display: block;   /* 220 px of picture + its clear margin */
   filter: drop-shadow(0 14px 14px rgba(6, 24, 48, 0.3));
   animation: start-breathe 1.7s ease-in-out infinite;
   transition: transform var(--t-micro) var(--ease-out);
@@ -397,7 +402,7 @@
 /* ---------- Title: the painted BRIDGE BUILDER logo ---------- */
 .title-card { position: absolute; left: 0; right: 0; top: 104px; text-align: center; pointer-events: none; }
 .title-card__headline { margin: 0; }
-.title-card__logo { display: inline-block; width: 900px; height: auto; filter: drop-shadow(0 12px 14px rgba(6, 24, 48, 0.3)); }
+.title-card__logo { display: inline-block; width: 954.0px; max-width: none; margin: -27.0px -27.0px -45.2px; height: auto; filter: drop-shadow(0 12px 14px rgba(6, 24, 48, 0.3)); }
 .title-card.is-entering .title-card__logo { animation: logo-pop 700ms var(--ease-back) both; }
 .title-card.is-leaving { animation: title-leave 460ms var(--ease-in) forwards; }
 .drone-caption {

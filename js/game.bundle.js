@@ -731,6 +731,7 @@ function createMusic(context, out, noiseBuffer) {
     const decay = EIGHTH * 1.8;
     osc('triangle', midiHz(note), t0, decay, envelope(t0, peak, decay));
     osc('sine', midiHz(note), t0, decay, envelope(t0, peak * 0.8, decay));
+    osc('triangle', midiHz(note) * 2, t0, decay, envelope(t0, peak * 0.5, decay));   // an octave up: heard on small speakers
   }
   function kick(t0, peak) {
     const node = osc('sine', 120, t0, 0.16, envelope(t0, peak, 0.16));
@@ -751,13 +752,13 @@ function createMusic(context, out, noiseBuffer) {
     const inBar = index % 8;
     const bar = Math.floor(index / 8);
     if (inBar === 0 || inBar === 4) {
-      kick(t0, 0.09);
-      bass(BASS[bar] + (inBar === 4 ? 7 : 0), t0, 0.07);
+      kick(t0, 0.12);
+      bass(BASS[bar] + (inBar === 4 ? 7 : 0), t0, 0.1);
     }
-    if (index % 2 === 1) CHORDS[bar].forEach((note) => pluck(note, t0, 0.022));
-    shaker(t0, index % 2 ? 0.03 : 0.018);
+    if (index % 2 === 1) CHORDS[bar].forEach((note) => pluck(note, t0, 0.04));
+    shaker(t0, index % 2 ? 0.035 : 0.022);
     const melody = MELODY_BY_STEP.get(index);
-    if (melody) mallet(melody[0], t0, melody[1] * 2, 0.06);
+    if (melody) mallet(melody[0], t0, melody[1] * 2, 0.12);
   }
 
   function tick() {
@@ -793,7 +794,7 @@ function createMusic(context, out, noiseBuffer) {
     /** Music sits further under the narration than the effects do. */
     duck(on) {
       if (!timer) return;
-      bus.gain.setTargetAtTime(on ? 0.45 : 1, context.currentTime, 0.12);
+      bus.gain.setTargetAtTime(on ? 0.55 : 1, context.currentTime, 0.12);
     },
     get playing() {
       return Boolean(timer);
@@ -857,6 +858,8 @@ function createAudioManager() {
   return {
     /** Call from a user gesture so the browser allows audio. */
     unlock() {
+      // iPhone: play through the silent switch like a video does (Safari 17+), not as a muted ringer sound.
+      try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch { /* older Safari */ }
       const ctx = ensureContext();
       if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
     },
@@ -2527,7 +2530,8 @@ const BEAMS = Object.freeze({
   yellow: { l: 'assets/images/kit/beam-yellow-l.png', m: 'assets/images/kit/beam-yellow-m.png', r: 'assets/images/kit/beam-yellow-r.png', h: 140, capL: 130, capR: 130, boltAt: 72, scale: 1.25 },
   navy: { l: 'assets/images/kit/beam-navy-l.png', m: 'assets/images/kit/beam-navy-m.png', r: 'assets/images/kit/beam-navy-r.png', h: 100, capL: 116, capR: 116, boltAt: 53, scale: 1.1 },
 });
-const JOINT = Object.freeze({ src: 'assets/images/kit/joint-plate.png', width: 240, height: 220 });
+// The plate art is 240 x 220 inside a 14 px clear margin (268 x 248), so its outline is never cut at the edge.
+const JOINT = Object.freeze({ src: 'assets/images/kit/joint-plate.png', width: 268, height: 248, plate: 240 });
 
 const STEEL_IMAGES = [...Object.values(BEAMS).flatMap((b) => [b.l, b.m, b.r]), JOINT.src];
 
@@ -2604,8 +2608,8 @@ function gussetDefs() {
 /** A joint: the painted hexagonal steel plate with bolts, centred on (x, y). */
 function createGusset(x, y, { radius = 17 } = {}) {
   const group = svgElement('g', { class: 'truss-node' });
-  const w = radius * 2.3;
-  const h = (w * JOINT.height) / JOINT.width;
+  const w = (radius * 2.3 * JOINT.width) / JOINT.plate;
+  const h = (radius * 2.3 * JOINT.height) / JOINT.plate;
   const plate = svgElement('image', { class: 'truss-node__plate', x: (x - w / 2).toFixed(1), y: (y - h / 2).toFixed(1), width: w.toFixed(1), height: h.toFixed(1) });
   plate.setAttribute('href', JOINT.src);
   group.appendChild(plate);
@@ -4994,10 +4998,10 @@ const EXIT_X = 2180;
 /** Each traveller: sprite, height on screen (px), speed (px/s), the way it bounces, its lane. */
 const TRAVELLERS = Object.freeze({
   // Every traveller is a 4-frame cycle (wheels turning, pedalling, stepping); `cycleMs` is one loop.
-  car: { src: 'assets/images/celebration/anim-car-side.png', frames: 4, ratio: 591 / 420, cycleMs: 320, height: 104, speed: 360, bob: 'cycle' },
-  scooter: { src: 'assets/images/celebration/anim-scooter-side.png', frames: 4, ratio: 439 / 420, cycleMs: 340, height: 104, speed: 300, bob: 'cycle' },
-  cyclist: { src: 'assets/images/celebration/anim-cyclist-side.png', frames: 4, ratio: 399 / 420, cycleMs: 480, height: 104, speed: 210, bob: 'cycle' },
-  walkers: { src: 'assets/images/celebration/walk-hedgehogs-side.png', frames: 4, ratio: 380 / 420, cycleMs: 600, height: 96, speed: 120, bob: 'cycle' },
+  car: { src: 'assets/images/celebration/anim-car-side.png', frames: 4, ratio: 623 / 432, cycleMs: 320, height: 107, speed: 360, bob: 'cycle' },
+  scooter: { src: 'assets/images/celebration/anim-scooter-side.png', frames: 4, ratio: 471 / 432, cycleMs: 340, height: 107, speed: 300, bob: 'cycle' },
+  cyclist: { src: 'assets/images/celebration/anim-cyclist-side.png', frames: 4, ratio: 431 / 432, cycleMs: 480, height: 107, speed: 210, bob: 'cycle' },
+  walkers: { src: 'assets/images/celebration/walk-hedgehogs-side.png', frames: 4, ratio: 412 / 432, cycleMs: 600, height: 99, speed: 120, bob: 'cycle' },
 });
 /** Who crosses, which way, in turn (the near lane goes right, the far lane comes back left). */
 const TRAFFIC = Object.freeze([
@@ -5078,10 +5082,10 @@ function createTownLife({ bridgeEl, fx, audio }) {
    true perspective: every shot knows its vanishing point and how fast the road widens either side of
    it, so a traveller's place, size and speed follow from its distance down the road. */
 const SHOT_SPRITES = Object.freeze({
-  carFront: { src: 'assets/images/celebration/anim-car-front.png', ratio: 470 / 420, size: 0.6, frames: 4, cycleMs: 360 },
-  cyclistBack: { src: 'assets/images/celebration/anim-cyclist-back.png', ratio: 213 / 420, size: 0.7, frames: 4, cycleMs: 460 },
-  scooterBack: { src: 'assets/images/celebration/anim-scooter-back.png', ratio: 256 / 420, size: 0.68, frames: 4, cycleMs: 380 },
-  walkersFront: { src: 'assets/images/celebration/walk-hedgehogs-front.png', ratio: 340 / 420, size: 0.5, frames: 4, cycleMs: 600 },
+  carFront: { src: 'assets/images/celebration/anim-car-front.png', ratio: 502 / 432, size: 0.617, frames: 4, cycleMs: 360 },
+  cyclistBack: { src: 'assets/images/celebration/anim-cyclist-back.png', ratio: 245 / 432, size: 0.72, frames: 4, cycleMs: 460 },
+  scooterBack: { src: 'assets/images/celebration/anim-scooter-back.png', ratio: 288 / 432, size: 0.699, frames: 4, cycleMs: 380 },
+  walkersFront: { src: 'assets/images/celebration/walk-hedgehogs-front.png', ratio: 372 / 432, size: 0.514, frames: 4, cycleMs: 600 },
 });
 /**
  * vp: vanishing point; slopeL/slopeR: road half-width per px below it, on each side.
@@ -5121,12 +5125,16 @@ const SHOTS = Object.freeze([
 ]);
 /** The entrance ceremony: the ribbon between the posts (measured on shot-front), the beaver who cuts it. */
 const CEREMONY = Object.freeze({
-  ribbon: { x1: 566, x2: 1356, y: 652, sag: 16 },
+  // Tied at the knots under the posts' gold balls, at his chest height, so the open blades close right on it.
+  ribbon: { x1: 566, x2: 1356, y: 598, sag: 12 },
   // He walks on the entrance shot's road (vanishing point 958, 548; half-width 1.8 px per px below it):
   // size = 0.597 x the road's half-width at his row, so he is the right size at every distance.
-  beaver: { ratio: 405 / 420, size: 0.597,     // ratio: his standing box (the strips are fitted inside it)
-    walk: 'assets/images/celebration/walk-beaver.png', walkRatio: 356 / 420,
-    poses: 'assets/images/celebration/anim-beaver-snip.png', poseRatio: 369 / 420, poseScale: 420 / 345,
+  // His box is his body (hat to boots), size 0.597 x the road's half-width; every strip below is drawn at
+  // one scale (body 300 px of a 440 px frame, feet 6 px above the frame's bottom), so they swap seamlessly.
+  beaver: { size: 0.597, frameH: 440, bodyH: 300, foot: 6,
+    away: { src: 'assets/images/celebration/beaver-walk-back.png', cell: 270 },     // back view: walking up to the ribbon
+    toward: { src: 'assets/images/celebration/beaver-walk-front.png', cell: 250 },  // front view: walking back to the camera
+    poses: { src: 'assets/images/celebration/beaver-snip.png', cell: 494 },         // raise, open, snip (back view), cheer (front)
     road: { vx: 958, vy: 548, slope: 1.8 },
     // At the ribbon: depth 2.18 (feet at y 792), just left of the centre line so the scissors meet the bow.
     stand: { z: 2.18, side: -0.141 },
@@ -5136,7 +5144,7 @@ const CEREMONY = Object.freeze({
 });
 const SHOT_FADE_MS = 850;      // cross-dissolves between shots, eased, with the camera still drifting
 
-const BRIDGE_SHOT_IMAGES = [...SHOTS.map((shot) => shot.src), ...Object.values(SHOT_SPRITES).map((sprite) => sprite.src), CEREMONY.beaver.walk, CEREMONY.beaver.poses];
+const BRIDGE_SHOT_IMAGES = [...SHOTS.map((shot) => shot.src), ...Object.values(SHOT_SPRITES).map((sprite) => sprite.src), CEREMONY.beaver.away.src, CEREMONY.beaver.toward.src, CEREMONY.beaver.poses.src];
 
 /**
  * Plays the opening and the three road-level shots over `host` (cross-fading, each with a slow push-in).
@@ -5229,9 +5237,11 @@ async function openRibbon(shotEl, { signal, audio } = {}) {
   shotEl.appendChild(ribbon);
   const beaver = document.createElement('div');
   beaver.className = 'shot-beaver';
-  beaver.innerHTML = `
-    <span class="walk-strip" style="background-image:url('${b.walk}');width:${((b.walkRatio / b.ratio) * 100).toFixed(2)}%"></span>
-    <span class="pose-strip" style="background-image:url('${b.poses}');height:${(b.poseScale * 100).toFixed(1)}%;width:${((b.poseRatio * b.poseScale / b.ratio) * 100).toFixed(1)}%"></span>`;
+  // Each strip: as tall as frameH / bodyH of his body, its feet line on his feet, centred on his body.
+  const strip = (cls, art) => `<span class="${cls}" style="background-image:url('${art.src}');`
+    + `height:${((b.frameH / b.bodyH) * 100).toFixed(2)}%;width:${((art.cell / b.bodyH) * 100).toFixed(2)}%;`
+    + `bottom:${((-b.foot / b.bodyH) * 100).toFixed(2)}%"></span>`;
+  beaver.innerHTML = strip('walk-strip walk-strip--away', b.away) + strip('walk-strip walk-strip--toward', b.toward) + strip('pose-strip', b.poses);
   const pose = (i) => beaver.style.setProperty('--pose', String(i));
   pose(0);
   shotEl.appendChild(beaver);
@@ -5241,7 +5251,7 @@ async function openRibbon(shotEl, { signal, audio } = {}) {
     const y = vy + (1080 - vy) / z;
     const halfWidth = slope * (y - vy);
     const h = b.size * halfWidth;
-    const w = h * b.ratio;
+    const w = h;
     const x = vx + side * halfWidth;
     beaver.style.width = `${w.toFixed(1)}px`;
     beaver.style.height = `${h.toFixed(1)}px`;
@@ -5253,20 +5263,20 @@ async function openRibbon(shotEl, { signal, audio } = {}) {
   // Walks in perspective: steady through depth, and he reaches the road's middle early in the walk (and
   // leaves it late), so his feet are always on the road, never over the canal or the railing.
   const walk = (from, to, ms) => new Promise((resolve) => {
-    beaver.classList.add('is-walking');
+    const away = to.z > from.z;
+    beaver.classList.add('is-walking', away ? 'is-away' : 'is-toward');
     let n = 0;
     const steps = setInterval(() => audio?.play('step', { variant: n++ }), STEP_MS);
     const start = performance.now();
-    const towardRibbon = to.z > from.z;
     const frame = (now) => {
       const t = Math.min(1, (now - start) / ms);
       const zt = t * t * (3 - 2 * t);                                  // eases off at both ends
-      const st = towardRibbon ? 1 - Math.pow(1 - t, 2.2) : Math.pow(t, 2.2);
+      const st = away ? 1 - Math.pow(1 - t, 2.2) : Math.pow(t, 2.2);
       place(from.z + (to.z - from.z) * zt, from.side + (to.side - from.side) * st);
       if (t < 1 && !signal?.aborted) requestAnimationFrame(frame);
       else {
         clearInterval(steps);
-        beaver.classList.remove('is-walking');
+        beaver.classList.remove('is-walking', 'is-away', 'is-toward');
         resolve();
       }
     };
@@ -5305,8 +5315,6 @@ async function openRibbon(shotEl, { signal, audio } = {}) {
   beaver.classList.add('is-cheering');
   await wait(1100, signal);
   beaver.classList.remove('is-cheering');
-  pose(0);
-  beaver.style.setProperty('--face', '-1');
   walk(b.stand, b.offstage, 1500).then(() => beaver.remove());    // heads back the way he came, toward the camera
   await wait(500, signal);
 }
@@ -5829,6 +5837,7 @@ function wireSkipToEnd({ els, audio, voice, bridge, gameState, levelEngine, scre
     if (busy || screenManager.currentName === 'complete') return;
     busy = true;
     audio.unlock();
+    audio.startMusic();
     voice.unlock?.();
     voice.stop();
     await levelEngine.resetAll();

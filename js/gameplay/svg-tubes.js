@@ -14,7 +14,8 @@ const BEAMS = Object.freeze({
   yellow: { l: 'assets/images/kit/beam-yellow-l.png', m: 'assets/images/kit/beam-yellow-m.png', r: 'assets/images/kit/beam-yellow-r.png', h: 140, capL: 130, capR: 130, boltAt: 72, scale: 1.25 },
   navy: { l: 'assets/images/kit/beam-navy-l.png', m: 'assets/images/kit/beam-navy-m.png', r: 'assets/images/kit/beam-navy-r.png', h: 100, capL: 116, capR: 116, boltAt: 53, scale: 1.1 },
 });
-const JOINT = Object.freeze({ src: 'assets/images/kit/joint-plate.png', width: 240, height: 220 });
+// The plate art is 240 x 220 inside a 14 px clear margin (268 x 248), so its outline is never cut at the edge.
+const JOINT = Object.freeze({ src: 'assets/images/kit/joint-plate.png', width: 268, height: 248, plate: 240 });
 
 export const STEEL_IMAGES = [...Object.values(BEAMS).flatMap((b) => [b.l, b.m, b.r]), JOINT.src];
 
@@ -91,8 +92,8 @@ export function gussetDefs() {
 /** A joint: the painted hexagonal steel plate with bolts, centred on (x, y). */
 export function createGusset(x, y, { radius = 17 } = {}) {
   const group = svgElement('g', { class: 'truss-node' });
-  const w = radius * 2.3;
-  const h = (w * JOINT.height) / JOINT.width;
+  const w = (radius * 2.3 * JOINT.width) / JOINT.plate;
+  const h = (radius * 2.3 * JOINT.height) / JOINT.plate;
   const plate = svgElement('image', { class: 'truss-node__plate', x: (x - w / 2).toFixed(1), y: (y - h / 2).toFixed(1), width: w.toFixed(1), height: h.toFixed(1) });
   plate.setAttribute('href', JOINT.src);
   group.appendChild(plate);

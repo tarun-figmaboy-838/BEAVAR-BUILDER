@@ -288,10 +288,6 @@
   50% { transform: scale(1.07); }
 }
 @keyframes start-spin { to { transform: rotate(360deg); } }
-@keyframes start-ripple {
-  0% { opacity: 0.95; transform: scale(1); }
-  100% { opacity: 0; transform: scale(1.38); }
-}
 @keyframes start-leave {
   0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
   100% { opacity: 0; transform: translate(-50%, -50%) scale(0.7); }
@@ -304,9 +300,13 @@
   75% { transform: translateY(-4px); }
 }
 
-@keyframes halo-pulse {
-  0%, 100% { transform: scale(0.96); opacity: 0.7; }
-  50% { transform: scale(1.06); opacity: 1; }
+@keyframes glow-pulse {
+  0%, 100% { transform: scale(0.9); opacity: 0.55; }
+  50% { transform: scale(1.08); opacity: 1; }
+}
+@keyframes button-pulse {
+  0%, 100% { scale: 1; }
+  50% { scale: 1.045; }
 }
 
 @keyframes card-leave-right {

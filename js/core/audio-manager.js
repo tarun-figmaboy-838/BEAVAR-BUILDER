@@ -401,6 +401,7 @@ function createMusic(context, out, noiseBuffer) {
     const decay = EIGHTH * 1.8;
     osc('triangle', midiHz(note), t0, decay, envelope(t0, peak, decay));
     osc('sine', midiHz(note), t0, decay, envelope(t0, peak * 0.8, decay));
+    osc('triangle', midiHz(note) * 2, t0, decay, envelope(t0, peak * 0.5, decay));   // an octave up: heard on small speakers
   }
   function kick(t0, peak) {
     const node = osc('sine', 120, t0, 0.16, envelope(t0, peak, 0.16));
@@ -421,13 +422,13 @@ function createMusic(context, out, noiseBuffer) {
     const inBar = index % 8;
     const bar = Math.floor(index / 8);
     if (inBar === 0 || inBar === 4) {
-      kick(t0, 0.09);
-      bass(BASS[bar] + (inBar === 4 ? 7 : 0), t0, 0.07);
+      kick(t0, 0.12);
+      bass(BASS[bar] + (inBar === 4 ? 7 : 0), t0, 0.1);
     }
-    if (index % 2 === 1) CHORDS[bar].forEach((note) => pluck(note, t0, 0.022));
-    shaker(t0, index % 2 ? 0.03 : 0.018);
+    if (index % 2 === 1) CHORDS[bar].forEach((note) => pluck(note, t0, 0.04));
+    shaker(t0, index % 2 ? 0.035 : 0.022);
     const melody = MELODY_BY_STEP.get(index);
-    if (melody) mallet(melody[0], t0, melody[1] * 2, 0.06);
+    if (melody) mallet(melody[0], t0, melody[1] * 2, 0.12);
   }
 
   function tick() {
@@ -463,7 +464,7 @@ function createMusic(context, out, noiseBuffer) {
     /** Music sits further under the narration than the effects do. */
     duck(on) {
       if (!timer) return;
-      bus.gain.setTargetAtTime(on ? 0.45 : 1, context.currentTime, 0.12);
+      bus.gain.setTargetAtTime(on ? 0.55 : 1, context.currentTime, 0.12);
     },
     get playing() {
       return Boolean(timer);
@@ -527,6 +528,8 @@ export function createAudioManager() {
   return {
     /** Call from a user gesture so the browser allows audio. */
     unlock() {
+      // iPhone: play through the silent switch like a video does (Safari 17+), not as a muted ringer sound.
+      try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch { /* older Safari */ }
       const ctx = ensureContext();
       if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
     },

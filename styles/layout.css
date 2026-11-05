@@ -74,20 +74,52 @@
 .debug-overlay { position: absolute; left: 12px; bottom: 12px; z-index: 90; }
 
 .loader {
+  /* Loading: the title over a bright sky, and a yellow triangle truss that builds across as the game loads,
+     a crane hook swinging at its end. Light: a few small transforms, no filters over large areas. */
   position: absolute;
   inset: 0;
   z-index: 100;
   display: grid;
   place-content: center;
-  gap: 18px;
-  background: var(--color-navy);
-  color: var(--color-white);
+  justify-items: center;
+  gap: 34px;
+  background: radial-gradient(ellipse at 50% 30%, #bfe9ff 0%, #6cc4f5 45%, #2a86d6 100%);
+  color: #16325c;
   text-align: center;
   font-family: var(--font-display);
-  font-size: 26px;
+  font-size: 30px;
   transition: opacity 400ms var(--ease-out);
 }
 .loader.is-done { opacity: 0; pointer-events: none; }
-.loader__bar { width: 420px; height: 16px; border-radius: 8px; background: rgba(255,255,255,0.2); overflow: hidden; margin: 0 auto; }
-.loader__fill { display: block; height: 100%; width: 0%; background: var(--color-yellow); transition: width 160ms linear; }
-.loader__text { margin: 0; max-width: 760px; line-height: 1.4; }
+.loader__logo { width: 911.6px; max-width: none; margin: -25.8px -25.8px -43.1px; height: auto; display: block; animation: logo-pop 700ms var(--ease-back) both, loader-bob 2.6s ease-in-out 700ms infinite; }
+.loader__bar {
+  position: relative; width: 704px; height: 44px; margin: 70px auto 0;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='44' viewBox='0 0 64 44'%3E%3Cg fill='none' stroke-linecap='round' opacity='0.35'%3E%3Cpath d='M0 6H64M0 38H64M0 38L32 6L64 38' stroke='%2316325c' stroke-width='10'/%3E%3Cpath d='M0 6H64M0 38H64M0 38L32 6L64 38' stroke='%23ffffff' stroke-width='5'/%3E%3C/g%3E%3Cg fill='%2316325c' opacity='0.35'%3E%3Ccircle cx='32' cy='6' r='3'/%3E%3Ccircle cx='0' cy='38' r='3'/%3E%3Ccircle cx='64' cy='38' r='3'/%3E%3C/g%3E%3C/svg%3E") 0 0 / 64px 44px repeat-x;      /* the ghost of the bridge still to build */
+}
+.loader__fill {
+  position: absolute; left: 0; top: 0; display: block; height: 100%; width: 0%;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='44' viewBox='0 0 64 44'%3E%3Cg fill='none' stroke-linecap='round' opacity='1'%3E%3Cpath d='M0 6H64M0 38H64M0 38L32 6L64 38' stroke='%2316325c' stroke-width='10'/%3E%3Cpath d='M0 6H64M0 38H64M0 38L32 6L64 38' stroke='%23ffc21a' stroke-width='5'/%3E%3C/g%3E%3Cg fill='%2316325c' opacity='1'%3E%3Ccircle cx='32' cy='6' r='3'/%3E%3Ccircle cx='0' cy='38' r='3'/%3E%3Ccircle cx='64' cy='38' r='3'/%3E%3C/g%3E%3C/svg%3E") 0 0 / 64px 44px repeat-x;
+  transition: width 220ms var(--ease-out);
+}
+/* The crane hook at the building end: a cable from above, the hook swinging gently. */
+.loader__hook {
+  position: absolute; right: -9px; bottom: 100%; width: 18px; height: 80px; transform-origin: 50% 0;
+  background: linear-gradient(#3c4a5c, #3c4a5c) 50% 0 / 3px 56px no-repeat;
+  animation: loader-swing 1.6s ease-in-out infinite alternate;
+}
+.loader__hook::after {
+  content: ""; position: absolute; left: 0; bottom: 0; width: 18px; height: 24px;
+  border: 5px solid #16325c; border-top-color: transparent; border-radius: 0 0 12px 12px;
+  background: none; box-sizing: border-box;
+}
+.loader__hook::before {
+  content: ""; position: absolute; left: -3px; top: 50px; width: 24px; height: 12px; border-radius: 4px;
+  background: #ffc21a; box-shadow: inset 0 -3px 0 #d99a00, 0 0 0 3px #16325c;
+}
+.loader__text { margin: 0; max-width: 760px; line-height: 1.4; text-shadow: 0 2px 0 rgba(255, 255, 255, 0.6); }
+.loader__dots i { display: inline-block; font-style: normal; animation: loader-dot 1.2s ease-in-out infinite; }
+.loader__dots i:nth-child(2) { animation-delay: 0.15s; }
+.loader__dots i:nth-child(3) { animation-delay: 0.3s; }
+@keyframes loader-bob { 0%, 100% { translate: 0 0; } 50% { translate: 0 -10px; } }
+@keyframes loader-swing { from { rotate: -7deg; } to { rotate: 7deg; } }
+@keyframes loader-dot { 0%, 60%, 100% { translate: 0 0; } 30% { translate: 0 -8px; } }
