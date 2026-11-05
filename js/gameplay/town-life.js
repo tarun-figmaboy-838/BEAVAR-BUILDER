@@ -13,10 +13,11 @@ const EXIT_X = 2180;
 
 /** Each traveller: sprite, height on screen (px), speed (px/s), the way it bounces, its lane. */
 const TRAVELLERS = Object.freeze({
-  car: { src: 'assets/images/celebration/car.png', height: 112, speed: 360, bob: 'ride' },
-  scooter: { src: 'assets/images/celebration/scooter.png', height: 106, speed: 300, bob: 'ride' },
-  cyclist: { src: 'assets/images/celebration/cyclist.png', height: 104, speed: 210, bob: 'pedal' },
-  walkers: { src: 'assets/images/celebration/walk-hedgehogs-side.png', frames: 4, ratio: 380 / 420, height: 96, speed: 120, bob: 'cycle' },
+  // Every traveller is a 4-frame cycle (wheels turning, pedalling, stepping); `cycleMs` is one loop.
+  car: { src: 'assets/images/celebration/anim-car-side.png', frames: 4, ratio: 591 / 420, cycleMs: 320, height: 104, speed: 360, bob: 'cycle' },
+  scooter: { src: 'assets/images/celebration/anim-scooter-side.png', frames: 4, ratio: 439 / 420, cycleMs: 340, height: 104, speed: 300, bob: 'cycle' },
+  cyclist: { src: 'assets/images/celebration/anim-cyclist-side.png', frames: 4, ratio: 399 / 420, cycleMs: 480, height: 104, speed: 210, bob: 'cycle' },
+  walkers: { src: 'assets/images/celebration/walk-hedgehogs-side.png', frames: 4, ratio: 380 / 420, cycleMs: 600, height: 96, speed: 120, bob: 'cycle' },
 });
 /** Who crosses, which way, in turn (the near lane goes right, the far lane comes back left). */
 const TRAFFIC = Object.freeze([
@@ -34,7 +35,7 @@ export function createTownLife({ bridgeEl, fx, audio }) {
   let turn = 0;
 
   /** A sprite standing on the road at x, facing `dir` (1 right, -1 left). Returns { el, moveTo }. */
-  function sprite({ src, height, bob, frames, ratio }, x, dir, lane = 0) {
+  function sprite({ src, height, bob, frames, ratio, cycleMs = 600 }, x, dir, lane = 0) {
     const el = document.createElement('div');
     el.className = `townie townie--${bob}${lane ? ' townie--far' : ''}`;
     el.style.setProperty('--h', `${height}px`);
@@ -43,7 +44,7 @@ export function createTownLife({ bridgeEl, fx, audio }) {
     el.style.transform = `translateX(${x}px)`;
     el.innerHTML = frames
       // A real walk cycle: the frames of a strip, stepped through (gameplay.css .walk-strip).
-      ? `<span class="townie__face" style="--dir:${dir}"><span class="walk-strip" style="background-image:url('${src}');width:${(height * ratio).toFixed(1)}px;height:${height}px"></span></span>`
+      ? `<span class="townie__face" style="--dir:${dir}"><span class="walk-strip" style="background-image:url('${src}');width:${(height * ratio).toFixed(1)}px;height:${height}px;--cycle:${cycleMs}ms"></span></span>`
       : `<span class="townie__face" style="--dir:${dir}"><img src="${src}" alt="" draggable="false"></span>`;
     layer.appendChild(el);
     const moveTo = (toX, speed) => new Promise((resolve) => {
@@ -97,10 +98,10 @@ export function createTownLife({ bridgeEl, fx, audio }) {
    true perspective: every shot knows its vanishing point and how fast the road widens either side of
    it, so a traveller's place, size and speed follow from its distance down the road. */
 const SHOT_SPRITES = Object.freeze({
-  carFront: { src: 'assets/images/celebration/car-front.png', ratio: 429 / 420, size: 0.62 },
-  cyclistBack: { src: 'assets/images/celebration/cyclist-back.png', ratio: 191 / 420, size: 0.7 },
-  scooterBack: { src: 'assets/images/celebration/scooter-back.png', ratio: 238 / 420, size: 0.68 },
-  walkersFront: { src: 'assets/images/celebration/walk-hedgehogs-front.png', ratio: 340 / 420, size: 0.5, frames: 4 },
+  carFront: { src: 'assets/images/celebration/anim-car-front.png', ratio: 470 / 420, size: 0.6, frames: 4, cycleMs: 360 },
+  cyclistBack: { src: 'assets/images/celebration/anim-cyclist-back.png', ratio: 213 / 420, size: 0.7, frames: 4, cycleMs: 460 },
+  scooterBack: { src: 'assets/images/celebration/anim-scooter-back.png', ratio: 256 / 420, size: 0.68, frames: 4, cycleMs: 380 },
+  walkersFront: { src: 'assets/images/celebration/walk-hedgehogs-front.png', ratio: 340 / 420, size: 0.5, frames: 4, cycleMs: 600 },
 });
 /**
  * vp: vanishing point; slopeL/slopeR: road half-width per px below it, on each side.
@@ -141,19 +142,27 @@ const SHOTS = Object.freeze([
 /** The entrance ceremony: the ribbon between the posts (measured on shot-front), the beaver who cuts it. */
 const CEREMONY = Object.freeze({
   ribbon: { x1: 566, x2: 1356, y: 652, sag: 16 },
-  beaver: { src: 'assets/images/celebration/beaver-scissors.png', ratio: 405 / 420, height: 262, groundY: 792, standX: 896,
-    walk: 'assets/images/celebration/walk-beaver.png', walkRatio: 356 / 420 },
-  walkMs: 1700,
+  // He walks on the entrance shot's road (vanishing point 958, 548; half-width 1.8 px per px below it):
+  // size = 0.597 x the road's half-width at his row, so he is the right size at every distance.
+  beaver: { ratio: 405 / 420, size: 0.597,     // ratio: his standing box (the strips are fitted inside it)
+    walk: 'assets/images/celebration/walk-beaver.png', walkRatio: 356 / 420,
+    poses: 'assets/images/celebration/anim-beaver-snip.png', poseRatio: 369 / 420, poseScale: 420 / 345,
+    road: { vx: 958, vy: 548, slope: 1.8 },
+    // At the ribbon: depth 2.18 (feet at y 792), just left of the centre line so the scissors meet the bow.
+    stand: { z: 2.18, side: -0.141 },
+    // Off-camera, near-left: he enters from (and leaves to) behind the camera, never from the canal.
+    offstage: { z: 0.9, side: -1.32 } },
+  walkMs: 2100,
 });
-const SHOT_FADE_MS = 550;
+const SHOT_FADE_MS = 850;      // cross-dissolves between shots, eased, with the camera still drifting
 
-export const BRIDGE_SHOT_IMAGES = [...SHOTS.map((shot) => shot.src), ...Object.values(SHOT_SPRITES).map((sprite) => sprite.src), CEREMONY.beaver.src, CEREMONY.beaver.walk];
+export const BRIDGE_SHOT_IMAGES = [...SHOTS.map((shot) => shot.src), ...Object.values(SHOT_SPRITES).map((sprite) => sprite.src), CEREMONY.beaver.walk, CEREMONY.beaver.poses];
 
 /**
  * Plays the opening and the three road-level shots over `host` (cross-fading, each with a slow push-in).
  * `onLastShot` fires as the last shot starts (so the side view can already show the open bridge).
  */
-export async function playBridgeShots(host, { signal, audio, onLastShot } = {}) {
+export async function playBridgeShots(host, { signal, audio, onLastShot, onEnding } = {}) {
   // (audio: snip, steps, horn, bell, scooter and cheer cues; see audio-manager.js)
   if (prefersReducedMotion()) return;
   const layer = document.createElement('div');
@@ -170,7 +179,7 @@ export async function playBridgeShots(host, { signal, audio, onLastShot } = {}) 
     el.className = `shot-townie townie--${sprite.frames ? 'cycle' : t.bob}`;
     el.style.opacity = '0';
     el.innerHTML = sprite.frames
-      ? `<span class="walk-strip" style="background-image:url('${sprite.src}')"></span>`
+      ? `<span class="walk-strip" style="background-image:url('${sprite.src}');--cycle:${sprite.cycleMs}ms"></span>`
       : `<img src="${sprite.src}" alt="" draggable="false">`;
     shotEl.appendChild(el);
     const [vx, vy] = shot.vp;
@@ -206,7 +215,7 @@ export async function playBridgeShots(host, { signal, audio, onLastShot } = {}) 
       shotEl.innerHTML = `<img class="bridge-shot__bg" src="${shot.src}" alt="" draggable="false">`;
       layer.appendChild(shotEl);
       frames.push(shotEl);
-      shotEl.animate([{ opacity: 0 }, { opacity: 1 }], { duration: index ? SHOT_FADE_MS : 700, easing: 'ease-in-out', fill: 'forwards' });
+      shotEl.animate([{ opacity: 0 }, { opacity: 1 }], { duration: index ? SHOT_FADE_MS : 1000, easing: 'cubic-bezier(.45, 0, .25, 1)', fill: 'forwards' });
       shotEl.querySelector('.bridge-shot__bg').animate([{ transform: 'scale(1)' }, { transform: 'scale(1.04)' }], { duration: shot.ms + SHOT_FADE_MS + (shot.ceremony ? 5200 : 0), easing: 'linear', fill: 'forwards' });
       if (index === SHOTS.length - 1) onLastShot?.();
       if (shot.ceremony) await openRibbon(shotEl, { signal, audio });
@@ -215,7 +224,8 @@ export async function playBridgeShots(host, { signal, audio, onLastShot } = {}) 
       await wait(shot.ms, signal);
       if (index) frames[index - 1].remove();
     }
-    await layer.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 700, easing: 'ease-in-out', fill: 'forwards' }).finished;
+    onEnding?.();                                                  // the side view pulls back as the last shot dissolves
+    await layer.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 1100, easing: 'cubic-bezier(.45, 0, .25, 1)', fill: 'forwards' }).finished;
   } catch {
     /* skipped */
   } finally {
@@ -237,32 +247,61 @@ async function openRibbon(shotEl, { signal, audio } = {}) {
     </svg>
     <span class="shot-ribbon__bow" style="left:${mid}px;top:${r.y + r.sag * 0.7}px"><i></i><i></i><b></b></span>`;
   shotEl.appendChild(ribbon);
-  const w = b.height * b.ratio;
   const beaver = document.createElement('div');
   beaver.className = 'shot-beaver';
-  beaver.style.width = `${w}px`;
-  beaver.style.height = `${b.height}px`;
-  beaver.innerHTML = `<img src="${b.src}" alt="" draggable="false"><span class="walk-strip" style="background-image:url('${b.walk}');width:${(b.height * b.walkRatio).toFixed(1)}px"></span>`;
+  beaver.innerHTML = `
+    <span class="walk-strip" style="background-image:url('${b.walk}');width:${((b.walkRatio / b.ratio) * 100).toFixed(2)}%"></span>
+    <span class="pose-strip" style="background-image:url('${b.poses}');height:${(b.poseScale * 100).toFixed(1)}%;width:${((b.poseRatio * b.poseScale / b.ratio) * 100).toFixed(1)}%"></span>`;
+  const pose = (i) => beaver.style.setProperty('--pose', String(i));
+  pose(0);
   shotEl.appendChild(beaver);
-  const at = (x) => `translate(${(x - w / 2).toFixed(1)}px, ${(b.groundY - b.height).toFixed(1)}px)`;
+  /** Place him on the road at depth z (1 = bottom of the picture) and lateral position `side` (road half-widths). */
+  const place = (z, side) => {
+    const { vx, vy, slope } = b.road;
+    const y = vy + (1080 - vy) / z;
+    const halfWidth = slope * (y - vy);
+    const h = b.size * halfWidth;
+    const w = h * b.ratio;
+    const x = vx + side * halfWidth;
+    beaver.style.width = `${w.toFixed(1)}px`;
+    beaver.style.height = `${h.toFixed(1)}px`;
+    beaver.style.transform = `translate(${(x - w / 2).toFixed(1)}px, ${(y - h).toFixed(1)}px)`;
+  };
+  place(b.offstage.z, b.offstage.side);
   // A beaver waddles: each step lifts and rocks the body (CSS), and every step lands with a soft footstep.
   const STEP_MS = 300;
-  const walk = (from, to, ms) => {
+  // Walks in perspective: steady through depth, and he reaches the road's middle early in the walk (and
+  // leaves it late), so his feet are always on the road, never over the canal or the railing.
+  const walk = (from, to, ms) => new Promise((resolve) => {
     beaver.classList.add('is-walking');
     let n = 0;
     const steps = setInterval(() => audio?.play('step', { variant: n++ }), STEP_MS);
-    return beaver.animate([{ transform: at(from) }, { transform: at(to) }], { duration: ms, easing: 'cubic-bezier(.3, .05, .3, 1)', fill: 'forwards' }).finished
-      .finally(() => { clearInterval(steps); beaver.classList.remove('is-walking'); });
-  };
-  await walk(-w, b.standX, walkMs);
+    const start = performance.now();
+    const towardRibbon = to.z > from.z;
+    const frame = (now) => {
+      const t = Math.min(1, (now - start) / ms);
+      const zt = t * t * (3 - 2 * t);                                  // eases off at both ends
+      const st = towardRibbon ? 1 - Math.pow(1 - t, 2.2) : Math.pow(t, 2.2);
+      place(from.z + (to.z - from.z) * zt, from.side + (to.side - from.side) * st);
+      if (t < 1 && !signal?.aborted) requestAnimationFrame(frame);
+      else {
+        clearInterval(steps);
+        beaver.classList.remove('is-walking');
+        resolve();
+      }
+    };
+    requestAnimationFrame(frame);
+  });
+  await walk(b.offstage, b.stand, walkMs);
   await wait(300, signal);
   // The cut: he raises the scissors, the blades close on the ribbon (snip, a glint), the halves spring apart.
-  beaver.classList.add('is-raising');
-  await wait(380, signal);
-  beaver.classList.remove('is-raising');
-  beaver.classList.add('is-snipping');
+  pose(0);                                   // raises the scissors
+  await wait(360, signal);
+  pose(1);                                   // blades open at the ribbon
+  await wait(300, signal);
+  pose(2);                                   // snip!
   audio?.play('snip');
-  await wait(140, signal);
+  await wait(110, signal);
   const glint = document.createElement('span');
   glint.className = 'shot-glint';
   glint.style.left = `${mid}px`;
@@ -281,12 +320,13 @@ async function openRibbon(shotEl, { signal, audio } = {}) {
     c.style.setProperty('--drift', `${(Math.random() - 0.5) * 160}px`);
     shotEl.appendChild(c);
   }
-  await wait(360, signal);
-  beaver.classList.remove('is-snipping');
+  await wait(320, signal);
+  pose(3);                                   // cheers, scissors held high
   beaver.classList.add('is-cheering');
   await wait(1100, signal);
   beaver.classList.remove('is-cheering');
+  pose(0);
   beaver.style.setProperty('--face', '-1');
-  walk(b.standX, -w, 1300).then(() => beaver.remove());          // steps aside as the traffic starts
+  walk(b.stand, b.offstage, 1500).then(() => beaver.remove());    // heads back the way he came, toward the camera
   await wait(500, signal);
 }

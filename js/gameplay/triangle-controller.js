@@ -112,8 +112,15 @@ export function createTriangleController({ platformEl, placedLayerEl }) {
     grabPointOf(option) {
       return { x: option.homeCenterX - option.width / 2 + option.grabX * option.width, y: option.baseY - option.baseOffset + option.grabY };
     },
+    /** Returns true when a new frame became the hovered one (for the comic bloop). */
     setHovered(id) {
-      for (const option of options.values()) option.element.classList.toggle('is-hovered', option.id === id);
+      let changed = false;
+      for (const option of options.values()) {
+        const on = option.id === id;
+        if (on && !option.element.classList.contains('is-hovered')) changed = true;
+        option.element.classList.toggle('is-hovered', on);
+      }
+      return changed;
     },
     /** Detach from the platform (the crane now owns the element). */
     lift(option) {

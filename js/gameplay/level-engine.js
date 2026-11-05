@@ -53,7 +53,7 @@ export function createLevelEngine({ gameState, crane, claw, triangles, bridge, p
     const pickReady = canAct && !carried && state.craneState === CRANE_STATES.HOVERING_OPTION;
     const dropReady = canAct && Boolean(carried) && state.craneState === CRANE_STATES.HOVERING_TARGET;
     input.setActionState({ mode: carried ? 'drop' : 'pick', enabled: pickReady || dropReady });
-    triangles.setHovered(carried ? null : state.hoveredOptionId);
+    if (triangles.setHovered(carried ? null : state.hoveredOptionId)) audio.play('bloop');
     bridge.setSocketAligned(Boolean(carried) && Boolean(hover.overSocket));
     bridge.setSocketArmed(Boolean(carried));
   }
@@ -178,6 +178,7 @@ export function createLevelEngine({ gameState, crane, claw, triangles, bridge, p
     triangles.release(option);
     await bridge.absorbFrame(option, level.bridgeStage, scope.signal);
     await bridge.constructStage(level.bridgeStage, { signal: scope.signal });
+    audio.play('tada');
     gameState.update({ bridgeProgress: currentLevelIndex + 1 });
     await wait(380, scope.signal);
     if (currentLevelIndex === LEVEL_COUNT - 1) {
@@ -194,6 +195,7 @@ export function createLevelEngine({ gameState, crane, claw, triangles, bridge, p
   async function handleIncorrect(option) {
     gameState.update({ transition: 'level:collapse' });
     audio.play('incorrect');
+    setTimeout(() => audio.play('wahwah'), 350);
     builder.worry();
     crane.alarm(true);
     voice.say(COPY.feedback.incorrect, { speaker: 'narrator' });

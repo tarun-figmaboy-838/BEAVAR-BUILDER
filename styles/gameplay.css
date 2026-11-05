@@ -401,15 +401,12 @@
 }
 .shot-townie img { filter: none; }
 .shot-beaver { position: absolute; left: 0; top: 0; z-index: 2000; will-change: transform; }
-.shot-beaver img { display: block; width: 100%; height: 100%; transform-origin: 50% 100%; }
-/* Waddle: lift on each step, rock side to side, a little squash on landing (300 ms a step). */
-.shot-beaver.is-walking img { animation: beaver-waddle 600ms ease-in-out infinite; }
-.shot-beaver.is-raising img { transition: transform 300ms var(--ease-out); transform: rotate(-7deg) translateY(-6px); transform-origin: 40% 100%; }
-.shot-beaver.is-snipping img { animation: beaver-snip 360ms var(--ease-out) 1; }
+/* Walking: the 4-frame walk cycle (legs step); standing: one pose of the ceremony strip. */
+.shot-beaver .walk-strip { position: absolute; left: 50%; bottom: 0; height: 100%; display: none; transform: translateX(-50%) scaleX(var(--face, 1)); --cycle: 600ms; }
+.shot-beaver.is-walking .walk-strip { display: block; }
 .shot-glint { position: absolute; width: 0; height: 0; z-index: 2500; pointer-events: none; }
 .shot-glint::before, .shot-glint::after { content: ""; position: absolute; left: -46px; top: -6px; width: 92px; height: 12px; border-radius: 6px; background: radial-gradient(ellipse, #fff 0 30%, rgba(255, 240, 180, 0.8) 55%, rgba(255, 220, 120, 0) 75%); animation: glint-pop 600ms ease-out forwards; }
 .shot-glint::after { left: -6px; top: -46px; width: 12px; height: 92px; }
-.shot-beaver.is-cheering img { animation: townie-cheer 360ms var(--ease-out) 3 alternate; }
 /* The entrance ribbon: a red satin band tied post to post; cut, the halves drop away to the posts. */
 .shot-ribbon { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
 .shot-ribbon svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
@@ -427,7 +424,16 @@
 .shot-ribbon.is-cut .shot-ribbon__bow { opacity: 0; transform: translateY(120px) rotate(40deg); }
 .shot-confetti { position: absolute; top: -30px; width: 14px; height: 22px; border-radius: 3px; z-index: 3000; opacity: 0; animation: shot-confetti var(--dur, 2200ms) linear var(--delay, 0ms) forwards; }
 /* A walk cycle: a strip of 4 frames side by side, stepped through (no in-betweens: each frame is a pose). */
-.walk-strip { display: block; background-repeat: no-repeat; background-size: 400% 100%; animation: walk-frames 600ms steps(4, end) infinite; }
+.walk-strip { display: block; background-repeat: no-repeat; background-size: 400% 100%; animation: walk-frames var(--cycle, 600ms) steps(4, end) infinite; }
+/* The beaver's ceremony poses: one frame of a 4-frame strip, chosen with --pose (0 raise, 1 open, 2 snip, 3 cheer). */
+.shot-beaver .pose-strip { position: absolute; left: 50%; bottom: 0; display: block; background-repeat: no-repeat; background-size: 400% 100%;
+  background-position: calc(var(--pose, 0) * 33.333%) 0; transform: translateX(-50%) scaleX(var(--face, 1)); transform-origin: 50% 100%; }
+.shot-beaver.is-walking .pose-strip { display: none; }
+.shot-beaver.is-cheering .pose-strip { animation: townie-cheer 360ms var(--ease-out) 3 alternate; }
 .shot-townie .walk-strip { width: 100%; height: 100%; }
 .townie.is-moving.townie--cycle .walk-strip { animation-play-state: running; }
+/* Comic touches (small, quick, never in the way): the hovered frame does a little happy wiggle once; a lifted
+   frame squashes and stretches as the claw takes it. */
+.triangle--option.is-hovered .frame { animation: frame-glow 1s ease-in-out infinite, frame-wiggle 420ms ease-in-out 1; }
+.triangle.is-lifted .frame { animation: frame-lift 500ms cubic-bezier(.3, 1.6, .5, 1) 1; transform-origin: 50% 0; }
 

@@ -60,6 +60,36 @@ function makeNoise(context, out, buffer) {
 /* ---- One-shot cues ---- */
 const SOUNDS = {
   uiTap: { minInterval: 0.04, play: ({ tone, t0 }) => tone({ t0, freq: 720, freqEnd: 960, duration: 0.06, gain: 0.08 }) },
+  /* ---- Comic touches during play: short and quiet, so they never cover the narration ---- */
+  /** The hook arrives over a frame: a soft rising bloop. */
+  bloop: { minInterval: 0.25, play: ({ tone, t0 }) => tone({ t0, type: 'sine', freq: 420, freqEnd: 760, duration: 0.12, gain: 0.07, release: 0.08 }) },
+  /** A frame is lifted: a springy boing. */
+  boing: {
+    minInterval: 0.3,
+    play: ({ tone, t0 }) => {
+      tone({ t0, type: 'sine', freq: 240, freqEnd: 520, duration: 0.09, gain: 0.08 });
+      tone({ t0: t0 + 0.09, type: 'sine', freq: 520, freqEnd: 300, duration: 0.22, gain: 0.06, release: 0.18 });
+    },
+  },
+  /** Wrong frame: a comic sad trombone (wah-wah-waaah), soft. */
+  wahwah: {
+    minInterval: 1,
+    play: ({ tone, t0 }) => {
+      [[0, 311, 294], [0.28, 294, 277], [0.56, 277, 220]].forEach(([at, f0, f1], i) => {
+        tone({ t0: t0 + at, type: 'sawtooth', freq: f0, freqEnd: f1, duration: i === 2 ? 0.6 : 0.24, gain: 0.03, release: i === 2 ? 0.35 : 0.08 });
+        tone({ t0: t0 + at, type: 'triangle', freq: f0 / 2, freqEnd: f1 / 2, duration: i === 2 ? 0.6 : 0.24, gain: 0.04, release: i === 2 ? 0.35 : 0.08 });
+      });
+    },
+  },
+  /** A part of the bridge is finished: a tiny ta-da. */
+  tada: {
+    minInterval: 1,
+    play: ({ tone, t0 }) => {
+      tone({ t0, type: 'triangle', freq: 784, duration: 0.1, gain: 0.06 });
+      tone({ t0: t0 + 0.11, type: 'triangle', freq: 1047, duration: 0.32, gain: 0.07, release: 0.25 });
+      tone({ t0: t0 + 0.11, type: 'sine', freq: 1568, duration: 0.3, gain: 0.025, release: 0.25 });
+    },
+  },
   /* ---- The opening ceremony and the town on the new bridge ---- */
   /** Scissors: two quick metallic shears (open, then the blades closing with a ring). */
   snip: {

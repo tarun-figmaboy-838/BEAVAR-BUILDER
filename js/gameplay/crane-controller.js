@@ -368,6 +368,9 @@ export function createCraneController({ craneEl, dom, claw, gameState, audio }) 
         await claw.close();
         attach(option);
         audio.play('pickup');
+        audio.play('boing');
+        option.element.classList.add('is-lifted');                      // a quick squash-and-stretch as it leaves the yard
+        setTimeout(() => option.element.classList.remove('is-lifted'), 520);
         await claw.squeeze();
         await wait(50, signal);
         await hoistTo(CRANE_LAYOUT.restY, { signal });

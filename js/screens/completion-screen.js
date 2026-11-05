@@ -54,6 +54,9 @@ export function createCompletionScreen({ els, audio, voice, camera, crane, claw,
       // The opening (PDF p19), at road level: at the entrance the beaver cuts the ribbon and the town drives
       // in; then inside the bridge, and the far end looking back. Meanwhile the side view gets its banners
       // and traffic, so the bridge is open and busy when the camera comes back.
+      // Into the shots: the camera glides toward the bridge's entrance while the road-level view dissolves in.
+      camera.focus({ x: 260, y: 640, scale: 1.8, duration: 1500, signal: scope.signal }).catch(() => {});
+      await wait(450, scope.signal).catch(() => {});
       builder.hide();
       await playBridgeShots(els.overlays, {
         signal: scope.signal,
@@ -61,6 +64,11 @@ export function createCompletionScreen({ els, audio, voice, camera, crane, claw,
         onLastShot: () => {
           town.startTraffic();
           builder.show();
+        },
+        // Out of the shots: from the far end, the camera pulls back to the whole busy bridge as they dissolve.
+        onEnding: () => {
+          camera.focus({ x: 1660, y: 640, scale: 1.8, duration: 0 }).catch(() => {});
+          camera.reset(1700, scope.signal).catch(() => {});
         },
       });
       builder.show();
