@@ -28,20 +28,51 @@ function buildPillar(x) {
   return unit;
 }
 
-/* ---------- Road deck from quay to quay: the environment sheet's stone ledge and blue railing, tiled ---------- */
+/* ---------- Deck: a bare riveted steel girder from quay to quay while the bridge is being built ----------
+   The road surface and the safety railings are laid on it only when the bridge is complete (finishDeck). */
 function buildDeck(bridgeEl) {
   const { x1, x2, top, height, railHeight } = DECK_LAYOUT;
+  const width = x2 - x1;
+  const above = railHeight + 6;                  // room above the girder for the finished road and railings
+  const g = above;                               // girder top, in deck coordinates
+  const bottom = g + height;
+  const stiffeners = [];
+  for (let x = 46; x < width - 30; x += 104) stiffeners.push(x);
+  const posts = [];
+  for (let x = 18; x <= width - 18; x += 58) posts.push(x);
+  const bearings = BRIDGE_GEOMETRY.pillarXs.map((px) => px - x1);
+  const rivetRow = (y) => `
+    <line x1="14" y1="${y}" x2="${width - 14}" y2="${y}" class="deck__rivets"/>
+    <line x1="14" y1="${y - 0.9}" x2="${width - 14}" y2="${y - 0.9}" class="deck__rivets deck__rivets--shine"/>`;
   const deck = document.createElement('div');
   deck.className = 'deck';
+  Object.assign(deck.style, { left: `${x1}px`, top: `${top - above}px`, width: `${width}px`, height: `${height + above}px` });
   deck.innerHTML = `
     <span class="deck__shadow"></span>
-    <span class="deck__railing"></span>
-    <span class="deck__slab"></span>
-    <img class="deck__cap deck__cap--left" src="assets/images/bridge/deck-cap-left.png" alt="" draggable="false">
-    <img class="deck__cap deck__cap--right" src="assets/images/bridge/deck-cap-right.png" alt="" draggable="false">`;
-  Object.assign(deck.style, { left: `${x1}px`, top: `${top}px`, width: `${x2 - x1}px`, height: `${height}px` });
-  deck.style.setProperty('--rail-height', `${railHeight}px`);
+    <svg class="deck__svg" width="${width}" height="${height + above}" viewBox="0 0 ${width} ${height + above}" aria-hidden="true">
+      <defs>
+        <linearGradient id="deck-steel" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#b9c2cd"/><stop offset="0.35" stop-color="#8c96a3"/><stop offset="0.72" stop-color="#6b7583"/><stop offset="1" stop-color="#4a525e"/>
+        </linearGradient>
+      </defs>
+      <g class="deck__finish">
+        <g class="deck__rails">
+          ${posts.map((x) => `<line x1="${x}" y1="${g - railHeight + 3}" x2="${x}" y2="${g - 2}" class="deck-rail__post"/>`).join('')}
+          <line x1="8" y1="${g - railHeight + 3}" x2="${width - 8}" y2="${g - railHeight + 3}" class="deck-rail"/>
+          <line x1="8" y1="${g - railHeight / 2}" x2="${width - 8}" y2="${g - railHeight / 2}" class="deck-rail deck-rail--mid"/>
+        </g>
+        <rect class="deck__road" x="2" y="${g - 7}" width="${width - 4}" height="9" rx="2"/>
+      </g>
+      <rect class="deck__web" x="1.5" y="${g}" width="${width - 3}" height="${height}" rx="3"/>
+      <rect class="deck__flange" x="3" y="${g + 1.5}" width="${width - 6}" height="5.5"/>
+      <rect class="deck__flange deck__flange--low" x="3" y="${bottom - 8}" width="${width - 6}" height="6.5"/>
+      ${stiffeners.map((x) => `<rect class="deck__stiffener" x="${x - 3}" y="${g + 7}" width="6" height="${height - 15}" rx="1"/>`).join('')}
+      ${rivetRow(g + 11)}
+      ${rivetRow(bottom - 13)}
+      ${bearings.map((x) => `<path class="deck-girder__bearing" d="M ${x - 34} ${bottom} h 68 l -8 7 h -52 z"/>`).join('')}
+    </svg>`;
   bridgeEl.appendChild(deck);
+  return deck;
 }
 
 const PERMUTATIONS = [[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]];
@@ -145,7 +176,7 @@ export function createBridgeController({ bridgeEl, fxEl, fx, audio }) {
     return unit;
   });
 
-  buildDeck(bridgeEl);
+  const deck = buildDeck(bridgeEl);
   const svg = svgElement('svg', { class: 'truss', viewBox: '0 0 1920 1080', 'aria-hidden': 'true' });
   svg.appendChild(gussetDefs());
   const root = svgElement('g', { class: 'truss-root' });
@@ -290,12 +321,23 @@ export function createBridgeController({ bridgeEl, fxEl, fx, audio }) {
     const frame = createFlightFrame(from);
     if (delay) await wait(delay, signal);
     const [fx0, fy0] = centroid(from);
+    // Grow about the similarity's fixed point: the one place that does not move between the dropped
+    // frame and its panel. A frame standing on the deck keeps its base planted on the deck the whole
+    // time (centre-and-scale interpolation lifted it off mid-growth).
+    const S = fit.scale;
+    const fixed = Math.abs(1 - S) > 1e-3
+      ? [(fit.centre[0] - S * fx0) / (1 - S), (fit.centre[1] - S * fy0) / (1 - S)]
+      : null;
     await tween({
       duration: 760,
       ease: easings.inOutCubic,
       signal,
       onUpdate: (t) => {
-        const scale = Math.exp(Math.log(fit.scale) * t);
+        const scale = Math.exp(Math.log(S) * t);
+        if (fixed) {
+          frame.set(from.map(([x, y]) => [fixed[0] + (x - fixed[0]) * scale, fixed[1] + (y - fixed[1]) * scale]));
+          return;
+        }
         const cx = fx0 + (fit.centre[0] - fx0) * t;
         const cy = fy0 + (fit.centre[1] - fy0) * t;
         frame.set(from.map(([x, y]) => [cx + (x - fx0) * scale, cy + (y - fy0) * scale]));
@@ -393,6 +435,7 @@ export function createBridgeController({ bridgeEl, fxEl, fx, audio }) {
     flightLayer.replaceChildren();
     builtStages.length = 0;
     socket.classList.remove('is-visible', 'is-aligned', 'is-armed');
+    deck.classList.remove('is-finished');
   }
 
   /** warning wobble → growing sway → sections fall → splash → reset (PDF p10). */
@@ -477,6 +520,14 @@ export function createBridgeController({ bridgeEl, fxEl, fx, audio }) {
       demoSpots.forEach((spot) => spot.classList.remove('is-visible'));
     },
     completeSettle: () => playClassAnimation(root, 'is-proud', 1100),
+    /** The finishing touch once every frame is in: the road rolls out along the girder and the railings go up. */
+    async finishDeck({ signal } = {}) {
+      deck.classList.add('is-finished');
+      audio.play('bolt');
+      await wait(prefersReducedMotion() ? 0 : 650, signal);
+      audio.play('clank', { variant: 1 });
+      await wait(prefersReducedMotion() ? 0 : 500, signal);
+    },
     impactPillars: () => pillars.forEach((pillar) => playClassAnimation(pillar, 'is-impact', 500)),
   };
 }

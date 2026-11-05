@@ -422,7 +422,7 @@
 /* ---------- Title: one big Start button over the live site ---------- */
 .start-button {
   position: absolute;
-  left: 50%; top: 52%;
+  left: 50%; top: 64%;
   transform: translate(-50%, -50%);
   padding: 30px 90px 32px;
   border-radius: 999px;
@@ -442,7 +442,25 @@
 .start-button.is-entering { animation: start-enter 520ms var(--ease-back) both; }
 
 /* ---------- Drone intro: aerial shots played as one flight (js/screens/drone-intro.js) ---------- */
-.drone-intro { position: absolute; inset: 0; overflow: hidden; background: #6fc3ff; }
+.drone-intro { position: absolute; inset: 0; z-index: 15; overflow: hidden; background: #6fc3ff; }
 .drone-intro__hover { position: absolute; inset: 0; animation: drone-hover 3.2s ease-in-out infinite; }
 .drone-intro__shot { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; will-change: transform, opacity; }
+
+/* ---------- Title card over the first drone shot, and the caption during the flight ---------- */
+.title-card { position: absolute; left: 0; right: 0; top: 190px; text-align: center; pointer-events: none; }
+.title-card__eyebrow {
+  margin: 0 0 6px; font-family: var(--font-display); font-size: 42px; letter-spacing: 14px; color: #fff;
+  -webkit-text-stroke: 7px #0f2d4d; paint-order: stroke fill; text-shadow: 0 5px 0 #0f2d4d;
+}
+.title-card__headline { margin: 0; font-family: var(--font-display); font-size: 132px; line-height: 1.02; white-space: nowrap; }
+.title-card__headline .cartoon-letter { -webkit-text-stroke: 11px #2a1605; }
+.title-card.is-entering .cartoon-letter { animation: letter-hop 600ms var(--ease-back) both; animation-delay: calc(250ms + var(--i) * 55ms); }
+.title-card.is-entering .title-card__eyebrow { animation: cta-enter 520ms var(--ease-back) both; }
+.title-card.is-leaving { animation: title-leave 460ms var(--ease-in) forwards; }
+.drone-caption {
+  position: absolute; left: 50%; bottom: 120px; margin: 0; padding: 18px 40px; border-radius: 999px;
+  background: rgba(9, 29, 51, 0.55); color: #fff; font-family: var(--font-display); font-size: 40px; white-space: nowrap;
+  transform: translateX(-50%); pointer-events: none;
+  animation: drone-caption 2600ms ease-in-out both;
+}
 

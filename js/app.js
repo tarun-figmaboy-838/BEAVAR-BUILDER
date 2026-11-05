@@ -33,10 +33,6 @@ import { createCompletionScreen } from './screens/completion-screen.js';
 const CRITICAL_IMAGES = [
   'assets/images/bridge/yard-platform.png',
   'assets/images/bridge/pillar-brick.png',
-  'assets/images/bridge/deck-tile.png',
-  'assets/images/bridge/deck-cap-left.png',
-  'assets/images/bridge/deck-cap-right.png',
-  'assets/images/bridge/railing-tile.png',
   CRANE_RIG.tower.topSrc,
   CRANE_RIG.tower.mastSrc,
   CRANE_RIG.tower.baseSrc,

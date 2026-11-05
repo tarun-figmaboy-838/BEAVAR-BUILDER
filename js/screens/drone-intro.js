@@ -63,23 +63,25 @@ const CUT_MS = 340;       // the two shots overlap for this long inside each mov
 const REVEAL_MS = 800;    // the last shot dissolving into the live scene
 
 /**
- * Plays the flight over `host`. `onReveal` fires as the last shot starts dissolving (so the game
- * camera is already moving underneath). Returns { done, skip }.
+ * Builds the flight paused on its first frame (the top-down shot, gently hovering) in `host`, just
+ * before `before`. `play()` starts it and resolves when the live scene shows; `onReveal` fires as the
+ * last shot starts dissolving (so the game camera is already moving underneath); `skip()` ends it.
  */
-export function playDroneIntro(host, { onReveal } = {}) {
-  if (prefersReducedMotion()) return { done: Promise.resolve(), skip() {} };
+export function createDroneIntro(host, { before = null, onReveal } = {}) {
+  if (prefersReducedMotion()) return { play: () => Promise.resolve(), skip() {}, remove() {} };
   const layer = document.createElement('div');
   layer.className = 'drone-intro';
   layer.setAttribute('aria-hidden', 'true');
   const hover = document.createElement('div');
   hover.className = 'drone-intro__hover';
   layer.appendChild(hover);
-  host.prepend(layer);
+  host.insertBefore(layer, before);
 
   const animations = [];
   const timers = [];
+  const removals = [];
   let finished = false;
-  let resolveDone;
+  let resolveDone = () => {};
   const done = new Promise((resolve) => {
     resolveDone = resolve;
   });
@@ -94,28 +96,39 @@ export function playDroneIntro(host, { onReveal } = {}) {
   }
 
   let start = 0;
-  const images = DRONE_SHOTS.map((shot, index) => {
+  DRONE_SHOTS.forEach((shot, index) => {
     const image = new Image();
     image.className = 'drone-intro__shot';
     image.src = shot.src;
     image.alt = '';
     image.draggable = false;
     image.style.transformOrigin = shot.origin;
-    image.style.opacity = '0';
     hover.appendChild(image);
     const delay = start;
-    animations.push(image.animate(shot.keys, { duration: shot.ms, delay, easing: 'linear', fill: 'both' }));
+    const animation = image.animate(shot.keys, { duration: shot.ms, delay, easing: 'linear', fill: 'both' });
+    animation.pause();
+    animations.push(animation);
     // Once the next shot has fully taken over, this one is hidden and freed.
-    if (index < DRONE_SHOTS.length - 1) timers.push(setTimeout(() => image.remove(), delay + shot.ms + 40));
+    if (index < DRONE_SHOTS.length - 1) removals.push([image, delay + shot.ms + 40]);
     start += shot.ms - CUT_MS;
-    return image;
   });
-  images[0].style.opacity = '1';
-
   const revealAt = start + CUT_MS - REVEAL_MS * 0.55;
-  timers.push(setTimeout(() => onReveal?.(), revealAt));
-  animations.push(layer.animate([{ opacity: 1 }, { opacity: 0 }], { duration: REVEAL_MS, delay: revealAt, easing: 'ease-in-out', fill: 'both' }));
-  timers.push(setTimeout(finish, Math.max(revealAt + REVEAL_MS, start + CUT_MS) + 40));
+  const reveal = layer.animate([{ opacity: 1 }, { opacity: 0 }], { duration: REVEAL_MS, delay: revealAt, easing: 'ease-in-out', fill: 'both' });
+  reveal.pause();
+  animations.push(reveal);
 
-  return { done, skip: finish };
+  return {
+    /** Total flight length in ms (until the live scene has fully appeared). */
+    duration: revealAt + REVEAL_MS,
+    play() {
+      if (finished) return done;
+      animations.forEach((animation) => animation.play());
+      removals.forEach(([image, at]) => timers.push(setTimeout(() => image.remove(), at)));
+      timers.push(setTimeout(() => onReveal?.(), revealAt));
+      timers.push(setTimeout(finish, Math.max(revealAt + REVEAL_MS, start + CUT_MS) + 40));
+      return done;
+    },
+    skip: finish,
+    remove: finish,
+  };
 }

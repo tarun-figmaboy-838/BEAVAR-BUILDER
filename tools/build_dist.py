@@ -27,8 +27,6 @@ STYLES = ["tokens", "base", "layout", "components", "gameplay", "animations", "r
 BACKDROP = "assets/images/background/canal.png"
 # Sprites drawn as repeating backgrounds: lossless so tile edges stay seamless.
 LOSSLESS = {
-    "assets/images/bridge/deck-tile.png",
-    "assets/images/bridge/railing-tile.png",
     "assets/images/crane-kit/cable-tile.png",
     "assets/images/crane-kit/jib-tile.png",
     "assets/images/crane-kit/tower-mast.png",

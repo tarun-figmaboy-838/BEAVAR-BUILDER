@@ -2693,20 +2693,51 @@ function buildPillar(x) {
   return unit;
 }
 
-/* ---------- Road deck from quay to quay: the environment sheet's stone ledge and blue railing, tiled ---------- */
+/* ---------- Deck: a bare riveted steel girder from quay to quay while the bridge is being built ----------
+   The road surface and the safety railings are laid on it only when the bridge is complete (finishDeck). */
 function buildDeck(bridgeEl) {
   const { x1, x2, top, height, railHeight } = DECK_LAYOUT;
+  const width = x2 - x1;
+  const above = railHeight + 6;                  // room above the girder for the finished road and railings
+  const g = above;                               // girder top, in deck coordinates
+  const bottom = g + height;
+  const stiffeners = [];
+  for (let x = 46; x < width - 30; x += 104) stiffeners.push(x);
+  const posts = [];
+  for (let x = 18; x <= width - 18; x += 58) posts.push(x);
+  const bearings = BRIDGE_GEOMETRY.pillarXs.map((px) => px - x1);
+  const rivetRow = (y) => `
+    <line x1="14" y1="${y}" x2="${width - 14}" y2="${y}" class="deck__rivets"/>
+    <line x1="14" y1="${y - 0.9}" x2="${width - 14}" y2="${y - 0.9}" class="deck__rivets deck__rivets--shine"/>`;
   const deck = document.createElement('div');
   deck.className = 'deck';
+  Object.assign(deck.style, { left: `${x1}px`, top: `${top - above}px`, width: `${width}px`, height: `${height + above}px` });
   deck.innerHTML = `
     <span class="deck__shadow"></span>
-    <span class="deck__railing"></span>
-    <span class="deck__slab"></span>
-    <img class="deck__cap deck__cap--left" src="assets/images/bridge/deck-cap-left.png" alt="" draggable="false">
-    <img class="deck__cap deck__cap--right" src="assets/images/bridge/deck-cap-right.png" alt="" draggable="false">`;
-  Object.assign(deck.style, { left: `${x1}px`, top: `${top}px`, width: `${x2 - x1}px`, height: `${height}px` });
-  deck.style.setProperty('--rail-height', `${railHeight}px`);
+    <svg class="deck__svg" width="${width}" height="${height + above}" viewBox="0 0 ${width} ${height + above}" aria-hidden="true">
+      <defs>
+        <linearGradient id="deck-steel" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#b9c2cd"/><stop offset="0.35" stop-color="#8c96a3"/><stop offset="0.72" stop-color="#6b7583"/><stop offset="1" stop-color="#4a525e"/>
+        </linearGradient>
+      </defs>
+      <g class="deck__finish">
+        <g class="deck__rails">
+          ${posts.map((x) => `<line x1="${x}" y1="${g - railHeight + 3}" x2="${x}" y2="${g - 2}" class="deck-rail__post"/>`).join('')}
+          <line x1="8" y1="${g - railHeight + 3}" x2="${width - 8}" y2="${g - railHeight + 3}" class="deck-rail"/>
+          <line x1="8" y1="${g - railHeight / 2}" x2="${width - 8}" y2="${g - railHeight / 2}" class="deck-rail deck-rail--mid"/>
+        </g>
+        <rect class="deck__road" x="2" y="${g - 7}" width="${width - 4}" height="9" rx="2"/>
+      </g>
+      <rect class="deck__web" x="1.5" y="${g}" width="${width - 3}" height="${height}" rx="3"/>
+      <rect class="deck__flange" x="3" y="${g + 1.5}" width="${width - 6}" height="5.5"/>
+      <rect class="deck__flange deck__flange--low" x="3" y="${bottom - 8}" width="${width - 6}" height="6.5"/>
+      ${stiffeners.map((x) => `<rect class="deck__stiffener" x="${x - 3}" y="${g + 7}" width="6" height="${height - 15}" rx="1"/>`).join('')}
+      ${rivetRow(g + 11)}
+      ${rivetRow(bottom - 13)}
+      ${bearings.map((x) => `<path class="deck-girder__bearing" d="M ${x - 34} ${bottom} h 68 l -8 7 h -52 z"/>`).join('')}
+    </svg>`;
   bridgeEl.appendChild(deck);
+  return deck;
 }
 
 const PERMUTATIONS = [[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]];
@@ -2810,7 +2841,7 @@ function createBridgeController({ bridgeEl, fxEl, fx, audio }) {
     return unit;
   });
 
-  buildDeck(bridgeEl);
+  const deck = buildDeck(bridgeEl);
   const svg = svgElement('svg', { class: 'truss', viewBox: '0 0 1920 1080', 'aria-hidden': 'true' });
   svg.appendChild(gussetDefs());
   const root = svgElement('g', { class: 'truss-root' });
@@ -2955,12 +2986,23 @@ function createBridgeController({ bridgeEl, fxEl, fx, audio }) {
     const frame = createFlightFrame(from);
     if (delay) await wait(delay, signal);
     const [fx0, fy0] = centroid(from);
+    // Grow about the similarity's fixed point: the one place that does not move between the dropped
+    // frame and its panel. A frame standing on the deck keeps its base planted on the deck the whole
+    // time (centre-and-scale interpolation lifted it off mid-growth).
+    const S = fit.scale;
+    const fixed = Math.abs(1 - S) > 1e-3
+      ? [(fit.centre[0] - S * fx0) / (1 - S), (fit.centre[1] - S * fy0) / (1 - S)]
+      : null;
     await tween({
       duration: 760,
       ease: easings.inOutCubic,
       signal,
       onUpdate: (t) => {
-        const scale = Math.exp(Math.log(fit.scale) * t);
+        const scale = Math.exp(Math.log(S) * t);
+        if (fixed) {
+          frame.set(from.map(([x, y]) => [fixed[0] + (x - fixed[0]) * scale, fixed[1] + (y - fixed[1]) * scale]));
+          return;
+        }
         const cx = fx0 + (fit.centre[0] - fx0) * t;
         const cy = fy0 + (fit.centre[1] - fy0) * t;
         frame.set(from.map(([x, y]) => [cx + (x - fx0) * scale, cy + (y - fy0) * scale]));
@@ -3058,6 +3100,7 @@ function createBridgeController({ bridgeEl, fxEl, fx, audio }) {
     flightLayer.replaceChildren();
     builtStages.length = 0;
     socket.classList.remove('is-visible', 'is-aligned', 'is-armed');
+    deck.classList.remove('is-finished');
   }
 
   /** warning wobble → growing sway → sections fall → splash → reset (PDF p10). */
@@ -3142,6 +3185,14 @@ function createBridgeController({ bridgeEl, fxEl, fx, audio }) {
       demoSpots.forEach((spot) => spot.classList.remove('is-visible'));
     },
     completeSettle: () => playClassAnimation(root, 'is-proud', 1100),
+    /** The finishing touch once every frame is in: the road rolls out along the girder and the railings go up. */
+    async finishDeck({ signal } = {}) {
+      deck.classList.add('is-finished');
+      audio.play('bolt');
+      await wait(prefersReducedMotion() ? 0 : 650, signal);
+      audio.play('clank', { variant: 1 });
+      await wait(prefersReducedMotion() ? 0 : 500, signal);
+    },
     impactPillars: () => pillars.forEach((pillar) => playClassAnimation(pillar, 'is-impact', 500)),
   };
 }
@@ -4139,23 +4190,25 @@ const CUT_MS = 340;       // the two shots overlap for this long inside each mov
 const REVEAL_MS = 800;    // the last shot dissolving into the live scene
 
 /**
- * Plays the flight over `host`. `onReveal` fires as the last shot starts dissolving (so the game
- * camera is already moving underneath). Returns { done, skip }.
+ * Builds the flight paused on its first frame (the top-down shot, gently hovering) in `host`, just
+ * before `before`. `play()` starts it and resolves when the live scene shows; `onReveal` fires as the
+ * last shot starts dissolving (so the game camera is already moving underneath); `skip()` ends it.
  */
-function playDroneIntro(host, { onReveal } = {}) {
-  if (prefersReducedMotion()) return { done: Promise.resolve(), skip() {} };
+function createDroneIntro(host, { before = null, onReveal } = {}) {
+  if (prefersReducedMotion()) return { play: () => Promise.resolve(), skip() {}, remove() {} };
   const layer = document.createElement('div');
   layer.className = 'drone-intro';
   layer.setAttribute('aria-hidden', 'true');
   const hover = document.createElement('div');
   hover.className = 'drone-intro__hover';
   layer.appendChild(hover);
-  host.prepend(layer);
+  host.insertBefore(layer, before);
 
   const animations = [];
   const timers = [];
+  const removals = [];
   let finished = false;
-  let resolveDone;
+  let resolveDone = () => {};
   const done = new Promise((resolve) => {
     resolveDone = resolve;
   });
@@ -4170,37 +4223,48 @@ function playDroneIntro(host, { onReveal } = {}) {
   }
 
   let start = 0;
-  const images = DRONE_SHOTS.map((shot, index) => {
+  DRONE_SHOTS.forEach((shot, index) => {
     const image = new Image();
     image.className = 'drone-intro__shot';
     image.src = shot.src;
     image.alt = '';
     image.draggable = false;
     image.style.transformOrigin = shot.origin;
-    image.style.opacity = '0';
     hover.appendChild(image);
     const delay = start;
-    animations.push(image.animate(shot.keys, { duration: shot.ms, delay, easing: 'linear', fill: 'both' }));
+    const animation = image.animate(shot.keys, { duration: shot.ms, delay, easing: 'linear', fill: 'both' });
+    animation.pause();
+    animations.push(animation);
     // Once the next shot has fully taken over, this one is hidden and freed.
-    if (index < DRONE_SHOTS.length - 1) timers.push(setTimeout(() => image.remove(), delay + shot.ms + 40));
+    if (index < DRONE_SHOTS.length - 1) removals.push([image, delay + shot.ms + 40]);
     start += shot.ms - CUT_MS;
-    return image;
   });
-  images[0].style.opacity = '1';
-
   const revealAt = start + CUT_MS - REVEAL_MS * 0.55;
-  timers.push(setTimeout(() => onReveal?.(), revealAt));
-  animations.push(layer.animate([{ opacity: 1 }, { opacity: 0 }], { duration: REVEAL_MS, delay: revealAt, easing: 'ease-in-out', fill: 'both' }));
-  timers.push(setTimeout(finish, Math.max(revealAt + REVEAL_MS, start + CUT_MS) + 40));
+  const reveal = layer.animate([{ opacity: 1 }, { opacity: 0 }], { duration: REVEAL_MS, delay: revealAt, easing: 'ease-in-out', fill: 'both' });
+  reveal.pause();
+  animations.push(reveal);
 
-  return { done, skip: finish };
+  return {
+    /** Total flight length in ms (until the live scene has fully appeared). */
+    duration: revealAt + REVEAL_MS,
+    play() {
+      if (finished) return done;
+      animations.forEach((animation) => animation.play());
+      removals.forEach(([image, at]) => timers.push(setTimeout(() => image.remove(), at)));
+      timers.push(setTimeout(() => onReveal?.(), revealAt));
+      timers.push(setTimeout(finish, Math.max(revealAt + REVEAL_MS, start + CUT_MS) + 40));
+      return done;
+    },
+    skip: finish,
+    remove: finish,
+  };
 }
-  return { DRONE_SHOTS, playDroneIntro };
+  return { DRONE_SHOTS, createDroneIntro };
 });
 __define('js/screens/title-screen.js', function () {
 const { COPY } = __require('js/data/copy.js');
 const { playClassAnimation, createSequenceScope, prefersReducedMotion, wait } = __require('js/core/motion.js');
-const { playDroneIntro } = __require('js/screens/drone-intro.js');
+const { createDroneIntro } = __require('js/screens/drone-intro.js');
 /** Cartoon letters, each in its own span so they can hop one after another (celebration headline). */
 function cartoonLetters(text, startIndex = 0) {
   return [...text].map((char, offset) => (char === ' '
@@ -4211,35 +4275,51 @@ function cartoonLetters(text, startIndex = 0) {
 /** The live site, framed slightly closer, so it is already settling back as the drone shots dissolve. */
 const LANDING = { x: 960, y: 560, scale: 1.1 };
 const FULL_SITE = { x: 960, y: 540, scale: 1 };
+const CAPTION_AT_MS = 2500;     // the deck's subline appears mid-flight
+const CAPTION_MS = 2600;
 
-/** Game start: a drone flight over the canal town lands on the live site, then one big Start button. */
+/**
+ * Game start: the title over the first drone shot (hovering above the canal) and one Start button.
+ * Start sends the drone on its flight over the town (with the deck's subline as a caption); it lands
+ * on the live site and the story begins. Any tap or key during the flight skips to the landing.
+ */
 function createTitleScreen({ els, audio, voice, camera, builder, screenManager }) {
   let button = null;
+  let card = null;
+  let caption = null;
+  let flight = null;
   const scope = createSequenceScope();
 
-  /** Skippable: any tap, click or key during the flight jumps straight to the Start button. */
-  async function droneIntro() {
-    if (prefersReducedMotion()) {
-      camera.reset(0);
-      return;
-    }
-    await camera.fly([LANDING], { duration: 0 });
-    const flight = playDroneIntro(els.overlays, {
-      onReveal: () => {
-        camera.fly([LANDING, FULL_SITE], { duration: 1500, signal: scope.signal }).catch(() => {});
-        setTimeout(() => builder.cheer(), 500);
-      },
-    });
+  function buildTitleCard() {
+    const element = document.createElement('div');
+    element.className = 'title-card';
+    element.innerHTML = `
+      <p class="title-card__eyebrow">${COPY.title.eyebrow}</p>
+      <h1 class="title-card__headline" aria-label="${COPY.title.headline}">${cartoonLetters(COPY.title.headline)}</h1>`;
+    return element;
+  }
+
+  async function fly() {
     const skip = () => {
       scope.cancel();
       flight.skip();
+      caption?.remove();
       camera.reset(380);
     };
     els.stage.addEventListener('pointerdown', skip);
     window.addEventListener('keydown', skip);
     try {
-      await flight.done;
-      await wait(600, scope.signal).catch(() => {});
+      const landed = flight.play();
+      wait(CAPTION_AT_MS, scope.signal).then(() => {
+        caption = document.createElement('p');
+        caption.className = 'drone-caption';
+        caption.textContent = COPY.title.subline;
+        caption.style.animationDuration = `${CAPTION_MS}ms`;
+        els.overlays.appendChild(caption);
+        setTimeout(() => caption?.remove(), CAPTION_MS + 50);
+      }).catch(() => {});
+      await landed;
+      await wait(500, scope.signal).catch(() => {});
     } finally {
       els.stage.removeEventListener('pointerdown', skip);
       window.removeEventListener('keydown', skip);
@@ -4249,19 +4329,35 @@ function createTitleScreen({ els, audio, voice, camera, builder, screenManager }
   return {
     async enter() {
       builder.show(); // the operator is already waiting in the cab
-      await droneIntro();
+      await camera.fly([prefersReducedMotion() ? FULL_SITE : LANDING], { duration: 0 });
+      flight = createDroneIntro(els.stage, {
+        before: els.hud,
+        onReveal: () => {
+          camera.fly([LANDING, FULL_SITE], { duration: 1500, signal: scope.signal }).catch(() => {});
+          setTimeout(() => builder.cheer(), 500);
+        },
+      });
+      card = buildTitleCard();
+      card.classList.add('is-entering');
+      els.overlays.appendChild(card);
       button = document.createElement('button');
       button.type = 'button';
       button.className = 'start-button';
       button.textContent = COPY.title.start;
       let pressed = false;
-      button.addEventListener('click', () => {
+      button.addEventListener('click', async () => {
         if (pressed) return;
         pressed = true;
         audio.unlock();
         audio.play('uiTap');
         voice.unlock();
         voice.prefetch();
+        await Promise.all([playClassAnimation(button, 'is-leaving', 420), playClassAnimation(card, 'is-leaving', 460)]);
+        button?.remove();
+        card?.remove();
+        button = null;
+        card = null;
+        await fly();
         screenManager.go('meet-builder');
       });
       button.classList.add('is-entering');
@@ -4271,6 +4367,10 @@ function createTitleScreen({ els, audio, voice, camera, builder, screenManager }
     },
     async exit() {
       scope.cancel();
+      flight?.remove();
+      caption?.remove();
+      card?.remove();
+      card = null;
       if (!button) return;
       await playClassAnimation(button, 'is-leaving', 420);
       button.remove();
@@ -4588,6 +4688,7 @@ function createCompletionScreen({ els, audio, voice, camera, crane, claw, bridge
       claw.relief();
       crane.parkAway({ signal: scope.signal }).catch(() => {});
       await camera.focus({ x: 960, y: 470, scale: 1.12, pull: 0.6, duration: 1200, signal: scope.signal });
+      await bridge.finishDeck({ signal: scope.signal });
       await bridge.completeSettle();
       audio.play('ding');
       await banner;
@@ -4676,10 +4777,6 @@ const { createCompletionScreen } = __require('js/screens/completion-screen.js');
 const CRITICAL_IMAGES = [
   'assets/images/bridge/yard-platform.png',
   'assets/images/bridge/pillar-brick.png',
-  'assets/images/bridge/deck-tile.png',
-  'assets/images/bridge/deck-cap-left.png',
-  'assets/images/bridge/deck-cap-right.png',
-  'assets/images/bridge/railing-tile.png',
   CRANE_RIG.tower.topSrc,
   CRANE_RIG.tower.mastSrc,
   CRANE_RIG.tower.baseSrc,

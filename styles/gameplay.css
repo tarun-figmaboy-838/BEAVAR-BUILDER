@@ -270,23 +270,27 @@
 .hotspot--demo { opacity: 0; }
 .hotspot--demo.is-visible { opacity: 1; transform: scale(0.78); }
 
-/* ---------- Road deck: tiled stone ledge with the canal's blue railing ---------- */
+/* ---------- Deck: a bare riveted steel girder while building; road and railings go on at the end ---------- */
 .deck { position: absolute; }
-.deck__slab {
-  position: absolute; left: 22px; right: 21px; top: 0; bottom: 0;
-  background: url("../assets/images/bridge/deck-tile.png") 0 0 / auto 100% repeat-x;
-}
-.deck__cap { position: absolute; top: 0; height: 100%; width: auto; }
-.deck__cap--left { left: 0; }
-.deck__cap--right { right: 0; }
-.deck__railing {
-  position: absolute; left: 14px; right: 14px; top: calc(-1 * var(--rail-height) + 4px); height: var(--rail-height);
-  background: url("../assets/images/bridge/railing-tile.png") 0 0 / 40px 100% repeat-x;
-}
+.deck__svg { position: absolute; left: 0; top: 0; overflow: visible; }
+.deck__web { fill: url(#deck-steel); stroke: #272e38; stroke-width: 3; }
+.deck__flange { fill: #dfe5ec; opacity: 0.8; }
+.deck__flange--low { fill: #2c323b; opacity: 0.55; }
+.deck__stiffener { fill: #9ba5b2; stroke: #3b4250; stroke-width: 1.5; }
+.deck__rivets { stroke: #343b45; stroke-width: 3.6; stroke-linecap: round; stroke-dasharray: 0 15; }
+.deck__rivets--shine { stroke: #d5dce4; stroke-width: 1.3; }
 .deck__shadow {
-  position: absolute; left: 40px; right: 40px; top: 100%; height: 46px;
+  position: absolute; left: 40px; right: 40px; bottom: -46px; height: 46px;
   background: linear-gradient(to bottom, rgba(8, 30, 60, 0.4), rgba(8, 30, 60, 0));
 }
+/* Finishing: the road rolls out from the left quay, then the railings rise into place. */
+.deck__finish { opacity: 0; transition: opacity 240ms; }
+.deck.is-finished .deck__finish { opacity: 1; }
+.deck__road { fill: #3b3f46; stroke: #22252b; stroke-width: 1.5; transform-box: fill-box; transform-origin: 0 50%; transform: scaleX(0); transition: transform 700ms var(--ease-out); }
+.deck.is-finished .deck__road { transform: scaleX(1); }
+.deck__rails { transform: translateY(14px); opacity: 0; transition: transform 460ms var(--ease-back) 620ms, opacity 260ms 620ms; }
+.deck.is-finished .deck__rails { transform: translateY(0); opacity: 1; }
+.deck-rail--mid { stroke-width: 4; opacity: 0.9; }
 
 /* ---------- Kit tower crane ---------- */
 .crane-structure { position: absolute; inset: 0; }
