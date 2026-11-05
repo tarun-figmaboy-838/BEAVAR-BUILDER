@@ -3,6 +3,7 @@ import { wait, playClassAnimation, createSequenceScope } from '../core/motion.js
 import { createCtaButton } from './screen-helpers.js';
 import { cartoonLetters } from './title-screen.js';
 import { zoomToCab } from './story-screens.js';
+import { createTownLife, playBridgeShots } from '../gameplay/town-life.js';
 
 const PENNANT_COLORS = ['#e53935', '#fb8c00', '#fdd835', '#43a047', '#1e88e5', '#8e24aa', '#e53935', '#fb8c00', '#fdd835', '#43a047', '#1e88e5', '#8e24aa'];
 
@@ -11,6 +12,7 @@ export function createCompletionScreen({ els, audio, voice, camera, crane, claw,
   const scope = createSequenceScope();
   const copy = COPY.completion;
   let overlay = null;
+  const town = createTownLife({ bridgeEl: els.bridge, fx, audio });
 
   function buildOverlay() {
     overlay = document.createElement('section');
@@ -50,6 +52,7 @@ export function createCompletionScreen({ els, audio, voice, camera, crane, claw,
       crane.parkAway({ signal: scope.signal }).catch(() => {});
       await camera.focus({ x: 960, y: 520, scale: 1.12, pull: 0.6, duration: 1200, signal: scope.signal });
       await bridge.completeSettle();
+      town.prepare();                 // the opening ribbon goes up across the finished road
       audio.play('ding');
       await banner;
       await wait(400, scope.signal);
@@ -64,6 +67,15 @@ export function createCompletionScreen({ els, audio, voice, camera, crane, claw,
       await feedback.hideBubble();
       builder.cheer();
       await camera.reset(1600, scope.signal).catch(() => {});
+      // The opening (PDF p19): the beaver leaves his cab, cuts the ribbon, and the town starts crossing.
+      builder.hide();
+      await town.inaugurate({ bannerText: copy.together, signal: scope.signal }).catch(() => {});
+      builder.show();
+      builder.cheer();
+      town.startTraffic();
+      await wait(2600, scope.signal).catch(() => {});
+      // The bridge from the road (PDF p19): its entrance, inside it, and the far end looking back.
+      await playBridgeShots(els.overlays, { signal: scope.signal });
       buildOverlay();
       const bannerEl = overlay.querySelector('.completion__sign');
       playClassAnimation(bannerEl, 'is-entering', 800);
@@ -92,6 +104,9 @@ export function createCompletionScreen({ els, audio, voice, camera, crane, claw,
       }).classList.add('completion__replay');
     },
     async exit() {
+      scope.cancel();
+      town.stop();
+      builder.show();
       await feedback.hideBubble();
       fx.clear();
       feedback.hideInstruction();

@@ -83,13 +83,10 @@ export function createTitleScreen({ els, audio, voice, camera, builder, screenMa
       button.type = 'button';
       button.className = 'start-button';
       button.setAttribute('aria-label', COPY.title.start);
-      // Chunky play disc: a light sweeping round a crisp ring, and a pulse rippling out from the rim.
+      // The play button (painted art, generated for this game): a soft pulse ripples out behind it.
       button.innerHTML = `
         <span class="start-button__glow"></span>
-        <span class="start-button__ring"></span>
-        <span class="start-button__face">
-          <svg class="start-button__icon" viewBox="0 0 100 100" aria-hidden="true"><polygon points="34,22 80,50 34,78"/></svg>
-        </span>`;
+        <img class="start-button__face" src="assets/images/kit/play-button.png" alt="" draggable="false">`;
       let pressed = false;
       button.addEventListener('click', async () => {
         if (pressed) return;

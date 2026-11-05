@@ -23,6 +23,8 @@ import { createBuilderCharacter, BUILDER_FRAME_SOURCES } from './gameplay/builde
 import { CRANE_RIG } from './data/layout.js';
 import { createTitleScreen } from './screens/title-screen.js';
 import { DRONE_SHOTS } from './screens/drone-intro.js';
+import { TOWN_LIFE_IMAGES, BRIDGE_SHOT_IMAGES } from './gameplay/town-life.js';
+import { STEEL_IMAGES } from './gameplay/svg-tubes.js';
 import { createMeetBuilderScreen, createHelpNeededScreen } from './screens/story-screens.js';
 import { createHowToPlayScreen } from './screens/how-to-play-screen.js';
 import { createGameplayScreen } from './screens/gameplay-screen.js';
@@ -53,6 +55,10 @@ const CRITICAL_IMAGES = [
   'assets/images/fx/ripple-1.png',
   'assets/images/fx/ripple-2.png',
   ...(DRONE_INTRO ? DRONE_SHOTS.map((shot) => shot.src) : []),
+  ...STEEL_IMAGES,
+  'assets/images/kit/play-button.png',
+  ...TOWN_LIFE_IMAGES,
+  ...BRIDGE_SHOT_IMAGES,
 ].map((src) => ({ key: src, src }));
 
 function queryElements() {

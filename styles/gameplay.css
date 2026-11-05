@@ -50,9 +50,11 @@
 .panel--right { --panel: 229, 57, 53; }
 .panel--obtuse { --panel: 253, 216, 53; }
 .panel--acute { --panel: 251, 140, 0; }
-.panel.is-installed { fill-opacity: 0.82; stroke-opacity: 1; animation: plate-pop 520ms var(--ease-back) 1; }
-.panel.is-installed.is-lit { animation: plate-pop 520ms var(--ease-back) 1, plate-shine 700ms ease-in-out 3 alternate; }
-.panel.is-installed.is-covered { fill-opacity: 0.16; stroke-opacity: 0.25; }
+/* A real steel bridge, no painted panels: while a frame is being fitted, every place that triangle type
+   appears lights up in its PDF p7 colour (the lesson), then fades back to clear so the finished bridge is
+   bare steel and the road, ribbon and traffic behind it stay visible. */
+.panel.is-installed { fill-opacity: 0; stroke-opacity: 0; transition: fill-opacity 1100ms ease-out, stroke-opacity 1100ms ease-out; }
+.panel.is-installed.is-lit { fill-opacity: 0.72; stroke-opacity: 1; transition: fill-opacity 260ms ease-out, stroke-opacity 260ms ease-out; animation: plate-pop 520ms var(--ease-back) 1, plate-shine 700ms ease-in-out 3 alternate; }
 .truss-root.is-collapsing .panel.is-installed { animation: node-fall 900ms var(--ease-in) forwards; animation-delay: var(--fall-delay, 0ms); }
 
 .truss { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
@@ -62,27 +64,21 @@
 .truss-root.is-settling { animation: truss-settle 560ms var(--ease-out) 1; }
 .truss-root.is-proud { animation: truss-proud 1000ms var(--ease-out) 1; }
 
-/* 3D steel tubes */
+/* Painted steel beams (js/gameplay/svg-tubes.js): drawn in from their start end when built. */
 .member { transform-box: view-box; visibility: hidden; }
 .member.is-built { visibility: visible; }
-.member line { fill: none; stroke-dashoffset: var(--hidden-offset); }
-.member.is-built line { stroke-dashoffset: 0; transition: stroke-dashoffset var(--draw-ms, 460ms) var(--ease-mech); }
-.member.is-instant line { transition: none; }
-.member line.tube__rivets { stroke-dashoffset: 0; opacity: 0; }
-.member.is-built line.tube__rivets { opacity: 1; transition: opacity 260ms var(--ease-out) var(--draw-ms, 460ms); }
-.member.is-instant line.tube__rivets { transition: none; }
-.member.is-fresh .tube__light { animation: fresh-paint 1100ms var(--ease-out) 1; }
+.member .tube__draw { transform-box: fill-box; transform-origin: 0% 50%; transform: scaleX(0); }
+.member.is-built .tube__draw { transform: scaleX(1); transition: transform var(--draw-ms, 460ms) var(--ease-mech); }
+.member.is-instant .tube__draw { transition: none; }
+.member.is-fresh .tube__place { animation: fresh-paint 1100ms var(--ease-out) 1; }
 
 .truss-node { visibility: hidden; opacity: 0; transform-box: fill-box; transform-origin: center; transform: scale(0.2); }
 .truss-node.is-built { visibility: visible; opacity: 1; transform: scale(1); transition: transform 380ms var(--ease-back), opacity 200ms; }
 .truss-node.is-instant { transition: none; }
-.truss-node__plate { fill: url(#gusset-steel); stroke: #3b4250; stroke-width: 3; stroke-linejoin: round; }
-.truss-node__plate-light { fill: none; stroke: rgba(255,255,255,0.45); stroke-width: 2; }
-.truss-node__bolt { fill: url(#gusset-bolt); stroke: #9a5a00; stroke-width: 1.5; }
 .truss-node__rivets { opacity: 0; transform-box: fill-box; transform-origin: center; transform: scale(1.6); transition: opacity 200ms, transform 320ms var(--ease-back); }
 .truss-node.is-bolted .truss-node__rivets { opacity: 1; transform: scale(1); }
+.truss-node.is-bolted .truss-node__plate { animation: plate-bolted 420ms var(--ease-out) 1; }
 .truss-node.is-instant .truss-node__rivets { transition: none; }
-.truss-node__rivet { fill: #3b4250; stroke: #e9eef3; stroke-width: 1; }
 
 .truss-root.is-collapsing .member {
   animation: member-fall 980ms var(--ease-in) forwards;
@@ -355,3 +351,64 @@
 @media (prefers-reduced-motion: reduce) {
   .builder *, .trolley.is-running, .cab-beacon__light { animation: none !important; transition: none !important; }
 }
+
+/* ---------- The ending (PDF p19): ribbon cutting, the town crossing, TOGETHER WE CONNECT banners ---------- */
+.town-life { position: absolute; inset: 0; pointer-events: none; }
+/* A townie: its bottom edge stands on the road at `top`; the face flips to look the way it travels. */
+.townie { position: absolute; width: 0; height: 0; will-change: transform; }
+.townie__face { position: absolute; left: 0; bottom: 0; display: block; transform: translateX(-50%) scaleX(var(--dir, 1)); }
+.townie__face img { display: block; height: var(--h, 100px); width: auto; filter: drop-shadow(0 5px 3px rgba(20, 30, 50, 0.3)); }
+.townie--far .townie__face img { filter: brightness(0.94) drop-shadow(0 4px 3px rgba(20, 30, 50, 0.25)); height: calc(var(--h, 100px) * 0.94); }
+/* Motion on the sprite itself: cars and scooters ride the road's bumps, bikes sway, walkers step. */
+.townie.is-moving.townie--ride img { animation: townie-ride 340ms ease-in-out infinite alternate; }
+.townie.is-moving.townie--pedal img { animation: townie-pedal 520ms ease-in-out infinite alternate; }
+.townie.is-moving.townie--walk img { animation: townie-walk 420ms ease-in-out infinite alternate; transform-origin: 50% 100%; }
+.townie.is-snipping img { animation: townie-snip 220ms ease-in-out 2 alternate; transform-origin: 30% 90%; }
+.townie.is-cheering img { animation: townie-cheer 360ms var(--ease-out) 3 alternate; transform-origin: 50% 100%; }
+/* Opening ribbon: two gold posts, a red satin band with a bow; cut, the halves swing down to the posts. */
+.ribbon { position: absolute; width: 0; height: 0; }
+.ribbon__post { position: absolute; bottom: 0; width: 9px; height: 74px; margin-left: -4.5px; border-radius: 4px 4px 2px 2px;
+  background: linear-gradient(90deg, #a86f00, #ffd84a 45%, #c98a00); box-shadow: 0 4px 3px rgba(0, 0, 0, 0.25); }
+.ribbon__post::before { content: ""; position: absolute; left: -5px; top: -10px; width: 19px; height: 19px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff3b0, #f2b400 60%, #a86f00); }
+.ribbon__post--l { left: -84px; }
+.ribbon__post--r { left: 84px; }
+.ribbon__half { position: absolute; bottom: 52px; width: 84px; height: 12px; background: linear-gradient(#ff5a4f, #d81e1e 60%, #a40f0f); box-shadow: 0 2px 2px rgba(0, 0, 0, 0.25);
+  transition: transform 700ms cubic-bezier(.3, 1.6, .5, 1); }
+.ribbon__half--l { left: -84px; transform-origin: 0 50%; }
+.ribbon__half--r { left: 0; transform-origin: 100% 50%; }
+.ribbon__bow { position: absolute; left: 0; bottom: 40px; transition: opacity 260ms, transform 600ms var(--ease-in); }
+.ribbon__bow i { position: absolute; top: -10px; width: 30px; height: 22px; border-radius: 50%; background: radial-gradient(circle at 40% 40%, #ff6b5f, #c81414 70%); }
+.ribbon__bow i:first-child { left: -32px; transform: rotate(-18deg); }
+.ribbon__bow i:nth-child(2) { left: 2px; transform: rotate(18deg); }
+.ribbon__bow b { position: absolute; left: -8px; top: -6px; width: 16px; height: 16px; border-radius: 50%; background: #e02a2a; box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.25); }
+.ribbon.is-cut .ribbon__half--l { transform: rotate(78deg); }
+.ribbon.is-cut .ribbon__half--r { transform: rotate(-78deg); }
+.ribbon.is-cut .ribbon__bow { opacity: 0; transform: translateY(40px) rotate(30deg); }
+/* TOGETHER WE CONNECT banners: tall cloth pennants on a rod, unfurling from the chord. */
+.town-banners { position: absolute; inset: 0; pointer-events: none; }
+.town-banner { position: absolute; width: 0; height: 0; }
+.town-banner__rod { position: absolute; left: -54px; top: -4px; width: 108px; height: 7px; border-radius: 4px; background: linear-gradient(#e2e6ec, #7c8594); box-shadow: 0 2px 2px rgba(0, 0, 0, 0.3); }
+.town-banner__cloth {
+  position: absolute; left: -44px; top: 2px; width: 88px; padding: 14px 6px 34px; box-sizing: border-box;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  color: #fff; font-family: var(--font-display); font-size: 15px; line-height: 1.05; letter-spacing: 0.5px; text-align: center;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% calc(100% - 18px), 0 100%);
+  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.18);
+  transform-origin: 50% 0;
+  animation: banner-unfurl 900ms var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * 180ms);
+}
+.town-banner--purple .town-banner__cloth { background: linear-gradient(90deg, #5b2a86, #7b3fb0 50%, #5b2a86); }
+.town-banner--blue .town-banner__cloth { background: linear-gradient(90deg, #17407a, #2459a6 50%, #17407a); }
+.town-banner__cloth b { display: block; }
+.town-banner__cloth i { position: absolute; left: 50%; bottom: 20px; width: 34px; height: 10px; margin-left: -17px; border: solid #f6c21a; border-width: 0 0 5px 5px; transform: rotate(-45deg) skew(8deg, 8deg); }
+/* The bridge from the road: full-stage painted shots, cross-fading, the townsfolk placed in perspective. */
+.bridge-shots { position: absolute; inset: 0; z-index: 40; overflow: hidden; pointer-events: none; background: #8fd0ff; }
+.bridge-shot { position: absolute; inset: 0; opacity: 0; overflow: hidden; }
+.bridge-shot__bg { position: absolute; inset: 0; width: 100%; height: 100%; transform-origin: 50% 52%; }
+.shot-townie { position: absolute; left: 0; top: 0; will-change: transform; }
+.shot-townie img { display: block; width: 100%; height: 100%; filter: drop-shadow(0 6px 4px rgba(20, 30, 50, 0.3)); }
+.shot-townie.townie--ride img { animation: townie-ride 300ms ease-in-out infinite alternate; }
+.shot-townie.townie--pedal img { animation: townie-pedal 460ms ease-in-out infinite alternate; }
+.shot-townie.townie--walk img { animation: townie-walk 400ms ease-in-out infinite alternate; transform-origin: 50% 100%; }
+

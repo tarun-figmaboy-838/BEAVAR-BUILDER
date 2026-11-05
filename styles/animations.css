@@ -281,7 +281,7 @@
   60% { transform: translateX(-5px) rotate(-2deg); }
   80% { transform: translateX(4px) rotate(1deg); }
 }
-@keyframes fresh-paint { 0% { stroke: #ffffff; } 100% { stroke: #ffcb3a; } }
+@keyframes fresh-paint { 0% { filter: brightness(1.45) saturate(1.2); } 100% { filter: brightness(1) saturate(1); } }
 
 @keyframes start-breathe {
   0%, 100% { transform: scale(1); }
@@ -445,3 +445,11 @@
 }
 @keyframes smoke-rise { 0% { opacity: 0; transform: translateY(0) scale(0.8); } 25% { opacity: 1; } 100% { opacity: 0; transform: translateY(-46px) scale(2.2); } }
 
+/* ----- Townsfolk and the opening ----- */
+@keyframes townie-ride { from { transform: translateY(0); } to { transform: translateY(-2.5px); } }
+@keyframes townie-pedal { from { transform: translateY(0) rotate(-0.8deg); } to { transform: translateY(-1.5px) rotate(0.8deg); } }
+@keyframes townie-walk { from { transform: translateY(0) rotate(-2deg); } to { transform: translateY(-4px) rotate(2deg); } }
+@keyframes townie-snip { from { transform: rotate(0deg); } to { transform: rotate(6deg) translateY(2px); } }
+@keyframes townie-cheer { from { transform: translateY(0) scale(1); } to { transform: translateY(-16px) scale(1.04, 0.97); } }
+@keyframes banner-unfurl { 0% { transform: scaleY(0.05); opacity: 0; } 60% { transform: scaleY(1.04); opacity: 1; } 100% { transform: scaleY(1); } }
+@keyframes plate-bolted { 0% { filter: brightness(1.6); } 100% { filter: brightness(1); } }

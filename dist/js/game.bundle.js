@@ -2419,18 +2419,27 @@ const INTRO_PILE = Object.freeze(['scalene', 'acute', 'right', 'isosceles', 'equ
 });
 __define('js/gameplay/svg-tubes.js', function () {
 /**
- * Riveted steel girders in SVG (the bridge's members and the triangle frames): a dark outline, the
- * painted web, a shaded lower flange, a lit upper flange with a bright edge, and a row of rivet heads
- * down the middle; offsets follow the member's normal so light always comes from the upper left.
+ * The bridge's steel, drawn with painted art (assets/images/kit), not flat vector strokes:
+ *   - a beam is a painted bar sliced in three (left end with its bolt, a middle that stretches to any
+ *     length, right end with its bolt), laid along the member, so every beam keeps round ends and an
+ *     undistorted bolt sitting on each joint, whatever its length or angle;
+ *   - a joint is a painted hexagonal steel plate with bolts.
+ * Yellow box beams carry the outer frame and the triangle frames; navy bars are the inner members.
+ * The member's exact geometry (node to node) is unchanged, so every triangle is still exactly its type.
  */
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
-const TUBE_PALETTES = Object.freeze({
-  steel: Object.freeze({ rim: '#272e38', body: '#6c7786', shade: '#48515d', light: '#a9b4c1', spec: '#eef2f6', rivet: '#2f353e', rivetShine: '#d5dce4' }),
-  paint: Object.freeze({ rim: '#5f3f00', body: '#e6a300', shade: '#a86c00', light: '#ffc933', spec: '#fff4c4', rivet: '#7a4e00', rivetShine: '#ffe7a0' }),
-  /** Navy structural steel for the bridge's inner bars (the yellow box beams carry the outer frame). */
-  navy: Object.freeze({ rim: '#16203a', body: '#3d5283', shade: '#28375c', light: '#6a83bb', spec: '#c4d3f3', rivet: '#16203a', rivetShine: '#9db2df' }),
+/** Beam art: slice heights and widths in art px; boltAt is the bolt's centre, measured from the beam's end. */
+const BEAMS = Object.freeze({
+  yellow: { l: 'assets/images/kit/beam-yellow-l.webp', m: 'assets/images/kit/beam-yellow-m.webp', r: 'assets/images/kit/beam-yellow-r.webp', h: 140, capL: 130, capR: 130, boltAt: 72, scale: 1.25 },
+  navy: { l: 'assets/images/kit/beam-navy-l.webp', m: 'assets/images/kit/beam-navy-m.webp', r: 'assets/images/kit/beam-navy-r.webp', h: 100, capL: 116, capR: 116, boltAt: 53, scale: 1.1 },
 });
+const JOINT = Object.freeze({ src: 'assets/images/kit/joint-plate.webp', width: 240, height: 220 });
+
+const STEEL_IMAGES = [...Object.values(BEAMS).flatMap((b) => [b.l, b.m, b.r]), JOINT.src];
+
+/** Which painted bar a palette uses (kept as names so callers did not change). */
+const TUBE_PALETTES = Object.freeze({ paint: 'yellow', navy: 'navy', steel: 'navy' });
 
 function svgElement(name, attributes = {}) {
   const element = document.createElementNS(SVG_NS, name);
@@ -2438,118 +2447,79 @@ function svgElement(name, attributes = {}) {
   return element;
 }
 
-/** Light comes from the upper left, so the "lit" normal always points up (or left for vertical tubes). */
-function litNormal(dx, dy, length) {
-  let nx = -dy / length;
-  let ny = dx / length;
-  if (ny > 0 || (Math.abs(ny) < 1e-6 && nx > 0)) {
-    nx = -nx;
-    ny = -ny;
-  }
-  return [nx, ny];
+function image(href) {
+  const element = svgElement('image', { preserveAspectRatio: 'none' });
+  element.setAttribute('href', href);
+  return element;
 }
 
-/** `trim` is how far (in member widths) a layer stops short of each joint; `dash` turns a line into a row of dots. */
-function tubeLayers(width, palette) {
-  const rivetPitch = Math.max(11, width * 0.85);
-  return [
-    { className: 'tube__rim', color: palette.rim, strokeWidth: width, offset: 0, cap: 'round', trim: 0 },
-    { className: 'tube__body', color: palette.body, strokeWidth: width - 5, offset: 0, cap: 'round', trim: 0 },
-    { className: 'tube__shade', color: palette.shade, strokeWidth: width * 0.2, offset: -width * 0.26, cap: 'butt', trim: 0.45 },
-    { className: 'tube__light', color: palette.light, strokeWidth: width * 0.18, offset: width * 0.26, cap: 'butt', trim: 0.45 },
-    { className: 'tube__spec', color: palette.spec, strokeWidth: Math.max(1.2, width * 0.07), offset: width * 0.16, cap: 'butt', trim: 0.45 },
-    { className: 'tube__rivets', color: palette.rivet, strokeWidth: width * 0.25, offset: -width * 0.03, cap: 'round', trim: 1.3, dash: `0 ${rivetPitch.toFixed(1)}` },
-    { className: 'tube__rivets tube__rivets--shine', color: palette.rivetShine, strokeWidth: width * 0.1, offset: width * 0.03, cap: 'round', trim: 1.3, dash: `0 ${rivetPitch.toFixed(1)}` },
-  ];
-}
-
-function placeLines(tube, x1, y1, x2, y2) {
-  const dx = x2 - x1;
-  const dy = y2 - y1;
-  const length = Math.hypot(dx, dy) || 1;
-  const [nx, ny] = litNormal(dx, dy, length);
-  tube.layers.forEach((layer, index) => {
-    const trim = Math.min(0.45, (tube.width * layer.trim) / length);
-    const ox = nx * layer.offset;
-    const oy = ny * layer.offset;
-    const line = tube.lines[index];
-    line.setAttribute('x1', (x1 + dx * trim + ox).toFixed(1));
-    line.setAttribute('y1', (y1 + dy * trim + oy).toFixed(1));
-    line.setAttribute('x2', (x2 - dx * trim + ox).toFixed(1));
-    line.setAttribute('y2', (y2 - dy * trim + oy).toFixed(1));
-  });
+/** Lay the beam's three slices along the member from (x1, y1) to (x2, y2). */
+function placeBeam(tube, x1, y1, x2, y2) {
+  const art = BEAMS[tube.art];
+  const length = Math.hypot(x2 - x1, y2 - y1) || 1;
+  const angle = (Math.atan2(y2 - y1, x2 - x1) * 180) / Math.PI;
+  const h = tube.width * art.scale;
+  const s = h / art.h;
+  const overhang = art.boltAt * s;                       // the bolt sits on the joint
+  const capL = art.capL * s;
+  const capR = art.capR * s;
+  const total = length + overhang * 2;
+  const middle = Math.max(0.5, total - capL - capR);
+  const [left, mid, right] = tube.images;
+  const y = (-h / 2).toFixed(2);
+  const set = (el, x, w) => {
+    el.setAttribute('x', x.toFixed(2));
+    el.setAttribute('y', y);
+    el.setAttribute('width', w.toFixed(2));
+    el.setAttribute('height', h.toFixed(2));
+  };
+  set(left, -overhang, capL);
+  set(mid, -overhang + capL - 0.4, middle + 0.8);         // a hair of overlap: no seam between slices
+  set(right, -overhang + capL + middle, capR);
+  tube.place.setAttribute('transform', `translate(${x1.toFixed(1)} ${y1.toFixed(1)}) rotate(${angle.toFixed(2)})`);
   tube.length = length;
 }
 
 /**
- * Returns { group, length, lines }. With `drawable`, every line gets a dash pattern so the tube can be
- * "drawn" in by animating stroke-dashoffset (see .member in gameplay.css).
+ * Returns { group, length }. With `drawable`, the beam is drawn in from its start end when its member
+ * gets `.is-built` (gameplay.css: .member .tube__draw).
  */
-function createTube(x1, y1, x2, y2, { width = 16, palette = TUBE_PALETTES.steel, className = '', drawable = false } = {}) {
-  const layers = tubeLayers(width, palette);
-  const group = svgElement('g', { class: `tube ${className}`.trim() });
-  const lines = layers.map((layer) => {
-    const line = svgElement('line', {
-      stroke: layer.color,
-      'stroke-width': layer.strokeWidth.toFixed(1),
-      'stroke-linecap': layer.cap,
-      class: layer.className,
-    });
-    if (layer.dash) line.setAttribute('stroke-dasharray', layer.dash);
-    group.appendChild(line);
-    return line;
-  });
-  const tube = { group, lines, layers, width, length: 0 };
-  placeLines(tube, x1, y1, x2, y2);
-  if (drawable) {
-    const length = tube.length;
-    // Rivet rows keep their dot pattern and fade in once the girder is drawn (gameplay.css).
-    lines.forEach((line, index) => {
-      if (!layers[index].dash) line.setAttribute('stroke-dasharray', `${length.toFixed(1)} ${(length + 80).toFixed(1)}`);
-    });
-    group.style.setProperty('--hidden-offset', `${(length + 40).toFixed(1)}px`);
-  }
+function createTube(x1, y1, x2, y2, { width = 16, palette = TUBE_PALETTES.paint, className = '', drawable = false } = {}) {
+  const art = BEAMS[palette] ? palette : 'yellow';
+  const group = svgElement('g', { class: `tube tube--${art} ${className}`.trim() });
+  const place = svgElement('g', { class: 'tube__place' });
+  const draw = svgElement('g', { class: drawable ? 'tube__draw' : 'tube__body' });
+  const images = [image(BEAMS[art].l), image(BEAMS[art].m), image(BEAMS[art].r)];
+  draw.append(...images);
+  place.appendChild(draw);
+  group.appendChild(place);
+  const tube = { group, place, images, art, width, length: 0 };
+  placeBeam(tube, x1, y1, x2, y2);
   return tube;
 }
 
-/** Move an existing tube's ends (used while a frame flies into the bridge). */
+/** Move an existing beam's ends (used while a frame flies into the bridge). */
 function moveTube(tube, x1, y1, x2, y2) {
-  placeLines(tube, x1, y1, x2, y2);
+  placeBeam(tube, x1, y1, x2, y2);
 }
 
-/** Shared gradients for frame-style corner plates (add once per SVG). */
+/** Kept for the SVGs that add it once; the painted joints need no gradients. */
 function gussetDefs() {
-  const defs = svgElement('defs');
-  defs.innerHTML = `
-    <linearGradient id="gusset-steel" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#b9c1cc"/><stop offset="0.5" stop-color="#848d99"/><stop offset="1" stop-color="#5d6571"/>
-    </linearGradient>
-    <radialGradient id="gusset-bolt" cx="0.38" cy="0.32" r="0.7">
-      <stop offset="0" stop-color="#ffffff"/><stop offset="0.45" stop-color="#b9c3d0"/><stop offset="1" stop-color="#5d6676"/>
-    </radialGradient>`;
-  return defs;
+  return svgElement('defs');
 }
 
-/** A joint plate: rounded grey steel plate with a steel bolt; rivets once bolted. */
+/** A joint: the painted hexagonal steel plate with bolts, centred on (x, y). */
 function createGusset(x, y, { radius = 17 } = {}) {
   const group = svgElement('g', { class: 'truss-node' });
-  const points = [];
-  for (let i = 0; i < 6; i += 1) {
-    const angle = (Math.PI / 3) * i + Math.PI / 6;
-    points.push(`${(x + Math.cos(angle) * radius).toFixed(1)},${(y + Math.sin(angle) * radius).toFixed(1)}`);
-  }
-  group.appendChild(svgElement('polygon', { points: points.join(' '), class: 'truss-node__plate' }));
-  group.appendChild(svgElement('circle', { cx: x, cy: y, r: radius - 5, class: 'truss-node__plate-light' }));
-  group.appendChild(svgElement('circle', { cx: x, cy: y, r: 7.5, class: 'truss-node__bolt' }));
-  const rivets = svgElement('g', { class: 'truss-node__rivets' });
-  for (let i = 0; i < 3; i += 1) {
-    const angle = (Math.PI * 2 * i) / 3 - Math.PI / 2;
-    rivets.appendChild(svgElement('circle', { cx: (x + Math.cos(angle) * 12).toFixed(1), cy: (y + Math.sin(angle) * 12).toFixed(1), r: 2.6, class: 'truss-node__rivet' }));
-  }
-  group.appendChild(rivets);
+  const w = radius * 2.3;
+  const h = (w * JOINT.height) / JOINT.width;
+  const plate = svgElement('image', { class: 'truss-node__plate', x: (x - w / 2).toFixed(1), y: (y - h / 2).toFixed(1), width: w.toFixed(1), height: h.toFixed(1) });
+  plate.setAttribute('href', JOINT.src);
+  group.appendChild(plate);
+  group.appendChild(svgElement('g', { class: 'truss-node__rivets' }));
   return group;
 }
-  return { SVG_NS, TUBE_PALETTES, svgElement, createTube, moveTube, gussetDefs, createGusset };
+  return { SVG_NS, STEEL_IMAGES, TUBE_PALETTES, svgElement, createTube, moveTube, gussetDefs, createGusset };
 });
 __define('js/gameplay/frame-shapes.js', function () {
 const { createTube, createGusset, svgElement, TUBE_PALETTES } = __require('js/gameplay/svg-tubes.js');
@@ -3968,6 +3938,7 @@ const COPY = Object.freeze({
     subline: 'Great work, Engineer!',
     builderLine: 'The bridge is complete! Now the people of both towns can visit each other!',
     badge: 'AMAZING JOB!',
+    together: 'TOGETHER WE CONNECT',     // the two banners on the bridge (PDF p19)
     replay: 'Build it again',
   },
   controls: {
@@ -4867,13 +4838,10 @@ function createTitleScreen({ els, audio, voice, camera, builder, screenManager }
       button.type = 'button';
       button.className = 'start-button';
       button.setAttribute('aria-label', COPY.title.start);
-      // Chunky play disc: a light sweeping round a crisp ring, and a pulse rippling out from the rim.
+      // The play button (painted art, generated for this game): a soft pulse ripples out behind it.
       button.innerHTML = `
         <span class="start-button__glow"></span>
-        <span class="start-button__ring"></span>
-        <span class="start-button__face">
-          <svg class="start-button__icon" viewBox="0 0 100 100" aria-hidden="true"><polygon points="34,22 80,50 34,78"/></svg>
-        </span>`;
+        <img class="start-button__face" src="assets/images/kit/play-button.webp" alt="" draggable="false">`;
       let pressed = false;
       button.addEventListener('click', async () => {
         if (pressed) return;
@@ -4910,6 +4878,269 @@ function createTitleScreen({ els, audio, voice, camera, builder, screenManager }
   };
 }
   return { cartoonLetters, createTitleScreen };
+});
+__define('js/gameplay/town-life.js', function () {
+const { BRIDGE_GEOMETRY } = __require('js/data/bridge-geometry.js');
+const { prefersReducedMotion, wait } = __require('js/core/motion.js');
+/**
+ * The ending (PDF p19): the beaver opens the new bridge by cutting a ribbon, then the animal town uses it,
+ * a car, a scooter, a bicycle and walkers crossing both ways on the deck road. Everything moves on the
+ * road between the deck and the truss, so the truss bars pass in front of it, as on a real through-truss.
+ * Sprites: assets/images/celebration (generated in Figma for this game, cut out of a flat background).
+ */
+const ROAD_Y = BRIDGE_GEOMETRY.deckY + 4;          // where wheels and feet meet the road plates
+const RIBBON_X = 960;
+const ENTER_X = -260;
+const EXIT_X = 2180;
+
+/** Each traveller: sprite, height on screen (px), speed (px/s), the way it bounces, its lane. */
+const TRAVELLERS = Object.freeze({
+  car: { src: 'assets/images/celebration/car.webp', height: 112, speed: 360, bob: 'ride' },
+  scooter: { src: 'assets/images/celebration/scooter.webp', height: 106, speed: 300, bob: 'ride' },
+  cyclist: { src: 'assets/images/celebration/cyclist.webp', height: 104, speed: 210, bob: 'pedal' },
+  walkers: { src: 'assets/images/celebration/walkers.webp', height: 96, speed: 120, bob: 'walk' },
+});
+/** Who crosses, which way, in turn (the near lane goes right, the far lane comes back left). */
+const TRAFFIC = Object.freeze([
+  ['car', 1], ['cyclist', -1], ['scooter', 1], ['walkers', -1], ['cyclist', 1], ['car', -1], ['walkers', 1], ['scooter', -1],
+]);
+const BEAVER = Object.freeze({ src: 'assets/images/celebration/beaver-scissors.webp', height: 118, speed: 260 });
+
+const TOWN_LIFE_IMAGES = [BEAVER.src, ...Object.values(TRAVELLERS).map((t) => t.src)];
+
+function createTownLife({ bridgeEl, fx, audio }) {
+  const layer = document.createElement('div');
+  layer.className = 'town-life';
+  layer.setAttribute('aria-hidden', 'true');
+  bridgeEl.insertBefore(layer, bridgeEl.querySelector('svg.truss'));
+  let running = false;
+  let trafficTimer = 0;
+  let turn = 0;
+
+  /** A sprite standing on the road at x, facing `dir` (1 right, -1 left). Returns { el, moveTo }. */
+  function sprite({ src, height, bob }, x, dir, lane = 0) {
+    const el = document.createElement('div');
+    el.className = `townie townie--${bob}${lane ? ' townie--far' : ''}`;
+    el.style.setProperty('--h', `${height}px`);
+    el.style.left = '0px';
+    el.style.top = `${ROAD_Y - (lane ? 6 : 0)}px`;
+    el.style.transform = `translateX(${x}px)`;
+    el.innerHTML = `<span class="townie__face" style="--dir:${dir}"><img src="${src}" alt="" draggable="false"></span>`;
+    layer.appendChild(el);
+    const moveTo = (toX, speed) => new Promise((resolve) => {
+      const from = new DOMMatrixReadOnly(getComputedStyle(el).transform).m41;
+      const ms = (Math.abs(toX - from) / speed) * 1000;
+      el.classList.add('is-moving');
+      const animation = el.animate([{ transform: `translateX(${from}px)` }, { transform: `translateX(${toX}px)` }], { duration: ms, easing: 'linear', fill: 'forwards' });
+      animation.onfinish = () => {
+        el.style.transform = `translateX(${toX}px)`;
+        animation.cancel();
+        el.classList.remove('is-moving');
+        resolve();
+      };
+      animation.oncancel = () => resolve();
+    });
+    return { el, moveTo };
+  }
+
+  function buildRibbon() {
+    const ribbon = document.createElement('div');
+    ribbon.className = 'ribbon';
+    ribbon.style.left = `${RIBBON_X}px`;
+    ribbon.style.top = `${ROAD_Y}px`;
+    ribbon.innerHTML = `
+      <span class="ribbon__post ribbon__post--l"></span><span class="ribbon__post ribbon__post--r"></span>
+      <span class="ribbon__half ribbon__half--l"></span><span class="ribbon__half ribbon__half--r"></span>
+      <span class="ribbon__bow"><i></i><i></i><b></b></span>`;
+    layer.appendChild(ribbon);
+    return ribbon;
+  }
+
+  /** PDF p19: two tall banners, purple and blue, hanging from the bridge's top chords, one each side. */
+  function buildBanners(text) {
+    const [lx, ly] = BRIDGE_GEOMETRY.nodes.L;
+    const [ax, ay] = BRIDGE_GEOMETRY.nodes.A;
+    const chordY = (x) => ly + ((x - lx) / (ax - lx)) * (ay - ly);       // the left chord; the right one mirrors it
+    const group = document.createElement('div');
+    group.className = 'town-banners';
+    group.innerHTML = [[600, 'purple'], [2 * ax - 600, 'blue']].map(([x, colour], i) => `
+      <span class="town-banner town-banner--${colour}" style="left:${x}px;top:${chordY(Math.min(x, 2 * ax - x)).toFixed(1)}px;--i:${i}">
+        <span class="town-banner__rod"></span>
+        <span class="town-banner__cloth">${text.split(' ').map((w) => `<b>${w}</b>`).join('')}<i></i></span>
+      </span>`).join('');
+    bridgeEl.appendChild(group);        // in front of the truss: they hang from its chords
+    return group;
+  }
+
+  function spawnTraveller() {
+    if (!running) return;
+    const [kind, dir] = TRAFFIC[turn % TRAFFIC.length];
+    turn += 1;
+    const traveller = TRAVELLERS[kind];
+    const startX = dir > 0 ? ENTER_X : EXIT_X;
+    const endX = dir > 0 ? EXIT_X : ENTER_X;
+    const { el, moveTo } = sprite(traveller, startX, dir, dir < 0 ? 1 : 0);
+    moveTo(endX, traveller.speed).then(() => el.remove());
+    trafficTimer = setTimeout(spawnTraveller, 1700 + Math.random() * 900);
+  }
+
+  return {
+    /** Ribbon and banner in place, before the beaver comes down. */
+    prepare() {
+      layer.replaceChildren();
+      this.ribbon = buildRibbon();
+    },
+    /** The beaver walks out onto the bridge, cuts the ribbon, cheers, and walks back to his crane. */
+    async inaugurate({ bannerText, signal } = {}) {
+      const ribbon = this.ribbon ?? buildRibbon();
+      const reduced = prefersReducedMotion();
+      const beaver = sprite({ ...BEAVER, bob: 'walk' }, reduced ? RIBBON_X - 120 : ENTER_X, 1);
+      if (!reduced) await beaver.moveTo(RIBBON_X - 118, BEAVER.speed);
+      if (signal?.aborted) return;
+      await wait(reduced ? 0 : 260, signal);
+      beaver.el.classList.add('is-snipping');
+      audio.play('clank', { variant: 2 });
+      await wait(reduced ? 0 : 220, signal);
+      ribbon.classList.add('is-cut');
+      audio.play('bolt');
+      fx.weld?.(RIBBON_X, ROAD_Y - 52);
+      fx.confetti(70);
+      audio.play('celebration');
+      this.banner = buildBanners(bannerText);
+      await wait(reduced ? 0 : 500, signal);
+      beaver.el.classList.remove('is-snipping');
+      beaver.el.classList.add('is-cheering');
+      await wait(reduced ? 0 : 1100, signal);
+      beaver.el.classList.remove('is-cheering');
+      beaver.el.querySelector('.townie__face').style.setProperty('--dir', '-1');
+      if (!reduced) await beaver.moveTo(ENTER_X, BEAVER.speed * 1.2);
+      beaver.el.remove();
+    },
+    /** The town crosses the new bridge, both ways, until stop(). */
+    startTraffic() {
+      if (running || prefersReducedMotion()) return;
+      running = true;
+      spawnTraveller();
+    },
+    stop() {
+      running = false;
+      clearTimeout(trafficTimer);
+      layer.replaceChildren();
+      this.banner?.remove();
+      this.banner = null;
+      this.ribbon = null;
+    },
+  };
+}
+
+/* ---------- The bridge from the road: three shots like PDF p19 (entrance, inside, far end) ----------
+   Painted backgrounds (generated in Figma for this game) with the townsfolk moving along each road in
+   true perspective: every shot knows its vanishing point and how fast the road widens either side of
+   it, so a traveller's place, size and speed follow from its distance down the road. */
+const SHOT_SPRITES = Object.freeze({
+  carFront: { src: 'assets/images/celebration/car-front.webp', ratio: 429 / 420, size: 0.62 },
+  cyclistBack: { src: 'assets/images/celebration/cyclist-back.webp', ratio: 191 / 420, size: 0.7 },
+  scooterBack: { src: 'assets/images/celebration/scooter-back.webp', ratio: 238 / 420, size: 0.68 },
+  walkersFront: { src: 'assets/images/celebration/walkers-front.webp', ratio: 325 / 420, size: 0.5 },
+});
+/**
+ * vp: vanishing point; slopeL/slopeR: road half-width per px below it, on each side.
+ * Each traveller: sprite, side offset (in road half-widths: -0.5 left lane, 0.5 right lane, 1.3 footpath),
+ * distance from z0 to z1 (1 = the bottom of the picture, larger = further away), bob style.
+ */
+const SHOTS = Object.freeze([
+  {
+    src: 'assets/images/celebration/shot-front.webp', ms: 3800, vp: [958, 548], slopeL: 1.8, slopeR: 1.8,
+    travellers: [
+      { sprite: 'cyclistBack', side: -0.5, z0: 1.6, z1: 7, delay: 0, bob: 'pedal' },
+      { sprite: 'carFront', side: 0.5, z0: 9, z1: 1.25, delay: 500, bob: 'ride' },
+      { sprite: 'scooterBack', side: -0.45, z0: 1.4, z1: 8, delay: 1500, bob: 'ride' },
+    ],
+  },
+  {
+    src: 'assets/images/celebration/shot-inside.webp', ms: 4200, vp: [940, 499], slopeL: 1.6, slopeR: 1.23,
+    travellers: [
+      { sprite: 'walkersFront', side: 1.32, z0: 4.5, z1: 1.15, delay: 0, bob: 'walk' },
+      { sprite: 'scooterBack', side: -0.5, z0: 1.3, z1: 6, delay: 300, bob: 'ride' },
+      { sprite: 'carFront', side: 0.5, z0: 8, z1: 1.2, delay: 1300, bob: 'ride' },
+      { sprite: 'cyclistBack', side: -0.45, z0: 1.4, z1: 6, delay: 2100, bob: 'pedal' },
+    ],
+  },
+  {
+    src: 'assets/images/celebration/shot-back.webp', ms: 3600, vp: [950, 543], slopeL: 1.32, slopeR: 1.38,
+    travellers: [
+      { sprite: 'scooterBack', side: -0.5, z0: 1.3, z1: 7, delay: 0, bob: 'ride' },
+      { sprite: 'walkersFront', side: 0.82, z0: 5, z1: 1.6, delay: 300, bob: 'walk' },
+      { sprite: 'cyclistBack', side: -0.42, z0: 1.5, z1: 8, delay: 1000, bob: 'pedal' },
+    ],
+  },
+]);
+const SHOT_FADE_MS = 550;
+
+const BRIDGE_SHOT_IMAGES = [...SHOTS.map((shot) => shot.src), ...Object.values(SHOT_SPRITES).map((sprite) => sprite.src)];
+
+/** Plays the three road-level shots over `host` (cross-fading, each with a slow push-in). Resolves when done. */
+async function playBridgeShots(host, { signal } = {}) {
+  if (prefersReducedMotion()) return;
+  const layer = document.createElement('div');
+  layer.className = 'bridge-shots';
+  layer.setAttribute('aria-hidden', 'true');
+  host.appendChild(layer);
+  const frames = [];
+  let alive = true;
+  signal?.addEventListener('abort', () => { alive = false; }, { once: true });
+
+  function runTraveller(shotEl, shot, t) {
+    const sprite = SHOT_SPRITES[t.sprite];
+    const el = document.createElement('div');
+    el.className = `shot-townie townie--${t.bob}`;
+    el.innerHTML = `<img src="${sprite.src}" alt="" draggable="false">`;
+    shotEl.appendChild(el);
+    const [vx, vy] = shot.vp;
+    const slope = t.side < 0 ? shot.slopeL : shot.slopeR;
+    const yNear = 1080;
+    const duration = shot.ms - t.delay;
+    const start = performance.now() + t.delay;
+    const place = (now) => {
+      const p = Math.max(0, Math.min(1, (now - start) / duration));
+      const z = t.z0 + (t.z1 - t.z0) * p;               // steady speed along the road
+      const d = 1 / z;                                   // perspective: depth 1 at the bottom of the picture
+      const y = vy + (yNear - vy) * d;
+      const halfWidth = slope * (y - vy);
+      const x = vx + t.side * halfWidth;
+      const h = sprite.size * halfWidth;
+      el.style.transform = `translate(${(x - (h * sprite.ratio) / 2).toFixed(1)}px, ${(y - h).toFixed(1)}px)`;
+      el.style.height = `${h.toFixed(1)}px`;
+      el.style.width = `${(h * sprite.ratio).toFixed(1)}px`;
+      el.style.zIndex = String(Math.round(d * 1000));    // nearer in front
+      el.style.opacity = now < start ? '0' : '1';
+      if (alive && p < 1) requestAnimationFrame(place);
+    };
+    requestAnimationFrame(place);
+  }
+
+  try {
+    for (const [index, shot] of SHOTS.entries()) {
+      const shotEl = document.createElement('div');
+      shotEl.className = 'bridge-shot';
+      shotEl.innerHTML = `<img class="bridge-shot__bg" src="${shot.src}" alt="" draggable="false">`;
+      layer.appendChild(shotEl);
+      frames.push(shotEl);
+      shotEl.animate([{ opacity: 0 }, { opacity: 1 }], { duration: index ? SHOT_FADE_MS : 700, easing: 'ease-in-out', fill: 'forwards' });
+      shotEl.querySelector('.bridge-shot__bg').animate([{ transform: 'scale(1)' }, { transform: 'scale(1.06)' }], { duration: shot.ms + SHOT_FADE_MS, easing: 'linear', fill: 'forwards' });
+      shot.travellers.forEach((t) => runTraveller(shotEl, shot, t));
+      await wait(shot.ms, signal);
+      if (index) frames[index - 1].remove();
+    }
+    await layer.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 700, easing: 'ease-in-out', fill: 'forwards' }).finished;
+  } catch {
+    /* skipped */
+  } finally {
+    alive = false;
+    layer.remove();
+  }
+}
+  return { TOWN_LIFE_IMAGES, createTownLife, BRIDGE_SHOT_IMAGES, playBridgeShots };
 });
 __define('js/screens/story-screens.js', function () {
 const { COPY } = __require('js/data/copy.js');
@@ -5220,6 +5451,7 @@ const { wait, playClassAnimation, createSequenceScope } = __require('js/core/mot
 const { createCtaButton } = __require('js/screens/screen-helpers.js');
 const { cartoonLetters } = __require('js/screens/title-screen.js');
 const { zoomToCab } = __require('js/screens/story-screens.js');
+const { createTownLife, playBridgeShots } = __require('js/gameplay/town-life.js');
 const PENNANT_COLORS = ['#e53935', '#fb8c00', '#fdd835', '#43a047', '#1e88e5', '#8e24aa', '#e53935', '#fb8c00', '#fdd835', '#43a047', '#1e88e5', '#8e24aa'];
 
 /** PDF p18 "Excellent work!" state, then the p19 celebration. */
@@ -5227,6 +5459,7 @@ function createCompletionScreen({ els, audio, voice, camera, crane, claw, bridge
   const scope = createSequenceScope();
   const copy = COPY.completion;
   let overlay = null;
+  const town = createTownLife({ bridgeEl: els.bridge, fx, audio });
 
   function buildOverlay() {
     overlay = document.createElement('section');
@@ -5266,6 +5499,7 @@ function createCompletionScreen({ els, audio, voice, camera, crane, claw, bridge
       crane.parkAway({ signal: scope.signal }).catch(() => {});
       await camera.focus({ x: 960, y: 520, scale: 1.12, pull: 0.6, duration: 1200, signal: scope.signal });
       await bridge.completeSettle();
+      town.prepare();                 // the opening ribbon goes up across the finished road
       audio.play('ding');
       await banner;
       await wait(400, scope.signal);
@@ -5280,6 +5514,15 @@ function createCompletionScreen({ els, audio, voice, camera, crane, claw, bridge
       await feedback.hideBubble();
       builder.cheer();
       await camera.reset(1600, scope.signal).catch(() => {});
+      // The opening (PDF p19): the beaver leaves his cab, cuts the ribbon, and the town starts crossing.
+      builder.hide();
+      await town.inaugurate({ bannerText: copy.together, signal: scope.signal }).catch(() => {});
+      builder.show();
+      builder.cheer();
+      town.startTraffic();
+      await wait(2600, scope.signal).catch(() => {});
+      // The bridge from the road (PDF p19): its entrance, inside it, and the far end looking back.
+      await playBridgeShots(els.overlays, { signal: scope.signal });
       buildOverlay();
       const bannerEl = overlay.querySelector('.completion__sign');
       playClassAnimation(bannerEl, 'is-entering', 800);
@@ -5308,6 +5551,9 @@ function createCompletionScreen({ els, audio, voice, camera, crane, claw, bridge
       }).classList.add('completion__replay');
     },
     async exit() {
+      scope.cancel();
+      town.stop();
+      builder.show();
       await feedback.hideBubble();
       fx.clear();
       feedback.hideInstruction();
@@ -5344,6 +5590,8 @@ const { createBuilderCharacter, BUILDER_FRAME_SOURCES } = __require('js/gameplay
 const { CRANE_RIG } = __require('js/data/layout.js');
 const { createTitleScreen } = __require('js/screens/title-screen.js');
 const { DRONE_SHOTS } = __require('js/screens/drone-intro.js');
+const { TOWN_LIFE_IMAGES, BRIDGE_SHOT_IMAGES } = __require('js/gameplay/town-life.js');
+const { STEEL_IMAGES } = __require('js/gameplay/svg-tubes.js');
 const { createMeetBuilderScreen, createHelpNeededScreen } = __require('js/screens/story-screens.js');
 const { createHowToPlayScreen } = __require('js/screens/how-to-play-screen.js');
 const { createGameplayScreen } = __require('js/screens/gameplay-screen.js');
@@ -5373,6 +5621,10 @@ const CRITICAL_IMAGES = [
   'assets/images/fx/ripple-1.webp',
   'assets/images/fx/ripple-2.webp',
   ...(DRONE_INTRO ? DRONE_SHOTS.map((shot) => shot.src) : []),
+  ...STEEL_IMAGES,
+  'assets/images/kit/play-button.webp',
+  ...TOWN_LIFE_IMAGES,
+  ...BRIDGE_SHOT_IMAGES,
 ].map((src) => ({ key: src, src }));
 
 function queryElements() {

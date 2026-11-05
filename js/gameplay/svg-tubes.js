@@ -1,16 +1,25 @@
 /**
- * Riveted steel girders in SVG (the bridge's members and the triangle frames): a dark outline, the
- * painted web, a shaded lower flange, a lit upper flange with a bright edge, and a row of rivet heads
- * down the middle; offsets follow the member's normal so light always comes from the upper left.
+ * The bridge's steel, drawn with painted art (assets/images/kit), not flat vector strokes:
+ *   - a beam is a painted bar sliced in three (left end with its bolt, a middle that stretches to any
+ *     length, right end with its bolt), laid along the member, so every beam keeps round ends and an
+ *     undistorted bolt sitting on each joint, whatever its length or angle;
+ *   - a joint is a painted hexagonal steel plate with bolts.
+ * Yellow box beams carry the outer frame and the triangle frames; navy bars are the inner members.
+ * The member's exact geometry (node to node) is unchanged, so every triangle is still exactly its type.
  */
 export const SVG_NS = 'http://www.w3.org/2000/svg';
 
-export const TUBE_PALETTES = Object.freeze({
-  steel: Object.freeze({ rim: '#272e38', body: '#6c7786', shade: '#48515d', light: '#a9b4c1', spec: '#eef2f6', rivet: '#2f353e', rivetShine: '#d5dce4' }),
-  paint: Object.freeze({ rim: '#5f3f00', body: '#e6a300', shade: '#a86c00', light: '#ffc933', spec: '#fff4c4', rivet: '#7a4e00', rivetShine: '#ffe7a0' }),
-  /** Navy structural steel for the bridge's inner bars (the yellow box beams carry the outer frame). */
-  navy: Object.freeze({ rim: '#16203a', body: '#3d5283', shade: '#28375c', light: '#6a83bb', spec: '#c4d3f3', rivet: '#16203a', rivetShine: '#9db2df' }),
+/** Beam art: slice heights and widths in art px; boltAt is the bolt's centre, measured from the beam's end. */
+const BEAMS = Object.freeze({
+  yellow: { l: 'assets/images/kit/beam-yellow-l.png', m: 'assets/images/kit/beam-yellow-m.png', r: 'assets/images/kit/beam-yellow-r.png', h: 140, capL: 130, capR: 130, boltAt: 72, scale: 1.25 },
+  navy: { l: 'assets/images/kit/beam-navy-l.png', m: 'assets/images/kit/beam-navy-m.png', r: 'assets/images/kit/beam-navy-r.png', h: 100, capL: 116, capR: 116, boltAt: 53, scale: 1.1 },
 });
+const JOINT = Object.freeze({ src: 'assets/images/kit/joint-plate.png', width: 240, height: 220 });
+
+export const STEEL_IMAGES = [...Object.values(BEAMS).flatMap((b) => [b.l, b.m, b.r]), JOINT.src];
+
+/** Which painted bar a palette uses (kept as names so callers did not change). */
+export const TUBE_PALETTES = Object.freeze({ paint: 'yellow', navy: 'navy', steel: 'navy' });
 
 export function svgElement(name, attributes = {}) {
   const element = document.createElementNS(SVG_NS, name);
@@ -18,114 +27,75 @@ export function svgElement(name, attributes = {}) {
   return element;
 }
 
-/** Light comes from the upper left, so the "lit" normal always points up (or left for vertical tubes). */
-function litNormal(dx, dy, length) {
-  let nx = -dy / length;
-  let ny = dx / length;
-  if (ny > 0 || (Math.abs(ny) < 1e-6 && nx > 0)) {
-    nx = -nx;
-    ny = -ny;
-  }
-  return [nx, ny];
+function image(href) {
+  const element = svgElement('image', { preserveAspectRatio: 'none' });
+  element.setAttribute('href', href);
+  return element;
 }
 
-/** `trim` is how far (in member widths) a layer stops short of each joint; `dash` turns a line into a row of dots. */
-function tubeLayers(width, palette) {
-  const rivetPitch = Math.max(11, width * 0.85);
-  return [
-    { className: 'tube__rim', color: palette.rim, strokeWidth: width, offset: 0, cap: 'round', trim: 0 },
-    { className: 'tube__body', color: palette.body, strokeWidth: width - 5, offset: 0, cap: 'round', trim: 0 },
-    { className: 'tube__shade', color: palette.shade, strokeWidth: width * 0.2, offset: -width * 0.26, cap: 'butt', trim: 0.45 },
-    { className: 'tube__light', color: palette.light, strokeWidth: width * 0.18, offset: width * 0.26, cap: 'butt', trim: 0.45 },
-    { className: 'tube__spec', color: palette.spec, strokeWidth: Math.max(1.2, width * 0.07), offset: width * 0.16, cap: 'butt', trim: 0.45 },
-    { className: 'tube__rivets', color: palette.rivet, strokeWidth: width * 0.25, offset: -width * 0.03, cap: 'round', trim: 1.3, dash: `0 ${rivetPitch.toFixed(1)}` },
-    { className: 'tube__rivets tube__rivets--shine', color: palette.rivetShine, strokeWidth: width * 0.1, offset: width * 0.03, cap: 'round', trim: 1.3, dash: `0 ${rivetPitch.toFixed(1)}` },
-  ];
-}
-
-function placeLines(tube, x1, y1, x2, y2) {
-  const dx = x2 - x1;
-  const dy = y2 - y1;
-  const length = Math.hypot(dx, dy) || 1;
-  const [nx, ny] = litNormal(dx, dy, length);
-  tube.layers.forEach((layer, index) => {
-    const trim = Math.min(0.45, (tube.width * layer.trim) / length);
-    const ox = nx * layer.offset;
-    const oy = ny * layer.offset;
-    const line = tube.lines[index];
-    line.setAttribute('x1', (x1 + dx * trim + ox).toFixed(1));
-    line.setAttribute('y1', (y1 + dy * trim + oy).toFixed(1));
-    line.setAttribute('x2', (x2 - dx * trim + ox).toFixed(1));
-    line.setAttribute('y2', (y2 - dy * trim + oy).toFixed(1));
-  });
+/** Lay the beam's three slices along the member from (x1, y1) to (x2, y2). */
+function placeBeam(tube, x1, y1, x2, y2) {
+  const art = BEAMS[tube.art];
+  const length = Math.hypot(x2 - x1, y2 - y1) || 1;
+  const angle = (Math.atan2(y2 - y1, x2 - x1) * 180) / Math.PI;
+  const h = tube.width * art.scale;
+  const s = h / art.h;
+  const overhang = art.boltAt * s;                       // the bolt sits on the joint
+  const capL = art.capL * s;
+  const capR = art.capR * s;
+  const total = length + overhang * 2;
+  const middle = Math.max(0.5, total - capL - capR);
+  const [left, mid, right] = tube.images;
+  const y = (-h / 2).toFixed(2);
+  const set = (el, x, w) => {
+    el.setAttribute('x', x.toFixed(2));
+    el.setAttribute('y', y);
+    el.setAttribute('width', w.toFixed(2));
+    el.setAttribute('height', h.toFixed(2));
+  };
+  set(left, -overhang, capL);
+  set(mid, -overhang + capL - 0.4, middle + 0.8);         // a hair of overlap: no seam between slices
+  set(right, -overhang + capL + middle, capR);
+  tube.place.setAttribute('transform', `translate(${x1.toFixed(1)} ${y1.toFixed(1)}) rotate(${angle.toFixed(2)})`);
   tube.length = length;
 }
 
 /**
- * Returns { group, length, lines }. With `drawable`, every line gets a dash pattern so the tube can be
- * "drawn" in by animating stroke-dashoffset (see .member in gameplay.css).
+ * Returns { group, length }. With `drawable`, the beam is drawn in from its start end when its member
+ * gets `.is-built` (gameplay.css: .member .tube__draw).
  */
-export function createTube(x1, y1, x2, y2, { width = 16, palette = TUBE_PALETTES.steel, className = '', drawable = false } = {}) {
-  const layers = tubeLayers(width, palette);
-  const group = svgElement('g', { class: `tube ${className}`.trim() });
-  const lines = layers.map((layer) => {
-    const line = svgElement('line', {
-      stroke: layer.color,
-      'stroke-width': layer.strokeWidth.toFixed(1),
-      'stroke-linecap': layer.cap,
-      class: layer.className,
-    });
-    if (layer.dash) line.setAttribute('stroke-dasharray', layer.dash);
-    group.appendChild(line);
-    return line;
-  });
-  const tube = { group, lines, layers, width, length: 0 };
-  placeLines(tube, x1, y1, x2, y2);
-  if (drawable) {
-    const length = tube.length;
-    // Rivet rows keep their dot pattern and fade in once the girder is drawn (gameplay.css).
-    lines.forEach((line, index) => {
-      if (!layers[index].dash) line.setAttribute('stroke-dasharray', `${length.toFixed(1)} ${(length + 80).toFixed(1)}`);
-    });
-    group.style.setProperty('--hidden-offset', `${(length + 40).toFixed(1)}px`);
-  }
+export function createTube(x1, y1, x2, y2, { width = 16, palette = TUBE_PALETTES.paint, className = '', drawable = false } = {}) {
+  const art = BEAMS[palette] ? palette : 'yellow';
+  const group = svgElement('g', { class: `tube tube--${art} ${className}`.trim() });
+  const place = svgElement('g', { class: 'tube__place' });
+  const draw = svgElement('g', { class: drawable ? 'tube__draw' : 'tube__body' });
+  const images = [image(BEAMS[art].l), image(BEAMS[art].m), image(BEAMS[art].r)];
+  draw.append(...images);
+  place.appendChild(draw);
+  group.appendChild(place);
+  const tube = { group, place, images, art, width, length: 0 };
+  placeBeam(tube, x1, y1, x2, y2);
   return tube;
 }
 
-/** Move an existing tube's ends (used while a frame flies into the bridge). */
+/** Move an existing beam's ends (used while a frame flies into the bridge). */
 export function moveTube(tube, x1, y1, x2, y2) {
-  placeLines(tube, x1, y1, x2, y2);
+  placeBeam(tube, x1, y1, x2, y2);
 }
 
-/** Shared gradients for frame-style corner plates (add once per SVG). */
+/** Kept for the SVGs that add it once; the painted joints need no gradients. */
 export function gussetDefs() {
-  const defs = svgElement('defs');
-  defs.innerHTML = `
-    <linearGradient id="gusset-steel" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#b9c1cc"/><stop offset="0.5" stop-color="#848d99"/><stop offset="1" stop-color="#5d6571"/>
-    </linearGradient>
-    <radialGradient id="gusset-bolt" cx="0.38" cy="0.32" r="0.7">
-      <stop offset="0" stop-color="#ffffff"/><stop offset="0.45" stop-color="#b9c3d0"/><stop offset="1" stop-color="#5d6676"/>
-    </radialGradient>`;
-  return defs;
+  return svgElement('defs');
 }
 
-/** A joint plate: rounded grey steel plate with a steel bolt; rivets once bolted. */
+/** A joint: the painted hexagonal steel plate with bolts, centred on (x, y). */
 export function createGusset(x, y, { radius = 17 } = {}) {
   const group = svgElement('g', { class: 'truss-node' });
-  const points = [];
-  for (let i = 0; i < 6; i += 1) {
-    const angle = (Math.PI / 3) * i + Math.PI / 6;
-    points.push(`${(x + Math.cos(angle) * radius).toFixed(1)},${(y + Math.sin(angle) * radius).toFixed(1)}`);
-  }
-  group.appendChild(svgElement('polygon', { points: points.join(' '), class: 'truss-node__plate' }));
-  group.appendChild(svgElement('circle', { cx: x, cy: y, r: radius - 5, class: 'truss-node__plate-light' }));
-  group.appendChild(svgElement('circle', { cx: x, cy: y, r: 7.5, class: 'truss-node__bolt' }));
-  const rivets = svgElement('g', { class: 'truss-node__rivets' });
-  for (let i = 0; i < 3; i += 1) {
-    const angle = (Math.PI * 2 * i) / 3 - Math.PI / 2;
-    rivets.appendChild(svgElement('circle', { cx: (x + Math.cos(angle) * 12).toFixed(1), cy: (y + Math.sin(angle) * 12).toFixed(1), r: 2.6, class: 'truss-node__rivet' }));
-  }
-  group.appendChild(rivets);
+  const w = radius * 2.3;
+  const h = (w * JOINT.height) / JOINT.width;
+  const plate = svgElement('image', { class: 'truss-node__plate', x: (x - w / 2).toFixed(1), y: (y - h / 2).toFixed(1), width: w.toFixed(1), height: h.toFixed(1) });
+  plate.setAttribute('href', JOINT.src);
+  group.appendChild(plate);
+  group.appendChild(svgElement('g', { class: 'truss-node__rivets' }));
   return group;
 }

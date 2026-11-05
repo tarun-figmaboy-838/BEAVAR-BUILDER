@@ -455,51 +455,28 @@
 .action-button.is-pressed:not(:disabled), .action-button:active:not(:disabled) { transform: translateY(9px); }
 .action-button.is-denied { animation: button-denied 320ms var(--ease-out) 1; }
 
-/* ---------- Title: one chunky play button, a light sweeping round a crisp ring, a pulse rippling out ---------- */
+/* ---------- Title: the painted play button, breathing gently, a soft pulse rippling out behind it ---------- */
 .start-button {
   position: absolute;
   left: 50%; top: 505px;     /* in the open sky between the title and the bridge */
-  width: 320px; height: 320px; padding: 0;
+  width: 300px; height: 300px; padding: 0;
   transform: translate(-50%, -50%);
   border-radius: 50%;
   display: grid; place-items: center;
 }
 .start-button > * { position: absolute; pointer-events: none; }
-/* Pulse: a clean ring that ripples out from the rim and fades. */
 .start-button__glow {
-  width: 236px; height: 236px; border-radius: 50%;
-  border: 6px solid rgba(255, 236, 140, 0.95);
-  animation: start-ripple 1.6s ease-out infinite;
-}
-/* Track ring hugging the button, with a bright light sweeping round it. */
-.start-button__ring {
-  width: 262px; height: 262px; border-radius: 50%;
-  background:
-    conic-gradient(from 0deg, rgba(255, 255, 255, 0) 0deg, rgba(255, 214, 63, 0.2) 200deg, #ffe680 320deg, #ffffff 356deg, rgba(255, 255, 255, 0) 360deg),
-    rgba(15, 45, 77, 0.55);
-  -webkit-mask: radial-gradient(circle, transparent 0 121px, #000 122px 130px, transparent 131px);
-  mask: radial-gradient(circle, transparent 0 121px, #000 122px 130px, transparent 131px);
-  animation: start-spin 1.4s linear infinite;
+  width: 196px; height: 196px; border-radius: 50%; margin-top: -14px;
+  border: 6px solid rgba(255, 236, 140, 0.9);
+  animation: start-ripple 1.7s ease-out infinite;
 }
 .start-button__face {
-  width: 214px; height: 214px; border-radius: 50%;
-  display: grid; place-items: center;
-  background: radial-gradient(circle at 36% 28%, #fff7c2 0 10%, #ffdc4f 32%, #f7b200 64%, #dc8c00 100%);
-  border: 10px solid #fff;
-  box-shadow: 0 0 0 5px #0f2d4d, 0 15px 0 5px #0a1f36, 0 24px 30px rgba(0, 0, 0, 0.3), inset 0 -14px 0 rgba(160, 85, 0, 0.3), inset 0 10px 0 rgba(255, 255, 255, 0.55);
-  animation: start-breathe 1.6s ease-in-out infinite;
-  transition: transform var(--t-micro) var(--ease-out), box-shadow var(--t-micro) var(--ease-out);
+  width: 220px; height: auto; display: block;
+  filter: drop-shadow(0 14px 14px rgba(6, 24, 48, 0.3));
+  animation: start-breathe 1.7s ease-in-out infinite;
+  transition: transform var(--t-micro) var(--ease-out);
 }
-.start-button__face::after {
-  content: ""; position: absolute; left: 34px; top: 20px; width: 92px; height: 38px; border-radius: 50%;
-  background: rgba(255, 255, 255, 0.5); transform: rotate(-24deg);
-}
-.start-button__icon { width: 118px; height: 118px; margin-left: 14px; overflow: visible; filter: drop-shadow(0 6px 0 rgba(130, 64, 0, 0.45)); }
-.start-button__icon polygon { fill: #fff; stroke: #0f2d4d; stroke-width: 10; stroke-linejoin: round; paint-order: stroke fill; }
-.start-button:active .start-button__face, .start-button.is-pressed .start-button__face {
-  animation: none; transform: translateY(10px) scale(0.97);
-  box-shadow: 0 0 0 5px #0f2d4d, 0 5px 0 5px #0a1f36, 0 10px 16px rgba(0, 0, 0, 0.3), inset 0 -10px 0 rgba(160, 85, 0, 0.3), inset 0 10px 0 rgba(255, 255, 255, 0.55);
-}
+.start-button:active .start-button__face, .start-button.is-pressed .start-button__face { animation: none; transform: translateY(8px) scale(0.96); }
 .start-button:focus-visible { outline: none; box-shadow: none; }
 .start-button:focus-visible .start-button__face { border-color: #fff9d6; }
 .start-button.is-leaving { animation: start-leave 380ms var(--ease-in) forwards; }
