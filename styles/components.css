@@ -350,7 +350,7 @@
   position: absolute; inset: 0;
   display: grid; place-items: center;
   backface-visibility: hidden; -webkit-backface-visibility: hidden;
-  transition: transform 460ms var(--ease-back), filter var(--t-fast), visibility 0s linear 100ms;
+  transition: transform 460ms var(--ease-back), visibility 0s linear 100ms;
 }
 /* The painted PICK / DROP buttons (generated for this game); the face flips between them. */
 .action-button__art { width: 112%; max-width: none; margin: -6% -6% -12% -6%; height: auto; display: block; filter: drop-shadow(0 12px 12px rgba(6, 24, 48, 0.35)); }
@@ -360,7 +360,9 @@
 .action-button[data-mode="pick"] .action-button__face--drop,
 .action-button[data-mode="drop"] .action-button__face--pick { visibility: hidden; }
 .action-button:disabled { cursor: default; }
-.action-button:disabled .action-button__face { filter: saturate(0.2) brightness(0.85); }
+/* Greyed on the picture itself, chained with its shadow: a filter on the flipping face is clipped to the
+   face's square box (3D layer), which cut the shadow off in straight lines. */
+.action-button:disabled .action-button__art { filter: saturate(0.2) brightness(0.85) drop-shadow(0 12px 12px rgba(6, 24, 48, 0.35)); }
 .action-button.is-ready:not(:disabled) { animation: button-ready 760ms var(--ease-out) 1; }
 .action-button.is-pressed:not(:disabled) .action-button__art,
 .action-button:active:not(:disabled) .action-button__art { filter: drop-shadow(0 4px 5px rgba(6, 24, 48, 0.35)); }
