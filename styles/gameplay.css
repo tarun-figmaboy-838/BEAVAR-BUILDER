@@ -18,8 +18,9 @@
   position: relative;
   display: block;
   width: 100%;
-  -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 calc(var(--wet) - 6px), rgba(0,0,0,0.55) calc(var(--wet) + 4px), rgba(0,0,0,0) calc(var(--wet) + 60px));
-  mask-image: linear-gradient(to bottom, #000 0, #000 calc(var(--wet) - 6px), rgba(0,0,0,0.55) calc(var(--wet) + 4px), rgba(0,0,0,0) calc(var(--wet) + 60px));
+  /* Solid above the waterline, then the bricks fade into the water all the way to the pier's foot (no hard edge). */
+  -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 var(--wet), rgba(0, 0, 0, 0.45) calc(var(--wet) + 10px), rgba(0, 0, 0, 0) 100%);
+  mask-image: linear-gradient(to bottom, #000 0, #000 var(--wet), rgba(0, 0, 0, 0.45) calc(var(--wet) + 10px), rgba(0, 0, 0, 0) 100%);
 }
 /* The pillar mirrored at the waterline: only the part above the water is reflected, hanging down
    into the canal, strongest at the waterline and fading with depth (it used to flip upward and
@@ -218,22 +219,19 @@
 .hotspot.is-aligned { --spot: 70, 226, 110; --spot-hi: 214, 255, 222; transform: scale(1.06); }
 .socket { pointer-events: none; border: 0; background: none; padding: 0; }
 /* A straight band of light lying on the road, so the column rises out of the deck. */
+/* A soft oval of light on the road (no hard edges on the light grey plates). */
 .hotspot__pad {
-  position: absolute; left: -14px; right: -14px; bottom: -7px; height: 14px;
-  background: linear-gradient(90deg, rgba(var(--spot), 0) 0%, rgba(var(--spot-hi), 1) 18%, rgba(var(--spot-hi), 1) 82%, rgba(var(--spot), 0) 100%);
-  box-shadow: 0 0 18px 6px rgba(var(--spot), 0.55);
-  mix-blend-mode: screen;
+  position: absolute; left: -10px; right: -10px; bottom: -9px; height: 18px; border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(var(--spot-hi), 0.95) 0%, rgba(var(--spot), 0.6) 45%, rgba(var(--spot), 0) 72%);
   transition: background 200ms, box-shadow 200ms;
   animation: pad-pulse 1.6s ease-in-out infinite;
 }
 .hotspot__column {
   position: absolute; left: 32px; right: 32px; top: 52px; bottom: 0;
-  background:
-    linear-gradient(90deg, rgba(var(--spot-hi), 0.5) 0%, rgba(var(--spot-hi), 0) 22%, rgba(var(--spot-hi), 0) 78%, rgba(var(--spot-hi), 0.5) 100%),
-    linear-gradient(to top, rgba(var(--spot), 0.85) 0%, rgba(var(--spot), 0.42) 45%, rgba(var(--spot), 0) 100%);
-  -webkit-mask-image: linear-gradient(to top, #000 55%, transparent 100%);
-  mask-image: linear-gradient(to top, #000 55%, transparent 100%);
-  mix-blend-mode: screen;
+  /* A beam of light: bright in the middle, fading to the sides and upward, soft where it meets the road. */
+  background: radial-gradient(ellipse 50% 100% at 50% 100%, rgba(var(--spot-hi), 0.75) 0%, rgba(var(--spot), 0.45) 40%, rgba(var(--spot), 0) 100%);
+  -webkit-mask-image: linear-gradient(to top, transparent 0, #000 10px, #000 40%, transparent 100%);
+  mask-image: linear-gradient(to top, transparent 0, #000 10px, #000 40%, transparent 100%);
   transform-origin: 50% 100%;
   animation: column-breathe 1.6s ease-in-out infinite;
 }
@@ -291,6 +289,7 @@
 .cab-beacon.is-flashing .cab-beacon__light--orange { animation: beacon-glow 700ms ease-in-out infinite alternate; }
 .cab-beacon.is-alarm .cab-beacon__light--orange { opacity: 0; animation: none; }
 .cab-beacon.is-alarm .cab-beacon__light--red { animation: beacon-glow 300ms ease-in-out infinite alternate; }
+.crane-cabin-front { position: absolute; pointer-events: none; }
 /* Steel mount holding the cabin under the jib. */
 .crane-cabin-mount {
   position: absolute; border-radius: 5px;
@@ -327,11 +326,10 @@
 .crane-cabin { filter: drop-shadow(0 7px 4px #17364b30); }
 .builder { position: absolute; overflow: visible; pointer-events: none; }   /* never clip the operator sprite */
 .builder__body { position: absolute; left: 0; top: 0; width: 144px; height: 144px; transform-origin: 50% 92%; transition: transform 240ms var(--ease-out); animation: operator-breathe 3.4s ease-in-out infinite; }
-.builder__frame { position: absolute; inset: 0; background-image: url("../assets/images/characters/operator/beaver-idle-atlas.png"); background-size: 200% 200%; background-repeat: no-repeat; opacity: 0; }
+.builder__frame { position: absolute; inset: 0; background-image: url("../assets/images/characters/operator/beaver-idle-atlas.png"); background-size: 200% 200%; background-repeat: no-repeat; opacity: 0; transform-origin: 0 0; }
 .builder__frame.is-on { opacity: 1; z-index: 1; transition: opacity 110ms ease-out; }
 .builder__frame.is-under { opacity: 1; z-index: 0; }
 /* Each pose has its own gentle motion on top of the frames. */
-.builder[data-pose="talk"] .builder__body { animation: operator-talk 560ms ease-in-out infinite; }
 .builder[data-pose="cheer"] .builder__body, .builder[data-pose="complete"] .builder__body { animation: operator-cheer 680ms var(--ease-out) infinite; }
 .builder[data-pose="point"] .builder__body { animation: operator-cheer 900ms var(--ease-out) 1; }
 .builder[data-pose="worry"] .builder__body { animation: operator-worry 1.5s ease-in-out infinite; }
@@ -342,7 +340,6 @@
 .builder[data-pose="drive"][data-lean="up"] .builder__body, .builder[data-pose="carry"][data-lean="up"] .builder__body { transform: translateY(-1.5px); }
 .builder[data-pose="drive"][data-lean="down"] .builder__body, .builder[data-pose="carry"][data-lean="down"] .builder__body { transform: translateY(1.5px) scale(1, 0.99); }
 @keyframes operator-breathe { 0%, 100% { transform: translateY(0) scale(1, 1); } 50% { transform: translateY(-1.2px) scale(1, 1.012); } }
-@keyframes operator-talk { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-1.6px) rotate(-0.8deg); } }
 @keyframes operator-cheer { 0%, 100% { transform: translateY(0) scale(1, 1); } 35% { transform: translateY(-5px) scale(0.985, 1.025); } 70% { transform: translateY(0) scale(1.02, 0.98); } }
 @keyframes operator-worry { 0%, 100% { transform: rotate(-1.1deg) translateX(-0.6px); } 50% { transform: rotate(1.1deg) translateX(0.6px); } }
 @keyframes operator-dip { 0% { transform: translateY(0); } 40% { transform: translateY(2px) scale(1.01, 0.985); } 100% { transform: translateY(0); } }

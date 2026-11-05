@@ -1,17 +1,17 @@
 /* ---------- Instruction panel: simple, high contrast, the key words in the highlight colour ---------- */
 .instruction-banner {
   position: absolute;
-  left: 340px;            /* right of the operator cab */
-  top: 138px;             /* just under the crane's jib */
+  left: 318px;            /* right of the operator cab */
+  top: 104px;             /* just under the crane's jib, above the claw at rest */
   display: flex;
   align-items: center;
-  padding: 16px 34px 18px;
+  padding: 14px 34px 16px;
   border-radius: 20px;
   background: #0f2d4d;
   border: 4px solid #fff;
   color: #fff;
   font-family: var(--font-display);
-  font-size: 36px;
+  font-size: 40px;
   line-height: 1.2;
   white-space: nowrap;
   box-shadow: 0 7px 0 rgba(6, 24, 48, 0.35), 0 14px 24px rgba(6, 24, 48, 0.3);
@@ -28,8 +28,8 @@
 .mute-button {
   position: absolute;
   right: var(--safe);
-  top: 36px;
-  width: 68px; height: 68px;
+  top: 24px;
+  width: 88px; height: 88px;
   border-radius: 50%;
   background: var(--color-navy);
   border: 4px solid #fff;
@@ -38,50 +38,54 @@
   display: grid; place-items: center;
   transition: transform var(--t-micro) var(--ease-out);
 }
-.mute-button::before { content: "♪"; font-size: 34px; line-height: 1; font-family: var(--font-display); }
+.mute-button::before { content: "♪"; font-size: 44px; line-height: 1; font-family: var(--font-display); }
 .mute-button.is-muted::after {
-  content: ""; position: absolute; width: 42px; height: 5px; border-radius: 3px;
+  content: ""; position: absolute; width: 54px; height: 6px; border-radius: 3px;
   background: var(--color-red); transform: rotate(-45deg);
 }
 .mute-button:active, .mute-button.is-pressed { transform: scale(0.92); }
 
 /* ---------- Builder speech bubble ---------- */
+/* Comic speech bubble: white, one bold ink outline, a crisp drop edge and a tail that points at the speaker. */
 .speech-bubble {
   position: absolute;
   left: 120px;
   top: 236px;
   max-width: 660px;
-  padding: 26px 34px 26px;
-  border-radius: 26px;
-  background: var(--color-card);
-  border: 4px solid #fff;
-  color: var(--color-ink);
+  padding: 22px 32px 24px;
+  border-radius: 34px;
+  background: #fff;
+  border: 6px solid #0f2d4d;
+  color: #0f2d4d;
   font-family: var(--font-display);
-  font-size: 32px;
-  line-height: 1.3;
-  box-shadow: 0 8px 0 rgba(15, 45, 77, 0.2), var(--shadow-card);
+  font-size: 34px;
+  line-height: 1.28;
+  box-shadow: 0 8px 0 #0f2d4d;
   transform-origin: left bottom;
 }
-.speech-bubble::after {
+/* Tail: an ink triangle with a white one inside it, so the outline runs unbroken round the bubble. */
+.speech-bubble::before, .speech-bubble::after {
   content: "";
   position: absolute;
-  left: 46px; bottom: -18px;
-  width: 34px; height: 34px;
-  background: var(--color-card);
-  transform: rotate(45deg);
-  border-radius: 6px;
+  left: 46px; bottom: -32px;
+  width: 0; height: 0;
+  border-style: solid;
 }
+.speech-bubble::before { border-width: 32px 22px 0 0; border-color: #0f2d4d transparent transparent transparent; }
+.speech-bubble::after { left: 52px; bottom: -20px; border-width: 22px 14px 0 0; border-color: #fff transparent transparent transparent; }
 .speech-bubble__text { margin: 0; }
-.speech-bubble.is-entering { animation: bubble-enter 520ms var(--ease-back) both; }
-.speech-bubble.is-leaving { animation: bubble-leave 320ms var(--ease-in) forwards; }
-.speech-bubble--cab { max-width: 640px; transform-origin: left top; }
-.speech-bubble--cab::after { left: -16px; top: 34px; bottom: auto; }
+.speech-bubble.is-entering { animation: bubble-pop 460ms var(--ease-back) both; }
+.speech-bubble.is-leaving { animation: bubble-leave 280ms var(--ease-in) forwards; }
+.speech-bubble--cab { max-width: 640px; transform-origin: left center; }
+/* From the cab: a comic wedge tail pointing left, at the operator's mouth. */
+.speech-bubble--cab::before { left: -44px; top: 24px; bottom: auto; border-width: 22px 44px 22px 0; border-color: transparent #0f2d4d transparent transparent; }
+.speech-bubble--cab::after { left: -28px; top: 33px; bottom: auto; border-width: 13px 30px 13px 0; border-color: transparent #fff transparent transparent; }
 
 /* ---------- How to play card (PDF: G0.3): clean card, a title tab, one row per control ---------- */
 .howto-card {
   position: absolute;
   right: 44px;
-  top: 178px;
+  top: 128px;
   width: 580px;
   padding: 44px 24px 20px;
   border-radius: 28px;
@@ -103,7 +107,7 @@
   margin: 0 10px 16px; text-align: center;
   font-family: var(--font-display); font-size: 26px; line-height: 1.25;
 }
-.howto-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.howto-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .howto-step {
   display: flex; align-items: center; gap: 18px;
   padding: 7px 14px 7px 8px; border-radius: 20px;
@@ -195,7 +199,7 @@
 /* The sign hangs from the crane bar on two wire ropes: wooden planks, steel bolts, shaded bunting. */
 .completion__sign {
   position: absolute;
-  left: 50%; top: 150px;
+  left: 50%; top: 100px;     /* clear of the finished truss's apex */
   width: 860px;
   margin-left: -430px;
   transform-origin: 50% -150px;
@@ -210,7 +214,7 @@
 .completion__rope--r { right: 140px; }
 .completion__banner {
   position: relative;
-  padding: 30px 50px 30px;
+  padding: 26px 50px 22px;
   border-radius: 26px;
   background:
     repeating-linear-gradient(87deg, rgba(255, 255, 255, 0) 0 22px, rgba(255, 255, 255, 0.05) 22px 24px, rgba(0, 0, 0, 0.06) 24px 27px, rgba(255, 255, 255, 0) 27px 61px),
@@ -260,7 +264,7 @@
 .completion__bubble { left: 80px; top: auto; bottom: 110px; max-width: 560px; font-size: 30px; }
 .completion__badge {
   position: absolute;
-  right: 70px; bottom: 90px;
+  right: 40px; bottom: 40px;
   width: 300px;
   padding: 22px 20px 20px;
   border-radius: 20px;
@@ -298,8 +302,8 @@
 /* ---------- Controls: arcade joystick (left): orange rim, slate face, white arrows, glossy blue ball ---------- */
 .joystick-dock {
   position: absolute;
-  left: 30px;
-  bottom: 28px;
+  left: 36px;
+  bottom: 30px;
 }
 .controls.is-entering .joystick-dock { animation: dock-enter-left 620ms var(--ease-out) both; }
 .controls.is-entering .action-dock { animation: dock-enter-right 620ms var(--ease-out) both; }
@@ -374,7 +378,7 @@
 .action-dock {
   position: absolute;
   right: 36px;
-  bottom: 30px;
+  bottom: 43px;
 }
 .action-button {
   position: relative;
@@ -416,10 +420,12 @@
 .action-button[data-mode="drop"] .action-button__face--drop { transform: rotateY(0deg); }
 .action-button__icon { height: 98px; width: auto; margin-top: -8px; filter: brightness(0) invert(1) drop-shadow(0 4px 0 rgba(0, 0, 0, 0.35)); }
 .action-button__arrow {
-  position: absolute; left: 50%; top: 104px; width: 0; height: 0; margin-left: -14px;
+  position: absolute; left: 50%; top: 109px; width: 0; height: 0; margin-left: -14px;
   border-left: 14px solid transparent; border-right: 14px solid transparent; border-top: 18px solid #fff;
   filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.35));
 }
+.action-button__face--drop { gap: 18px; }
+.action-button__face--drop .action-button__icon { height: 78px; }
 .action-button__label {
   font-family: var(--font-display);
   font-size: 40px;
@@ -496,7 +502,7 @@
 /* ---------- Title: clean solid lettering (one outline, one crisp 3D edge, no blur), a small navy badge ---------- */
 .title-card { position: absolute; left: 0; right: 0; top: 176px; text-align: center; pointer-events: none; }
 .title-card__eyebrow {
-  display: inline-block; margin: 0 0 10px; padding: 6px 26px 8px; border-radius: 999px;
+  display: inline-block; margin: 0 0 10px; padding: 6px 16px 8px 26px; border-radius: 999px;   /* letter-spacing trails the last letter */
   background: #0f2d4d; border: 4px solid #fff; color: #fff;
   font-family: var(--font-display); font-size: 34px; letter-spacing: 10px;
   box-shadow: 0 5px 0 rgba(6, 24, 48, 0.3);

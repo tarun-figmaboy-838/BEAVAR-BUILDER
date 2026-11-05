@@ -151,7 +151,7 @@ export function createLevelEngine({ gameState, crane, claw, triangles, bridge, p
     lockInput();
     const level = currentLevel();
     const socket = placement.activeStage.socket;
-    camera.focus({ x: socket.x, y: socket.y, scale: 1.28, pull: 0.55, duration: 900, signal: scope.signal }).catch(() => {});
+    camera.focus({ x: socket.x, y: socket.y, scale: 1.28, pull: 0.2, duration: 900, signal: scope.signal }).catch(() => {});
     const released = await crane.lowerAndRelease(
       { craneX: placement.craneXForSocket(option), gripY: dropGripY(option) },
       { signal: scope.signal }

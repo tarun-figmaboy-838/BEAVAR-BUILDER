@@ -38,6 +38,7 @@ const CRITICAL_IMAGES = [
   'assets/images/bridge/deck-right.png',
   'assets/images/bridge/deck-bracket.png',
   CRANE_RIG.cabin.src,
+  CRANE_RIG.cabin.frontSrc,
   CRANE_RIG.tower.mastSrc,
   CRANE_RIG.tower.baseSrc,
   CRANE_RIG.jibTile.src,

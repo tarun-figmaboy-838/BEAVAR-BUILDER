@@ -11,9 +11,25 @@ export const BUILDER_FRAME_SOURCES = [
   'assets/images/characters/operator/beaver-drive-atlas.png',
   'assets/images/characters/operator/beaver-actions-atlas.png',
 ];
+/**
+ * Per-sheet fit (measured from each sheet's body outline against the idle sheet): the sheets were
+ * generated separately, so each is scaled and nudged (in % of a frame) to match the idle sheet exactly.
+ * Without this the beaver grows or shifts by a pixel or two whenever he switches pose.
+ */
+const SHEET_FIT = [
+  { scale: 1, x: 0, y: 0 },              // idle
+  { scale: 0.9879, x: 0.554, y: 0.996 }, // talk
+  { scale: 1, x: 0, y: 0 },              // happy
+  { scale: 0.9982, x: 0.012, y: 0.166 }, // sad
+  { scale: 0.9828, x: 0.899, y: 1.325 }, // drive
+  { scale: 1, x: 0.638, y: -0.478 },     // actions
+];
+/** Talking: only the mouth moves (closed, open, wide, smile), in an uneven, speech-like rhythm. */
+const TALK_FRAMES = [1, 0, 2, 3, 0, 1, 2, 0, 3, 1, 0, 2];
+const TALK_MS = [120, 90, 150, 110, 80, 130, 140, 90, 120, 100, 80, 160];
 const POSES = {
   idle: { sheet: 0, frames: [0, 1, 2, 1, 0], durations: [3200, 70, 90, 70, 1200] },
-  talk: { sheet: 1, frames: [0, 1, 2, 3, 1, 3], ms: 140 },
+  talk: { sheet: 1, frames: TALK_FRAMES, durations: TALK_MS },
   cheer: { sheet: 2, frames: [0, 1, 2, 3, 1, 0], ms: 260, once: true },
   worry: { sheet: 3, frames: [0, 1, 2, 1, 3], ms: 300, once: true },
   point: { sheet: 2, frames: [0, 1, 3, 0], ms: 300, once: true },
@@ -35,6 +51,17 @@ export function createBuilderCharacter({ hostEl }) {
   // Two frame layers: each new frame fades in over the last one, so poses change smoothly, never snap.
   root.innerHTML = '<div class="builder__body"><div class="builder__frame is-on"></div><div class="builder__frame"></div></div>';
   hostEl.appendChild(root);
+  // The cab's front (body, window frame and a glass sheet) goes over the operator, so he sits inside, behind glass.
+  const { cabin } = CRANE_RIG;
+  const cabFront = new Image();
+  cabFront.className = 'crane-cabin-front';
+  cabFront.src = cabin.frontSrc;
+  cabFront.alt = '';
+  cabFront.draggable = false;
+  Object.assign(cabFront.style, { left: `${cabin.left}px`, top: `${cabin.top}px`, width: `${cabin.width}px`, height: `${cabin.height}px` });
+  hostEl.appendChild(cabFront);
+  const beaconEl = hostEl.querySelector('.cab-beacon');
+  if (beaconEl) hostEl.appendChild(beaconEl);   // the beacon's glow stays on top of the cab roof
   const frames = [...root.querySelectorAll('.builder__frame')];
   let front = 0;
   let shownKey = '';
@@ -51,15 +78,22 @@ export function createBuilderCharacter({ hostEl }) {
   const driving = () => Math.hypot(axis.x, axis.y) > 0.05;
   const restingPose = () => completed ? 'complete' : driving() ? 'drive' : machinePose;
   function paint(layer, sheet, number) {
+    const fit = SHEET_FIT[sheet];
     layer.style.backgroundImage = `url("${BUILDER_FRAME_SOURCES[sheet]}")`;
     layer.style.backgroundPosition = `${(number % 2) * 100}% ${Math.floor(number / 2) * 100}%`;
+    layer.style.transform = `translate(${fit.x}%, ${fit.y}%) scale(${fit.scale})`;
   }
+  let shownSheet = -1;
   function show(number) {
     const sheet = POSES[pose].sheet;
     const key = `${sheet}:${number}`;
     if (key !== shownKey) {
       shownKey = key;
-      if (root.hidden || prefersReducedMotion()) {
+      // Frames of one sheet are drawn in register: swap them instantly (a cross-fade would ghost the mouth).
+      // Only a change of sheet (a new pose family) cross-fades.
+      const sameSheet = sheet === shownSheet;
+      shownSheet = sheet;
+      if (root.hidden || prefersReducedMotion() || sameSheet) {
         paint(frames[front], sheet, number);
       } else {
         const next = 1 - front;
@@ -114,7 +148,8 @@ export function createBuilderCharacter({ hostEl }) {
     hide() { root.hidden = true; axis = { x: 0, y: 0 }; setPose('idle'); },
     get cabCenter() { return { x: cabWindow.left + cabWindow.width / 2, y: cabWindow.top + cabWindow.height / 2 }; },
     get cabWindow() { return cabWindow; },
-    get bubbleAnchor() { return { x: CRANE_RIG.cabin.left + CRANE_RIG.cabin.width, y: cabWindow.top }; },
+    /** Where the speech-bubble tail points: just right of the cab glass, level with the operator's mouth. */
+    get bubbleAnchor() { return { x: CRANE_RIG.cabin.left + CRANE_RIG.cabin.width - 8, y: cabWindow.top + cabWindow.height * 0.34 }; },
     setPose,
     setGameState(state) {
       completed = state.completed;

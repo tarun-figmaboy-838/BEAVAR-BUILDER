@@ -54,13 +54,13 @@ const CRANE_RIG = Object.freeze({
    * dark back plate over the mast lattice and its roof beacon clear of the jib. `operator-cabin-clear`
    * is the supplied cabin with its dashboard painted out: the operator's own joystick box is the control.
    */
-  cabin: Object.freeze({ src: 'assets/images/crane-v2/operator-cabin-clear.webp', left: 10, top: 94, width: 300, height: 274 }),
+  cabin: Object.freeze({ src: 'assets/images/crane-v2/operator-cabin-clear.webp', frontSrc: 'assets/images/crane-v2/operator-cabin-front.webp', left: -12.1, top: 94, width: 300, height: 274 }),   // body flush with the screen's left edge
   /** Steel mount from the jib down to the cabin's back plate. */
-  cabinMount: Object.freeze({ left: 44, top: 90, width: 34, height: 44 }),
+  cabinMount: Object.freeze({ left: 21.9, top: 90, width: 34, height: 44 }),
   /** The seated operator (2 x 2 atlas cells): back against the seat back, feet and joystick box on the cab floor. */
-  cabWindow: Object.freeze({ left: 85.5, top: 181.6, width: 144, height: 144 }),
+  cabWindow: Object.freeze({ left: 63.4, top: 181.6, width: 144, height: 144 }),
   /** A glow centred on the beacon painted on the cab roof; it pulses while the crane moves. */
-  cabBeacon: Object.freeze({ left: 97.6, top: 74.7, size: 90 }),
+  cabBeacon: Object.freeze({ left: 75.5, top: 74.7, size: 90 }),
   claw: Object.freeze({
     states: Object.freeze([
       Object.freeze({ id: 'open', src: 'assets/images/crane-kit/claw-open.webp', width: 124, height: 191 }),
@@ -76,8 +76,8 @@ const CRANE_LAYOUT = Object.freeze({
   maxX: 1690,
   homeX: 1660,
   parkX: 1660,
-  restY: 84,          // claw top when fully raised
-  maxY: 700,           // claw top when fully lowered
+  restY: 200,         // claw top when fully raised: below the task panel, so the claw is never hidden behind it
+  maxY: 760,           // claw top when fully lowered: reaches the apex of the flattest frame
   maxSpeed: 560,       // px per second along the jib
   hoistSpeed: 520,     // px per second up/down
   gripOffsetY: 176,    // distance from claw top to the point held between the jaws
@@ -95,9 +95,9 @@ const PLATFORM_LAYOUT = Object.freeze({
   deckLeft: 425,       // usable plate surface (inside the yellow end caps)
   deckRight: 1495,
   slotXs: Object.freeze([590, 960, 1330]),
-  baseY: 969,          // where frames stand on the grey plate
-  pileXs: Object.freeze([520, 750, 960, 1170, 1400]),
-  pileBaseY: 969,
+  baseY: 950,          // where frames stand: centred on the grey plate
+  pileXs: Object.freeze([520, 759, 950, 1161, 1400]),   // equal 43 px gaps between the yard frames
+  pileBaseY: 950,
   optionScale: 1,
   pileScale: 0.72,
 });
@@ -129,7 +129,7 @@ const DECK_LAYOUT = Object.freeze({
 const PIER_LAYOUT = Object.freeze({
   src: 'assets/images/bridge/pier.webp', artWidth: 292, artHeight: 154,
   xs: Object.freeze([345, 960, 1575]), width: 118, topY: 724,
-  waterY: 796,          // where the bricks start to disappear into the canal
+  waterY: 758,          // the waterline on the piers: below the cap, the bricks fade into the canal
 });
   return { STAGE, KIT_SCALE, CRANE_RIG, CRANE_LAYOUT, PLATFORM_LAYOUT, CONTROLS_LAYOUT, WATER_LINE_Y, DECK_LAYOUT, PIER_LAYOUT };
 });
@@ -1832,7 +1832,7 @@ function buildStructure() {
   const mast = document.createElement('div');
   mast.className = 'crane-tower__mast';
   Object.assign(mast.style, {
-    position: 'absolute', left: '-20px', top: '70px', width: '312.8px', height: '552px',
+    position: 'absolute', left: '-127px', top: '70px', width: '312.8px', height: '530px',
     backgroundImage: `url("${tower.mastSrc}")`, backgroundSize: '312.8px 42.84px',
   });
   const jib = document.createElement('div');
@@ -1842,8 +1842,9 @@ function buildStructure() {
     backgroundImage: `url("${jibTile.src}")`, backgroundSize: '129px 82px',
   });
   structure.append(mast,
-    // The base stands on the quay walkway left of the bridge (the deck's end cap starts at x 168).
-    sprite('crane-base', tower.baseSrc, { position: 'absolute', left: '5px', top: '620.5px', width: '160px', height: '60.5px' }),
+    // The base holds the foot of the mast, so it shares the mast's scale and left edge exactly; the tower stands
+    // just off-screen left and the base's plinth ends before the bridge's left end cap (x 168).
+    sprite('crane-base', tower.baseSrc, { position: 'absolute', left: '-127px', top: '562.7px', width: '312.8px', height: '118.3px' }),
     jib,
     sprite('crane-jib-tip', jibTip.src, { left: '1806px', top: '15.5px', width: '119px', height: '82px' }),
     mount,
@@ -3856,7 +3857,7 @@ function createLevelEngine({ gameState, crane, claw, triangles, bridge, placemen
     lockInput();
     const level = currentLevel();
     const socket = placement.activeStage.socket;
-    camera.focus({ x: socket.x, y: socket.y, scale: 1.28, pull: 0.55, duration: 900, signal: scope.signal }).catch(() => {});
+    camera.focus({ x: socket.x, y: socket.y, scale: 1.28, pull: 0.2, duration: 900, signal: scope.signal }).catch(() => {});
     const released = await crane.lowerAndRelease(
       { craneX: placement.craneXForSocket(option), gripY: dropGripY(option) },
       { signal: scope.signal }
@@ -3976,7 +3977,7 @@ const { WATER_TEXTURE } = __require('js/data/water-texture.js');
 const HORIZON_Y = 566;                    // where the water meets the far shore in the backdrop
 const BAND_TOP = WATER_TEXTURE.top;       // canvas top, stage px
 const BAND_HEIGHT = STAGE.height - BAND_TOP;
-const RIPPLE_PX = 9;                       // ripple displacement close to the viewer
+const RIPPLE_PX = 12;                      // ripple displacement close to the viewer
 const FLOW_PX = 64;                        // flow distance per cycle close to the viewer
 const FLOW_CYCLE_S = 4.2;
 
@@ -4027,12 +4028,13 @@ void main() {
   float edge = min(x - L, R - x);
   float underBlock = (x < ${QUAY_BLOCK_INNER[0].toFixed(1)} || x > ${QUAY_BLOCK_INNER[1].toFixed(1)}) ? y - ${QUAY_BLOCK_BOTTOM.toFixed(1)} : 1e5;
   edge = min(edge, underBlock);
-  float alpha = clamp(edge / 3.0, 0.0, 1.0);
+  // A strip of untouched painting along the banks, fading in: no shifted copy of the bank edge (it showed as dashes).
+  float alpha = smoothstep(6.0, 34.0, edge);
   if (alpha <= 0.0) { gl_FragColor = vec4(0.0); return; }
 
   // Perspective: s is 0 at the horizon and 1 at the bottom of the screen.
   float s = clamp((y - H) / (${STAGE.height.toFixed(1)} - H), 0.0, 1.0);
-  float calm = smoothstep(0.0, 28.0, edge) * smoothstep(0.0, 0.08, s);
+  float calm = smoothstep(14.0, 70.0, edge) * smoothstep(0.0, 0.08, s);
   float z = 1.0 / max(s, 0.03);              // depth along the canal
   float wx = (x - 960.0) * z;                // across the canal, in front-row px
   float t = uTime;
@@ -4051,7 +4053,9 @@ void main() {
   vec3 c1 = painted(vec2(x, y) + ripple - vec2(0.0, flow * (p1 - 0.5)));
   vec3 color = mix(c1, c0, 1.0 - abs(2.0 * p0 - 1.0));
   // Light catching the wave faces.
-  color *= 1.0 + 0.045 * w1 * s * calm;
+  // Light moving on the painted water: wave faces brighten and darken, and catch the sun where waves cross.
+  color *= 1.0 + (0.1 * w1 + 0.05 * w2) * s * calm;
+  color += vec3(0.16) * smoothstep(0.86, 1.0, w1 * 0.6 + w2 * 0.4) * s * calm;
   gl_FragColor = vec4(color * alpha, alpha);
 }`;
 
@@ -4202,9 +4206,25 @@ const BUILDER_FRAME_SOURCES = [
   'assets/images/characters/operator/beaver-drive-atlas.webp',
   'assets/images/characters/operator/beaver-actions-atlas.webp',
 ];
+/**
+ * Per-sheet fit (measured from each sheet's body outline against the idle sheet): the sheets were
+ * generated separately, so each is scaled and nudged (in % of a frame) to match the idle sheet exactly.
+ * Without this the beaver grows or shifts by a pixel or two whenever he switches pose.
+ */
+const SHEET_FIT = [
+  { scale: 1, x: 0, y: 0 },              // idle
+  { scale: 0.9879, x: 0.554, y: 0.996 }, // talk
+  { scale: 1, x: 0, y: 0 },              // happy
+  { scale: 0.9982, x: 0.012, y: 0.166 }, // sad
+  { scale: 0.9828, x: 0.899, y: 1.325 }, // drive
+  { scale: 1, x: 0.638, y: -0.478 },     // actions
+];
+/** Talking: only the mouth moves (closed, open, wide, smile), in an uneven, speech-like rhythm. */
+const TALK_FRAMES = [1, 0, 2, 3, 0, 1, 2, 0, 3, 1, 0, 2];
+const TALK_MS = [120, 90, 150, 110, 80, 130, 140, 90, 120, 100, 80, 160];
 const POSES = {
   idle: { sheet: 0, frames: [0, 1, 2, 1, 0], durations: [3200, 70, 90, 70, 1200] },
-  talk: { sheet: 1, frames: [0, 1, 2, 3, 1, 3], ms: 140 },
+  talk: { sheet: 1, frames: TALK_FRAMES, durations: TALK_MS },
   cheer: { sheet: 2, frames: [0, 1, 2, 3, 1, 0], ms: 260, once: true },
   worry: { sheet: 3, frames: [0, 1, 2, 1, 3], ms: 300, once: true },
   point: { sheet: 2, frames: [0, 1, 3, 0], ms: 300, once: true },
@@ -4226,6 +4246,17 @@ function createBuilderCharacter({ hostEl }) {
   // Two frame layers: each new frame fades in over the last one, so poses change smoothly, never snap.
   root.innerHTML = '<div class="builder__body"><div class="builder__frame is-on"></div><div class="builder__frame"></div></div>';
   hostEl.appendChild(root);
+  // The cab's front (body, window frame and a glass sheet) goes over the operator, so he sits inside, behind glass.
+  const { cabin } = CRANE_RIG;
+  const cabFront = new Image();
+  cabFront.className = 'crane-cabin-front';
+  cabFront.src = cabin.frontSrc;
+  cabFront.alt = '';
+  cabFront.draggable = false;
+  Object.assign(cabFront.style, { left: `${cabin.left}px`, top: `${cabin.top}px`, width: `${cabin.width}px`, height: `${cabin.height}px` });
+  hostEl.appendChild(cabFront);
+  const beaconEl = hostEl.querySelector('.cab-beacon');
+  if (beaconEl) hostEl.appendChild(beaconEl);   // the beacon's glow stays on top of the cab roof
   const frames = [...root.querySelectorAll('.builder__frame')];
   let front = 0;
   let shownKey = '';
@@ -4242,15 +4273,22 @@ function createBuilderCharacter({ hostEl }) {
   const driving = () => Math.hypot(axis.x, axis.y) > 0.05;
   const restingPose = () => completed ? 'complete' : driving() ? 'drive' : machinePose;
   function paint(layer, sheet, number) {
+    const fit = SHEET_FIT[sheet];
     layer.style.backgroundImage = `url("${BUILDER_FRAME_SOURCES[sheet]}")`;
     layer.style.backgroundPosition = `${(number % 2) * 100}% ${Math.floor(number / 2) * 100}%`;
+    layer.style.transform = `translate(${fit.x}%, ${fit.y}%) scale(${fit.scale})`;
   }
+  let shownSheet = -1;
   function show(number) {
     const sheet = POSES[pose].sheet;
     const key = `${sheet}:${number}`;
     if (key !== shownKey) {
       shownKey = key;
-      if (root.hidden || prefersReducedMotion()) {
+      // Frames of one sheet are drawn in register: swap them instantly (a cross-fade would ghost the mouth).
+      // Only a change of sheet (a new pose family) cross-fades.
+      const sameSheet = sheet === shownSheet;
+      shownSheet = sheet;
+      if (root.hidden || prefersReducedMotion() || sameSheet) {
         paint(frames[front], sheet, number);
       } else {
         const next = 1 - front;
@@ -4305,7 +4343,8 @@ function createBuilderCharacter({ hostEl }) {
     hide() { root.hidden = true; axis = { x: 0, y: 0 }; setPose('idle'); },
     get cabCenter() { return { x: cabWindow.left + cabWindow.width / 2, y: cabWindow.top + cabWindow.height / 2 }; },
     get cabWindow() { return cabWindow; },
-    get bubbleAnchor() { return { x: CRANE_RIG.cabin.left + CRANE_RIG.cabin.width, y: cabWindow.top }; },
+    /** Where the speech-bubble tail points: just right of the cab glass, level with the operator's mouth. */
+    get bubbleAnchor() { return { x: CRANE_RIG.cabin.left + CRANE_RIG.cabin.width - 8, y: cabWindow.top + cabWindow.height * 0.34 }; },
     setPose,
     setGameState(state) {
       completed = state.completed;
@@ -4611,7 +4650,8 @@ async function zoomToCab({ camera, builder, signal, duration = 1300 }) {
   const { x, y } = builder.cabCenter;
   await camera.focus({ x, y, scale: CAB_ZOOM, duration, signal });
   const anchor = camera.project(builder.bubbleAnchor.x, builder.bubbleAnchor.y);
-  return { x: anchor.x + 40, y: Math.max(40, anchor.y - 20) };
+  // The bubble's tail (46 px below its top edge) lines up with the operator's mouth.
+  return { x: anchor.x + 44, y: Math.max(40, anchor.y - 46) };
 }
 
 /** G0.1 Meet the Builder: the crane rolls in, then we meet its operator in the cab. */
@@ -5047,6 +5087,7 @@ const CRITICAL_IMAGES = [
   'assets/images/bridge/deck-right.webp',
   'assets/images/bridge/deck-bracket.webp',
   CRANE_RIG.cabin.src,
+  CRANE_RIG.cabin.frontSrc,
   CRANE_RIG.tower.mastSrc,
   CRANE_RIG.tower.baseSrc,
   CRANE_RIG.jibTile.src,

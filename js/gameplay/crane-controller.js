@@ -52,7 +52,7 @@ function buildStructure() {
   const mast = document.createElement('div');
   mast.className = 'crane-tower__mast';
   Object.assign(mast.style, {
-    position: 'absolute', left: '-20px', top: '70px', width: '312.8px', height: '552px',
+    position: 'absolute', left: '-127px', top: '70px', width: '312.8px', height: '530px',
     backgroundImage: `url("${tower.mastSrc}")`, backgroundSize: '312.8px 42.84px',
   });
   const jib = document.createElement('div');
@@ -62,8 +62,9 @@ function buildStructure() {
     backgroundImage: `url("${jibTile.src}")`, backgroundSize: '129px 82px',
   });
   structure.append(mast,
-    // The base stands on the quay walkway left of the bridge (the deck's end cap starts at x 168).
-    sprite('crane-base', tower.baseSrc, { position: 'absolute', left: '5px', top: '620.5px', width: '160px', height: '60.5px' }),
+    // The base holds the foot of the mast, so it shares the mast's scale and left edge exactly; the tower stands
+    // just off-screen left and the base's plinth ends before the bridge's left end cap (x 168).
+    sprite('crane-base', tower.baseSrc, { position: 'absolute', left: '-127px', top: '562.7px', width: '312.8px', height: '118.3px' }),
     jib,
     sprite('crane-jib-tip', jibTip.src, { left: '1806px', top: '15.5px', width: '119px', height: '82px' }),
     mount,

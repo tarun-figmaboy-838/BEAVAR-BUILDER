@@ -26,13 +26,13 @@ export const CRANE_RIG = Object.freeze({
    * dark back plate over the mast lattice and its roof beacon clear of the jib. `operator-cabin-clear`
    * is the supplied cabin with its dashboard painted out: the operator's own joystick box is the control.
    */
-  cabin: Object.freeze({ src: 'assets/images/crane-v2/operator-cabin-clear.png', left: 10, top: 94, width: 300, height: 274 }),
+  cabin: Object.freeze({ src: 'assets/images/crane-v2/operator-cabin-clear.png', frontSrc: 'assets/images/crane-v2/operator-cabin-front.png', left: -12.1, top: 94, width: 300, height: 274 }),   // body flush with the screen's left edge
   /** Steel mount from the jib down to the cabin's back plate. */
-  cabinMount: Object.freeze({ left: 44, top: 90, width: 34, height: 44 }),
+  cabinMount: Object.freeze({ left: 21.9, top: 90, width: 34, height: 44 }),
   /** The seated operator (2 x 2 atlas cells): back against the seat back, feet and joystick box on the cab floor. */
-  cabWindow: Object.freeze({ left: 85.5, top: 181.6, width: 144, height: 144 }),
+  cabWindow: Object.freeze({ left: 63.4, top: 181.6, width: 144, height: 144 }),
   /** A glow centred on the beacon painted on the cab roof; it pulses while the crane moves. */
-  cabBeacon: Object.freeze({ left: 97.6, top: 74.7, size: 90 }),
+  cabBeacon: Object.freeze({ left: 75.5, top: 74.7, size: 90 }),
   claw: Object.freeze({
     states: Object.freeze([
       Object.freeze({ id: 'open', src: 'assets/images/crane-kit/claw-open.png', width: 124, height: 191 }),
@@ -48,8 +48,8 @@ export const CRANE_LAYOUT = Object.freeze({
   maxX: 1690,
   homeX: 1660,
   parkX: 1660,
-  restY: 84,          // claw top when fully raised
-  maxY: 700,           // claw top when fully lowered
+  restY: 200,         // claw top when fully raised: below the task panel, so the claw is never hidden behind it
+  maxY: 760,           // claw top when fully lowered: reaches the apex of the flattest frame
   maxSpeed: 560,       // px per second along the jib
   hoistSpeed: 520,     // px per second up/down
   gripOffsetY: 176,    // distance from claw top to the point held between the jaws
@@ -67,9 +67,9 @@ export const PLATFORM_LAYOUT = Object.freeze({
   deckLeft: 425,       // usable plate surface (inside the yellow end caps)
   deckRight: 1495,
   slotXs: Object.freeze([590, 960, 1330]),
-  baseY: 969,          // where frames stand on the grey plate
-  pileXs: Object.freeze([520, 750, 960, 1170, 1400]),
-  pileBaseY: 969,
+  baseY: 950,          // where frames stand: centred on the grey plate
+  pileXs: Object.freeze([520, 759, 950, 1161, 1400]),   // equal 43 px gaps between the yard frames
+  pileBaseY: 950,
   optionScale: 1,
   pileScale: 0.72,
 });
@@ -101,5 +101,5 @@ export const DECK_LAYOUT = Object.freeze({
 export const PIER_LAYOUT = Object.freeze({
   src: 'assets/images/bridge/pier.png', artWidth: 292, artHeight: 154,
   xs: Object.freeze([345, 960, 1575]), width: 118, topY: 724,
-  waterY: 796,          // where the bricks start to disappear into the canal
+  waterY: 758,          // the waterline on the piers: below the cap, the bricks fade into the canal
 });

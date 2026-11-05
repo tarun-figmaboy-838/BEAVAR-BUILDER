@@ -15,7 +15,7 @@ import { WATER_TEXTURE } from '../data/water-texture.js';
 const HORIZON_Y = 566;                    // where the water meets the far shore in the backdrop
 const BAND_TOP = WATER_TEXTURE.top;       // canvas top, stage px
 const BAND_HEIGHT = STAGE.height - BAND_TOP;
-const RIPPLE_PX = 9;                       // ripple displacement close to the viewer
+const RIPPLE_PX = 12;                      // ripple displacement close to the viewer
 const FLOW_PX = 64;                        // flow distance per cycle close to the viewer
 const FLOW_CYCLE_S = 4.2;
 
@@ -66,12 +66,13 @@ void main() {
   float edge = min(x - L, R - x);
   float underBlock = (x < ${QUAY_BLOCK_INNER[0].toFixed(1)} || x > ${QUAY_BLOCK_INNER[1].toFixed(1)}) ? y - ${QUAY_BLOCK_BOTTOM.toFixed(1)} : 1e5;
   edge = min(edge, underBlock);
-  float alpha = clamp(edge / 3.0, 0.0, 1.0);
+  // A strip of untouched painting along the banks, fading in: no shifted copy of the bank edge (it showed as dashes).
+  float alpha = smoothstep(6.0, 34.0, edge);
   if (alpha <= 0.0) { gl_FragColor = vec4(0.0); return; }
 
   // Perspective: s is 0 at the horizon and 1 at the bottom of the screen.
   float s = clamp((y - H) / (${STAGE.height.toFixed(1)} - H), 0.0, 1.0);
-  float calm = smoothstep(0.0, 28.0, edge) * smoothstep(0.0, 0.08, s);
+  float calm = smoothstep(14.0, 70.0, edge) * smoothstep(0.0, 0.08, s);
   float z = 1.0 / max(s, 0.03);              // depth along the canal
   float wx = (x - 960.0) * z;                // across the canal, in front-row px
   float t = uTime;
@@ -90,7 +91,9 @@ void main() {
   vec3 c1 = painted(vec2(x, y) + ripple - vec2(0.0, flow * (p1 - 0.5)));
   vec3 color = mix(c1, c0, 1.0 - abs(2.0 * p0 - 1.0));
   // Light catching the wave faces.
-  color *= 1.0 + 0.045 * w1 * s * calm;
+  // Light moving on the painted water: wave faces brighten and darken, and catch the sun where waves cross.
+  color *= 1.0 + (0.1 * w1 + 0.05 * w2) * s * calm;
+  color += vec3(0.16) * smoothstep(0.86, 1.0, w1 * 0.6 + w2 * 0.4) * s * calm;
   gl_FragColor = vec4(color * alpha, alpha);
 }`;
 
