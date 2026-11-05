@@ -8,6 +8,8 @@ export const SVG_NS = 'http://www.w3.org/2000/svg';
 export const TUBE_PALETTES = Object.freeze({
   steel: Object.freeze({ rim: '#272e38', body: '#6c7786', shade: '#48515d', light: '#a9b4c1', spec: '#eef2f6', rivet: '#2f353e', rivetShine: '#d5dce4' }),
   paint: Object.freeze({ rim: '#5f3f00', body: '#e6a300', shade: '#a86c00', light: '#ffc933', spec: '#fff4c4', rivet: '#7a4e00', rivetShine: '#ffe7a0' }),
+  /** Navy structural steel for the bridge's inner bars (the yellow box beams carry the outer frame). */
+  navy: Object.freeze({ rim: '#16203a', body: '#3d5283', shade: '#28375c', light: '#6a83bb', spec: '#c4d3f3', rivet: '#16203a', rivetShine: '#9db2df' }),
 });
 
 export function svgElement(name, attributes = {}) {
@@ -103,12 +105,12 @@ export function gussetDefs() {
       <stop offset="0" stop-color="#b9c1cc"/><stop offset="0.5" stop-color="#848d99"/><stop offset="1" stop-color="#5d6571"/>
     </linearGradient>
     <radialGradient id="gusset-bolt" cx="0.38" cy="0.32" r="0.7">
-      <stop offset="0" stop-color="#ffe98a"/><stop offset="0.45" stop-color="#ffb21e"/><stop offset="1" stop-color="#d47a00"/>
+      <stop offset="0" stop-color="#ffffff"/><stop offset="0.45" stop-color="#b9c3d0"/><stop offset="1" stop-color="#5d6676"/>
     </radialGradient>`;
   return defs;
 }
 
-/** A corner plate like the triangle frames' joints: rounded grey plate with an orange bolt; rivets once bolted. */
+/** A joint plate: rounded grey steel plate with a steel bolt; rivets once bolted. */
 export function createGusset(x, y, { radius = 17 } = {}) {
   const group = svgElement('g', { class: 'truss-node' });
   const points = [];

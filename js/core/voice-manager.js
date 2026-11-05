@@ -62,7 +62,7 @@ export function createVoiceManager({ audio }) {
     return voices[0] ?? null;
   }
 
-  function playClip(clip, myToken) {
+  function playClip(clip, myToken, onStart = () => {}) {
     return new Promise((resolve) => {
       let started = false;
       let settled = false;
@@ -71,6 +71,7 @@ export function createVoiceManager({ audio }) {
         if (settled) return;
         settled = true;
         clearTimeout(watchdog);
+        onStart();                 // never leave a caption waiting for a voice that did not come
         if (myToken === token) {
           element.onplaying = element.onended = element.onerror = null;
           audio.duck(false);
@@ -82,6 +83,7 @@ export function createVoiceManager({ audio }) {
       element.onplaying = () => {
         if (myToken !== token) return;
         started = true;
+        onStart();
         audio.duck(true);
       };
       element.onended = () => myToken === token && finish(true);
@@ -162,14 +164,17 @@ export function createVoiceManager({ audio }) {
       this.stop();
       const myToken = ++token;
       const clip = clipFor(text);
+      // `started` resolves when the voice is actually heard (a clip can wait to load), so captions can wait for it.
       if (clipsEnabled && clip && !muted) {
-        return { seconds: clip.seconds / rate, spoke: true, finished: playClip(clip, myToken).then(() => undefined) };
+        let markStarted;
+        const started = new Promise((resolve) => { markStarted = resolve; });
+        return { seconds: clip.seconds / rate, spoke: true, clipId: clip.id, rate, started, finished: playClip(clip, myToken, markStarted).then(() => undefined) };
       }
       if (speechEnabled && !muted) {
-        return { seconds: estimateSeconds(text) / rate, spoke: true, finished: speakWithDevice(text, speaker, myToken).then(() => undefined) };
+        return { seconds: estimateSeconds(text) / rate, spoke: true, rate, started: Promise.resolve(), finished: speakWithDevice(text, speaker, myToken).then(() => undefined) };
       }
       const seconds = estimateSeconds(text) / rate;
-      return { seconds, spoke: false, finished: new Promise((resolve) => setTimeout(resolve, seconds * 1000)) };
+      return { seconds, spoke: false, rate, started: Promise.resolve(), finished: new Promise((resolve) => setTimeout(resolve, seconds * 1000)) };
     },
     stop() {
       const interrupted = settleCurrent;

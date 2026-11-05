@@ -76,7 +76,7 @@ const CRANE_LAYOUT = Object.freeze({
   maxX: 1690,
   homeX: 1660,
   parkX: 1660,
-  restY: 200,         // claw top when fully raised: below the task panel, so the claw is never hidden behind it
+  restY: 236,         // claw top when fully raised: below the task sign, so the claw is never hidden behind it
   maxY: 760,           // claw top when fully lowered: reaches the apex of the flattest frame
   maxSpeed: 560,       // px per second along the jib
   hoistSpeed: 520,     // px per second up/down
@@ -940,7 +940,7 @@ function createVoiceManager({ audio }) {
     return voices[0] ?? null;
   }
 
-  function playClip(clip, myToken) {
+  function playClip(clip, myToken, onStart = () => {}) {
     return new Promise((resolve) => {
       let started = false;
       let settled = false;
@@ -949,6 +949,7 @@ function createVoiceManager({ audio }) {
         if (settled) return;
         settled = true;
         clearTimeout(watchdog);
+        onStart();                 // never leave a caption waiting for a voice that did not come
         if (myToken === token) {
           element.onplaying = element.onended = element.onerror = null;
           audio.duck(false);
@@ -960,6 +961,7 @@ function createVoiceManager({ audio }) {
       element.onplaying = () => {
         if (myToken !== token) return;
         started = true;
+        onStart();
         audio.duck(true);
       };
       element.onended = () => myToken === token && finish(true);
@@ -1040,14 +1042,17 @@ function createVoiceManager({ audio }) {
       this.stop();
       const myToken = ++token;
       const clip = clipFor(text);
+      // `started` resolves when the voice is actually heard (a clip can wait to load), so captions can wait for it.
       if (clipsEnabled && clip && !muted) {
-        return { seconds: clip.seconds / rate, spoke: true, finished: playClip(clip, myToken).then(() => undefined) };
+        let markStarted;
+        const started = new Promise((resolve) => { markStarted = resolve; });
+        return { seconds: clip.seconds / rate, spoke: true, clipId: clip.id, rate, started, finished: playClip(clip, myToken, markStarted).then(() => undefined) };
       }
       if (speechEnabled && !muted) {
-        return { seconds: estimateSeconds(text) / rate, spoke: true, finished: speakWithDevice(text, speaker, myToken).then(() => undefined) };
+        return { seconds: estimateSeconds(text) / rate, spoke: true, rate, started: Promise.resolve(), finished: speakWithDevice(text, speaker, myToken).then(() => undefined) };
       }
       const seconds = estimateSeconds(text) / rate;
-      return { seconds, spoke: false, finished: new Promise((resolve) => setTimeout(resolve, seconds * 1000)) };
+      return { seconds, spoke: false, rate, started: Promise.resolve(), finished: new Promise((resolve) => setTimeout(resolve, seconds * 1000)) };
     },
     stop() {
       const interrupted = settleCurrent;
@@ -2423,6 +2428,8 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
 const TUBE_PALETTES = Object.freeze({
   steel: Object.freeze({ rim: '#272e38', body: '#6c7786', shade: '#48515d', light: '#a9b4c1', spec: '#eef2f6', rivet: '#2f353e', rivetShine: '#d5dce4' }),
   paint: Object.freeze({ rim: '#5f3f00', body: '#e6a300', shade: '#a86c00', light: '#ffc933', spec: '#fff4c4', rivet: '#7a4e00', rivetShine: '#ffe7a0' }),
+  /** Navy structural steel for the bridge's inner bars (the yellow box beams carry the outer frame). */
+  navy: Object.freeze({ rim: '#16203a', body: '#3d5283', shade: '#28375c', light: '#6a83bb', spec: '#c4d3f3', rivet: '#16203a', rivetShine: '#9db2df' }),
 });
 
 function svgElement(name, attributes = {}) {
@@ -2518,12 +2525,12 @@ function gussetDefs() {
       <stop offset="0" stop-color="#b9c1cc"/><stop offset="0.5" stop-color="#848d99"/><stop offset="1" stop-color="#5d6571"/>
     </linearGradient>
     <radialGradient id="gusset-bolt" cx="0.38" cy="0.32" r="0.7">
-      <stop offset="0" stop-color="#ffe98a"/><stop offset="0.45" stop-color="#ffb21e"/><stop offset="1" stop-color="#d47a00"/>
+      <stop offset="0" stop-color="#ffffff"/><stop offset="0.45" stop-color="#b9c3d0"/><stop offset="1" stop-color="#5d6676"/>
     </radialGradient>`;
   return defs;
 }
 
-/** A corner plate like the triangle frames' joints: rounded grey plate with an orange bolt; rivets once bolted. */
+/** A joint plate: rounded grey steel plate with a steel bolt; rivets once bolted. */
 function createGusset(x, y, { radius = 17 } = {}) {
   const group = svgElement('g', { class: 'truss-node' });
   const points = [];
@@ -2860,7 +2867,8 @@ const { BRIDGE_GEOMETRY, stageById, memberId } = __require('js/data/bridge-geome
 const { WATER_LINE_Y, DECK_LAYOUT, PIER_LAYOUT } = __require('js/data/layout.js');
 const { wait, tween, easings, playClassAnimation, prefersReducedMotion } = __require('js/core/motion.js');
 const { createTube, moveTube, createGusset, gussetDefs, svgElement, TUBE_PALETTES } = __require('js/gameplay/svg-tubes.js');
-const MEMBER_WIDTH = 18;
+const MEMBER_WIDTH = 18;          // inner bars: navy steel
+const CHORD_WIDTH = 28;           // outer frame: chunky yellow box beams (built in level 1)
 const FRAME_TUBE_WIDTH = 16;   // matches the frames on the yard (frame-shapes.js)
 const PANEL_INSET = 11;        // colour plates sit inside the beams, as on PDF p7
 const COVERED_FRACTION = 0.5;  // a plate mostly hidden behind later plates fades, so no leftover region reads as a triangle
@@ -3033,14 +3041,21 @@ function createBridgeController({ bridgeEl, fxEl, fx, audio }) {
   const memberEls = new Map();
   const panelEls = new Map();
   for (const stage of stages) {
+    const outer = stage.id === 'outer-frame';
     for (const [from, to] of stage.members) {
       const [x1, y1] = nodes[from];
       const [x2, y2] = nodes[to];
-      const { group } = createTube(x1, y1, x2, y2, { width: MEMBER_WIDTH, palette: TUBE_PALETTES.paint, className: 'member', drawable: true });
+      const { group } = createTube(x1, y1, x2, y2, {
+        width: outer ? CHORD_WIDTH : MEMBER_WIDTH,
+        palette: outer ? TUBE_PALETTES.paint : TUBE_PALETTES.navy,
+        className: outer ? 'member member--chord' : 'member',
+        drawable: true,
+      });
       group.dataset.id = memberId(from, to);
       group.style.setProperty('--origin-x', `${x1}px`);
       group.style.setProperty('--origin-y', `${y1}px`);
-      membersGroup.appendChild(group);
+      if (outer) membersGroup.appendChild(group);
+      else membersGroup.insertBefore(group, membersGroup.querySelector('.member--chord'));
       memberEls.set(memberId(from, to), group);
     }
     panelEls.set(stage.id, stage.panels.map((names) => {
@@ -3409,8 +3424,250 @@ function createPlacementController({ triangles }) {
 }
   return { createPlacementController };
 });
+__define('js/gameplay/bubble-shape.js', function () {
+/**
+ * Speech-bubble outline, drawn for whatever box the words need (after the Polygon game's bubble):
+ * a rounded body and one swept tail that leans toward the speaker, so the tail never stretches or
+ * smears the way a stretched picture would.
+ *
+ * Proportions: corner radius ~26 px, tail base ~20 % of the body width (never wider than 0.8 of
+ * its length), tail length ~17 % of the body height (56..96 px), tip off to the leaning side.
+ */
+const BUBBLE = Object.freeze({
+  stroke: 6,
+  radius: 28,
+  tailBase: 0.2,
+  tailBaseMax: 120,
+  tailLen: 0.3,
+  tailLenMin: 52,
+  tailLenMax: 84,
+});
+
+const lim = (v, a, b) => (v < a ? a : v > b ? b : v);
+const f = (n) => (Math.round(n * 10) / 10).toString();
+
+/**
+ * Path for a body of w x h with a tail hanging off the bottom edge.
+ * tail.at: where the tail leaves the bottom edge (0..1 of the width); tail.lean: -1 tip left, +1 right.
+ * Returns { d, tailLen, tip: [x, y] } in the bubble's own pixels.
+ */
+function bubblePath(w, h, tail = { at: 0.15, lean: -1 }) {
+  const s = BUBBLE.stroke;
+  const r = Math.max(18, Math.min(BUBBLE.radius, w * 0.08, h * 0.3));
+  const x0 = s / 2;
+  const y0 = s / 2;
+  const x1 = w - s / 2;
+  const y1 = h - s / 2;
+  const L = lim(h * BUBBLE.tailLen, BUBBLE.tailLenMin, BUBBLE.tailLenMax);
+  const bw = Math.min(BUBBLE.tailBaseMax, w * BUBBLE.tailBase, L * 0.8);
+  const lean = tail.lean < 0 ? -1 : 1;
+  const cx = lim(tail.at * w, r + bw / 2 + 6, w - r - bw / 2 - 6);
+  const b0 = cx - bw / 2;
+  const b1 = cx + bw / 2;
+  const tipX = cx + lean * bw * 0.62;
+  const tipY = y1 + L;
+  let d = `M${f(x0 + r)} ${f(y0)} H${f(x1 - r)} A${f(r)} ${f(r)} 0 0 1 ${f(x1)} ${f(y0 + r)} `
+    + `V${f(y1 - r)} A${f(r)} ${f(r)} 0 0 1 ${f(x1 - r)} ${f(y1)} `;
+  // Two curves, as in the reference: the outer edge sweeps from the far base corner to the tip,
+  // the inner edge climbs back more steeply, which gives the tail its belly.
+  if (lean < 0) {
+    d += `H${f(b1)} C${f(b1 - bw * 0.08)} ${f(y1 + L * 0.62)}, ${f(tipX + bw * 0.34)} ${f(tipY - L * 0.28)}, ${f(tipX)} ${f(tipY)} `
+      + `C${f(tipX + bw * 0.06)} ${f(tipY - L * 0.5)}, ${f(b0 + bw * 0.1)} ${f(y1 + L * 0.3)}, ${f(b0)} ${f(y1)} `;
+  } else {
+    d += `H${f(b1)} C${f(b1 - bw * 0.1)} ${f(y1 + L * 0.3)}, ${f(tipX - bw * 0.06)} ${f(tipY - L * 0.5)}, ${f(tipX)} ${f(tipY)} `
+      + `C${f(tipX - bw * 0.34)} ${f(tipY - L * 0.28)}, ${f(b0 + bw * 0.08)} ${f(y1 + L * 0.62)}, ${f(b0)} ${f(y1)} `;
+  }
+  d += `H${f(x0 + r)} A${f(r)} ${f(r)} 0 0 1 ${f(x0)} ${f(y1 - r)} V${f(y0 + r)} A${f(r)} ${f(r)} 0 0 1 ${f(x0 + r)} ${f(y0)} Z`;
+  return { d, tailLen: L, tip: [tipX, tipY] };
+}
+
+/** Sizes the bubble's SVG layer to the box the words decided and draws the outline. Returns the tip. */
+function fitBubble(svg, box, tail) {
+  const w = Math.max(60, Math.round(box.offsetWidth));
+  const h = Math.max(40, Math.round(box.offsetHeight));
+  const { d, tailLen, tip } = bubblePath(w, h, tail);
+  svg.setAttribute('viewBox', `0 0 ${w} ${h + tailLen}`);
+  svg.style.width = `${w}px`;
+  svg.style.height = `${h + tailLen}px`;
+  svg.querySelectorAll('path').forEach((path) => path.setAttribute('d', d));
+  return tip;
+}
+  return { BUBBLE, bubblePath, fitBubble };
+});
+__define('js/data/vo-word-times.js', function () {
+/** Generated by tools/vo_word_times.py: when each word starts in each narration clip (ms, at 1x). */
+const VO_WORD_TIMES = Object.freeze({
+  "vo001": [
+    350,
+    542,
+    944,
+    1136,
+    1328,
+    2044,
+    2920,
+    3070,
+    3382,
+    3574,
+    4150,
+    4342,
+    4726,
+    4918
+  ],
+  "vo002": [
+    310,
+    504,
+    799,
+    1103,
+    1398,
+    1592,
+    1787,
+    1981
+  ],
+  "vo003": [
+    310,
+    537,
+    764,
+    1111,
+    1338,
+    1694,
+    1921,
+    2375,
+    2602,
+    2829,
+    3336,
+    3672,
+    3899,
+    4126,
+    4353
+  ],
+  "vo004": [
+    300,
+    570,
+    840
+  ],
+  "vo005": [
+    310,
+    608,
+    915
+  ],
+  "vo006": [
+    300,
+    584,
+    868,
+    1152,
+    1436
+  ],
+  "vo007": [
+    310,
+    496,
+    681,
+    867,
+    1509,
+    1794
+  ],
+  "vo009": [
+    330,
+    518,
+    707,
+    1224,
+    1412,
+    2088,
+    2656,
+    3183
+  ],
+  "vo010": [
+    410,
+    596,
+    781,
+    1819
+  ],
+  "vo011": [
+    330,
+    569,
+    809,
+    1287,
+    1736,
+    2126,
+    2365,
+    2944,
+    3183,
+    4151
+  ],
+  "vo012": [
+    340,
+    576,
+    812,
+    2058
+  ],
+  "vo013": [
+    310,
+    569,
+    828,
+    1347,
+    1606,
+    1865,
+    2902
+  ],
+  "vo014": [
+    320,
+    577,
+    833,
+    1347,
+    1773,
+    2030,
+    2543,
+    3057,
+    3313
+  ],
+  "vo015": [
+    300,
+    660
+  ],
+  "vo016": [
+    300,
+    548,
+    936,
+    1184,
+    1432
+  ],
+  "vo018": [
+    310,
+    1170,
+    1823,
+    2077,
+    2330,
+    2583
+  ],
+  "vo019": [
+    300,
+    637,
+    1620,
+    1751,
+    2089
+  ],
+  "vo020": [
+    270,
+    445,
+    760,
+    935,
+    2190,
+    2280,
+    2370,
+    2835,
+    3010,
+    3335,
+    3680,
+    3945,
+    4295,
+    4470
+  ]
+});
+  return { VO_WORD_TIMES };
+});
 __define('js/gameplay/feedback-controller.js', function () {
 const { wait, playClassAnimation, prefersReducedMotion } = __require('js/core/motion.js');
+const { fitBubble } = __require('js/gameplay/bubble-shape.js');
+const { VO_WORD_TIMES } = __require('js/data/vo-word-times.js');
 const READING_MS_PER_CHARACTER = 42;
 
 /**
@@ -3419,55 +3676,62 @@ const READING_MS_PER_CHARACTER = 42;
  */
 const escapeHtml = (value) => value.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
-/** The first `count` characters of `text`, with the `focus` phrase (if any) wrapped in a coloured span. */
-function markup(text, count, focus) {
-  const start = focus ? text.indexOf(focus) : -1;
-  if (start < 0) return escapeHtml(text.slice(0, count));
-  const end = start + focus.length;
-  const part = (a, b) => escapeHtml(text.slice(a, Math.max(a, Math.min(b, count))));
-  const marked = part(start, end);
-  return part(0, start) + (marked ? `<span class="instruction-focus">${marked}</span>` : '') + part(end, text.length);
-}
-
-function typeText(element, text, totalMs, signal, focus = null) {
+/**
+ * Shows `text` a word at a time over `totalMs` (each word rises and settles, eased, no overshoot), as
+ * it is read out. The words of the `focus` phrase are the key words: gold, nothing behind them. Screen readers get the whole line at once. The layout is final from the first frame
+ * (hidden words still take their place), so the box never grows while the words appear.
+ */
+function revealWords(element, text, totalMs, focus = null, { times = null, rate = 1, started = null } = {}) {
   element.textContent = '';
   const screenReaderCopy = document.createElement('span');
   screenReaderCopy.className = 'visually-hidden';
   screenReaderCopy.textContent = text;
   const line = document.createElement('span');
-  line.className = 'typed-line';
+  line.className = 'reveal-line';
   line.setAttribute('aria-hidden', 'true');
-  const ghost = document.createElement('span');
-  ghost.className = 'typed-line__ghost';
-  ghost.innerHTML = markup(text, text.length, focus);
-  const visible = document.createElement('span');
-  visible.className = 'typed-line__text';
-  line.append(ghost, visible);
-  element.append(screenReaderCopy, line);
-  const show = (count) => {
-    visible.innerHTML = markup(text, count, focus);
-  };
-  if (prefersReducedMotion() || totalMs <= 0) {
-    show(text.length);
-    return Promise.resolve();
+  const start = focus ? text.indexOf(focus) : -1;
+  const end = start + (focus?.length ?? 0);
+  const words = [];
+  let offset = 0;
+  for (const word of text.split(' ')) {
+    const at = text.indexOf(word, offset);
+    offset = at + word.length;
+    const bare = word.replace(/[.,!?;:]+$/, '');      // "sides." is a key word even with its full stop
+    words.push({ word, key: start >= 0 && at >= start && at + bare.length <= end });
   }
-  return new Promise((resolve) => {
-    const start = performance.now();
-    let frame = 0;
-    const finish = () => {
-      cancelAnimationFrame(frame);
-      show(text.length);
-      resolve();
-    };
-    signal?.addEventListener('abort', finish, { once: true });
-    const step = (now) => {
-      const progress = Math.min(1, (now - start) / totalMs);
-      show(Math.ceil(text.length * progress));
-      if (progress < 1) frame = requestAnimationFrame(step);
-      else finish();
-    };
-    frame = requestAnimationFrame(step);
-  });
+  const step = words.length > 1 ? Math.max(40, Math.min(220, (totalMs - 300) / (words.length - 1))) : 0;
+  const reduced = prefersReducedMotion() || totalMs <= 0;
+  // Each word appears when it is spoken: measured times from the recording (tools/vo_word_times.py),
+  // or an even pace when there is no recording for this line.
+  const synced = Array.isArray(times) && times.length === words.length;
+  const delayOf = (i) => (reduced ? 0 : Math.round(synced ? times[i] / rate : i * step));
+  line.innerHTML = words.map(({ word, key }, i) => `<span class="w${key ? ' key' : ''}" style="--wdly:${delayOf(i)}ms">${escapeHtml(word)}</span>`).join(' ');
+  if (reduced) line.classList.add('is-instant');
+  // Hold the words until the voice is actually heard, then let them run with it.
+  if (!reduced && started) {
+    line.classList.add('is-waiting');
+    started.then(() => line.classList.remove('is-waiting'));
+  }
+  element.append(screenReaderCopy, line);
+  return wait(reduced ? 0 : delayOf(words.length - 1) + 460);
+}
+
+/** Narrows `box` to the widest line its words wrapped to (CSS alone cannot shrink a wrapped box). */
+function hugWords(box, textEl) {
+  const words = [...textEl.querySelectorAll('.reveal-line .w')];
+  if (!words.length) return;
+  const lines = new Map();
+  for (const word of words) {
+    const top = word.offsetTop;
+    const line = lines.get(top) ?? { left: Infinity, right: -Infinity };
+    line.left = Math.min(line.left, word.offsetLeft);
+    line.right = Math.max(line.right, word.offsetLeft + word.offsetWidth);
+    lines.set(top, line);
+  }
+  const widest = Math.max(...[...lines.values()].map((line) => line.right - line.left));
+  const css = getComputedStyle(box);
+  const padding = parseFloat(css.paddingLeft) + parseFloat(css.paddingRight);
+  box.style.width = `${Math.ceil(widest + padding + 2)}px`;
 }
 
 /** The task card (PDF wording) and the builder's speech bubble. Nothing else is written on screen. */
@@ -3478,9 +3742,13 @@ function createFeedbackController({ hudEl, overlaysEl, voice, builder }) {
   function speakAndType(element, text, { speaker, focus = null }) {
     const spoken = voice.say(text, { speaker });
     const typingMs = spoken.spoke ? Math.max(300, (spoken.seconds - 0.35) * 1000) : Math.min(2600, text.length * READING_MS_PER_CHARACTER);
-    typeText(element, text, typingMs, undefined, focus);
+    revealWords(element, text, typingMs, focus, { times: spoken.clipId ? VO_WORD_TIMES[spoken.clipId] : null, rate: spoken.rate ?? 1, started: spoken.started });
     return spoken.finished;
   }
+
+  // The task plate's words (the plate itself is styled in components.css).
+  instructionEl.innerHTML = '<p class="instruction__text"></p>';
+  const signText = instructionEl.querySelector('.instruction__text');
 
   return {
     /** Shows the task line; the narrator reads it and the words appear at the voice's pace. */
@@ -3493,37 +3761,43 @@ function createFeedbackController({ hudEl, overlaysEl, voice, builder }) {
         void instructionEl.offsetWidth;
         instructionEl.classList.add('is-swapping');
         await wait(prefersReducedMotion() ? 0 : 190);
-        const finished = speakAndType(instructionEl, text, { speaker: 'narrator', focus });
+        const finished = speakAndType(signText, text, { speaker: 'narrator', focus });
         await wait(prefersReducedMotion() ? 0 : 340);
         instructionEl.classList.remove('is-swapping');
         return finished;
       }
-      const finished = speakAndType(instructionEl, text, { speaker: 'narrator', focus });
+      const finished = speakAndType(signText, text, { speaker: 'narrator', focus });
       playClassAnimation(instructionEl, 'is-entering', 720);
       return finished;
     },
     pushInstruction: () => playClassAnimation(instructionEl, 'is-pushed', 600),
     hideInstruction() {
       instructionEl.hidden = true;
-      instructionEl.textContent = '';
+      signText.textContent = '';
     },
 
     /**
-     * The builder speaks from the cab: the bubble is anchored beside the cab window wherever the camera is,
-     * words type at the voice's pace, and the beaver talks.
+     * The builder speaks from the cab: the bubble's tail points at him wherever the camera is,
+     * words appear at the voice's pace, and the beaver talks.
      */
     showBubble(text, { anchor } = {}) {
       this.hideBubble({ instant: true });
       bubbleEl = document.createElement('div');
       bubbleEl.className = 'speech-bubble speech-bubble--cab';
-      if (anchor) {
-        bubbleEl.style.left = `${Math.round(anchor.x)}px`;
-        bubbleEl.style.top = `${Math.round(anchor.y)}px`;
-      }
-      bubbleEl.innerHTML = '<p class="speech-bubble__text"></p>';
+      bubbleEl.innerHTML = '<svg class="speech-bubble__shape" aria-hidden="true"><path class="speech-bubble__face"/></svg><p class="speech-bubble__text"></p>';
       overlaysEl.appendChild(bubbleEl);
-      playClassAnimation(bubbleEl, 'is-entering', 620);
       const finished = speakAndType(bubbleEl.querySelector('.speech-bubble__text'), text, { speaker: 'builder' });
+      // Hug the words: shrink the box to its widest wrapped line, so no empty margin is left at the sides.
+      hugWords(bubbleEl, bubbleEl.querySelector('.speech-bubble__text'));
+      // The words decide the box; the outline is drawn for it, and the tail's tip is put on the anchor
+      // (the operator's mouth, just outside the cab glass), so the bubble sits up and to the right.
+      const tip = fitBubble(bubbleEl.querySelector('.speech-bubble__shape'), bubbleEl, { at: 0.12, lean: -1 });
+      if (anchor) {
+        bubbleEl.style.left = `${Math.round(anchor.x - tip[0])}px`;
+        bubbleEl.style.top = `${Math.round(Math.max(24, anchor.y - tip[1]))}px`;
+        bubbleEl.style.transformOrigin = `${Math.round(tip[0])}px ${Math.round(tip[1])}px`;
+      }
+      playClassAnimation(bubbleEl, 'is-entering', 620);
       builder?.talkUntil(finished);
       return { element: bubbleEl, finished };
     },
@@ -3550,7 +3824,7 @@ function random(min, max) {
   return min + Math.random() * (max - min);
 }
 
-/** Short-lived sprites (existing sparkle/ripple assets) and light CSS particles. */
+/** Short-lived effects: hot-metal sparks, glows and smoke (CSS), splashes (ripple sprites), confetti. */
 function createConstructionFx({ fxLayer }) {
   function spawn(className, x, y, { tag = 'div', src, lifetime = 1000, vars = {} } = {}) {
     const element = document.createElement(tag);
@@ -3568,37 +3842,50 @@ function createConstructionFx({ fxLayer }) {
     return element;
   }
 
+  /**
+   * Real hot-metal sparks: tiny white-hot points thrown up and out that arc over and fall under gravity,
+   * cooling from white to orange as they fly. Each spark is two layers: the outer one carries the
+   * sideways drift at a steady speed, the inner one rises then falls (an eased up-and-down = a parabola).
+   */
+  function sparkShower(x, y, { count = 12, spread = 1, power = 1 } = {}) {
+    for (let i = 0; i < count; i += 1) {
+      const angle = (-90 + random(-85, 85) * spread) * (Math.PI / 180);   // mostly upward, fanned out wide
+      const speed = random(70, 160) * power;
+      const ms = random(520, 900);
+      const outer = spawn('fx-spark-x', x, y, {
+        lifetime: ms + 60,
+        vars: { '--dx': `${(Math.cos(angle) * speed).toFixed(1)}px`, '--ms': `${ms.toFixed(0)}ms` },
+      });
+      const dot = document.createElement('i');
+      dot.className = 'fx-spark-dot';
+      dot.style.setProperty('--up', `${(Math.sin(angle) * speed * 0.55).toFixed(1)}px`);
+      dot.style.setProperty('--fall', `${random(45, 95).toFixed(0)}px`);
+      dot.style.setProperty('--size', `${random(3, 6).toFixed(1)}px`);
+      outer.appendChild(dot);
+    }
+  }
+
   return {
+    /** A few sparks where a beam is fixed in place (no sticker, no twinkle). */
     sparks(x, y, { small = false } = {}) {
       if (prefersReducedMotion()) return;
-      const element = spawn('fx-spark', x + random(-8, 8), y + random(-8, 8), { tag: 'img', src: 'assets/images/fx/sparkle-cluster.webp', lifetime: 720 });
-      element.style.width = `${small ? 64 : 96}px`;
+      spawn('fx-weld-core fx-weld-core--small', x, y, { lifetime: 320 });
+      sparkShower(x, y, { count: small ? 4 : 7, power: small ? 0.6 : 0.8 });
     },
     /**
-     * The fit: a weld flash at a joint (white-hot bloom, a shockwave ring, sparks flying out on an arc,
-     * and the sparkle sprite). Transform/opacity only, so it stays smooth on phones.
+     * The fit: a weld at a joint. A small white-hot point, the joint glowing yellow then cooling to orange,
+     * a shower of falling sparks and a thin wisp of smoke. Transform/opacity only.
      */
-    weld(x, y, { sparks = 12 } = {}) {
+    weld(x, y) {
       if (prefersReducedMotion()) {
-        spawn('fx-weld-flash fx-weld-flash--still', x, y, { lifetime: 420 });
+        spawn('fx-weld-glow fx-weld-glow--still', x, y, { lifetime: 600 });
         return;
       }
-      spawn('fx-weld-flash', x, y, { lifetime: 760 });
-      spawn('fx-weld-ring', x, y, { lifetime: 760 });
-      const turn = random(0, 360);
-      for (let i = 0; i < sparks; i += 1) {
-        spawn('fx-weld-spark', x, y, {
-          lifetime: 860,
-          vars: {
-            '--a': `${(turn + (360 / sparks) * i + random(-14, 14)).toFixed(0)}deg`,
-            '--d': `${random(95, 165).toFixed(0)}px`,
-            '--fall': `${random(24, 52).toFixed(0)}px`,
-            '--ms': `${random(560, 780).toFixed(0)}ms`,
-          },
-        });
-      }
-      const sprite = spawn('fx-spark', x, y, { tag: 'img', src: 'assets/images/fx/sparkle-cluster.webp', lifetime: 720 });
-      sprite.style.width = '150px';
+      spawn('fx-weld-core', x, y, { lifetime: 320 });
+      spawn('fx-weld-glow fx-weld-glow--hot', x, y, { lifetime: 700 });
+      spawn('fx-weld-glow fx-weld-glow--warm', x, y, { lifetime: 1300 });
+      sparkShower(x, y, { count: 13 });
+      setTimeout(() => spawn('fx-smoke', x + random(-6, 6), y - 6, { lifetime: 1500 }), 140);
     },
     /** Comic cartoon puff: three round cloud lobes that burst outward from a point and fade. */
     puff(x, y, { drift = 0 } = {}) {
@@ -3618,8 +3905,10 @@ function createConstructionFx({ fxLayer }) {
         spawn('fx-drop', x + random(-30, 30), y - 6, { lifetime: 800, vars: { '--dx': `${random(-34, 34)}px` } });
       }
     },
+    /** The stage is complete: a soft warm glow where the frame went (no sparkle sticker). */
     ding(x, y) {
-      spawn('fx-ding', x, y, { tag: 'img', src: 'assets/images/fx/sparkle-big.webp', lifetime: 820 });
+      if (prefersReducedMotion()) return;
+      spawn('fx-weld-glow fx-weld-glow--warm fx-weld-glow--wide', x, y + 80, { lifetime: 1300 });
     },
     confetti(count = 110) {
       if (prefersReducedMotion()) return;
@@ -4245,8 +4534,9 @@ function createBuilderCharacter({ hostEl }) {
   root.hidden = true;
   root.setAttribute('aria-hidden', 'true');
   Object.assign(root.style, { left: `${cabWindow.left}px`, top: `${cabWindow.top}px`, width: `${cabWindow.width}px`, height: `${cabWindow.height}px` });
-  // Two frame layers: each new frame fades in over the last one, so poses change smoothly, never snap.
-  root.innerHTML = '<div class="builder__body"><div class="builder__frame is-on"></div><div class="builder__frame"></div></div>';
+  // One frame layer: frames swap instantly, as in any sprite animation. The sheets are scale-matched
+  // (SHEET_FIT), so the beaver never jumps; a cross-fade showed two poses on top of each other.
+  root.innerHTML = '<div class="builder__body"><div class="builder__frame is-on"></div></div>';
   hostEl.appendChild(root);
   // The cab's front (body, window frame and a glass sheet) goes over the operator, so he sits inside, behind glass.
   const { cabin } = CRANE_RIG;
@@ -4259,11 +4549,8 @@ function createBuilderCharacter({ hostEl }) {
   hostEl.appendChild(cabFront);
   const beaconEl = hostEl.querySelector('.cab-beacon');
   if (beaconEl) hostEl.appendChild(beaconEl);   // the beacon's glow stays on top of the cab roof
-  const frames = [...root.querySelectorAll('.builder__frame')];
-  let front = 0;
+  const frameEl = root.querySelector('.builder__frame');
   let shownKey = '';
-  let underTimer = 0;
-  const FADE_MS = 110;
   let pose = 'idle';
   let interval = 0;
   let returnTimer = 0;
@@ -4280,30 +4567,12 @@ function createBuilderCharacter({ hostEl }) {
     layer.style.backgroundPosition = `${(number % 2) * 100}% ${Math.floor(number / 2) * 100}%`;
     layer.style.transform = `translate(${fit.x}%, ${fit.y}%) scale(${fit.scale})`;
   }
-  let shownSheet = -1;
   function show(number) {
     const sheet = POSES[pose].sheet;
     const key = `${sheet}:${number}`;
     if (key !== shownKey) {
       shownKey = key;
-      // Frames of one sheet are drawn in register: swap them instantly (a cross-fade would ghost the mouth).
-      // Only a change of sheet (a new pose family) cross-fades.
-      const sameSheet = sheet === shownSheet;
-      shownSheet = sheet;
-      if (root.hidden || prefersReducedMotion() || sameSheet) {
-        paint(frames[front], sheet, number);
-      } else {
-        const next = 1 - front;
-        clearTimeout(underTimer);
-        frames[next].classList.remove('is-under');
-        paint(frames[next], sheet, number);
-        frames[front].classList.remove('is-on');
-        frames[front].classList.add('is-under');       // stays solid underneath while the new frame fades in
-        frames[next].classList.add('is-on');
-        const previous = frames[front];
-        underTimer = setTimeout(() => previous.classList.remove('is-under'), FADE_MS + 30);
-        front = next;
-      }
+      paint(frameEl, sheet, number);
     }
     root.dataset.facing = ['idle', 'drive', 'pick', 'carry', 'drop'].includes(pose) ? 'controls' : 'user';
     root.dataset.frame = String(number);
@@ -4652,8 +4921,8 @@ async function zoomToCab({ camera, builder, signal, duration = 1300 }) {
   const { x, y } = builder.cabCenter;
   await camera.focus({ x, y, scale: CAB_ZOOM, duration, signal });
   const anchor = camera.project(builder.bubbleAnchor.x, builder.bubbleAnchor.y);
-  // The bubble's tail (46 px below its top edge) lines up with the operator's mouth.
-  return { x: anchor.x + 44, y: Math.max(40, anchor.y - 46) };
+  // Where the bubble's tail tip goes: just outside the cab glass, level with the operator's mouth.
+  return { x: anchor.x + 16, y: anchor.y };
 }
 
 /** G0.1 Meet the Builder: the crane rolls in, then we meet its operator in the cab. */

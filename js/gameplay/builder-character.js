@@ -48,8 +48,9 @@ export function createBuilderCharacter({ hostEl }) {
   root.hidden = true;
   root.setAttribute('aria-hidden', 'true');
   Object.assign(root.style, { left: `${cabWindow.left}px`, top: `${cabWindow.top}px`, width: `${cabWindow.width}px`, height: `${cabWindow.height}px` });
-  // Two frame layers: each new frame fades in over the last one, so poses change smoothly, never snap.
-  root.innerHTML = '<div class="builder__body"><div class="builder__frame is-on"></div><div class="builder__frame"></div></div>';
+  // One frame layer: frames swap instantly, as in any sprite animation. The sheets are scale-matched
+  // (SHEET_FIT), so the beaver never jumps; a cross-fade showed two poses on top of each other.
+  root.innerHTML = '<div class="builder__body"><div class="builder__frame is-on"></div></div>';
   hostEl.appendChild(root);
   // The cab's front (body, window frame and a glass sheet) goes over the operator, so he sits inside, behind glass.
   const { cabin } = CRANE_RIG;
@@ -62,11 +63,8 @@ export function createBuilderCharacter({ hostEl }) {
   hostEl.appendChild(cabFront);
   const beaconEl = hostEl.querySelector('.cab-beacon');
   if (beaconEl) hostEl.appendChild(beaconEl);   // the beacon's glow stays on top of the cab roof
-  const frames = [...root.querySelectorAll('.builder__frame')];
-  let front = 0;
+  const frameEl = root.querySelector('.builder__frame');
   let shownKey = '';
-  let underTimer = 0;
-  const FADE_MS = 110;
   let pose = 'idle';
   let interval = 0;
   let returnTimer = 0;
@@ -83,30 +81,12 @@ export function createBuilderCharacter({ hostEl }) {
     layer.style.backgroundPosition = `${(number % 2) * 100}% ${Math.floor(number / 2) * 100}%`;
     layer.style.transform = `translate(${fit.x}%, ${fit.y}%) scale(${fit.scale})`;
   }
-  let shownSheet = -1;
   function show(number) {
     const sheet = POSES[pose].sheet;
     const key = `${sheet}:${number}`;
     if (key !== shownKey) {
       shownKey = key;
-      // Frames of one sheet are drawn in register: swap them instantly (a cross-fade would ghost the mouth).
-      // Only a change of sheet (a new pose family) cross-fades.
-      const sameSheet = sheet === shownSheet;
-      shownSheet = sheet;
-      if (root.hidden || prefersReducedMotion() || sameSheet) {
-        paint(frames[front], sheet, number);
-      } else {
-        const next = 1 - front;
-        clearTimeout(underTimer);
-        frames[next].classList.remove('is-under');
-        paint(frames[next], sheet, number);
-        frames[front].classList.remove('is-on');
-        frames[front].classList.add('is-under');       // stays solid underneath while the new frame fades in
-        frames[next].classList.add('is-on');
-        const previous = frames[front];
-        underTimer = setTimeout(() => previous.classList.remove('is-under'), FADE_MS + 30);
-        front = next;
-      }
+      paint(frameEl, sheet, number);
     }
     root.dataset.facing = ['idle', 'drive', 'pick', 'carry', 'drop'].includes(pose) ? 'controls' : 'user';
     root.dataset.frame = String(number);

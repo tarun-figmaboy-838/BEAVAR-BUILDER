@@ -6,7 +6,7 @@ function random(min, max) {
   return min + Math.random() * (max - min);
 }
 
-/** Short-lived sprites (existing sparkle/ripple assets) and light CSS particles. */
+/** Short-lived effects: hot-metal sparks, glows and smoke (CSS), splashes (ripple sprites), confetti. */
 export function createConstructionFx({ fxLayer }) {
   function spawn(className, x, y, { tag = 'div', src, lifetime = 1000, vars = {} } = {}) {
     const element = document.createElement(tag);
@@ -24,37 +24,50 @@ export function createConstructionFx({ fxLayer }) {
     return element;
   }
 
+  /**
+   * Real hot-metal sparks: tiny white-hot points thrown up and out that arc over and fall under gravity,
+   * cooling from white to orange as they fly. Each spark is two layers: the outer one carries the
+   * sideways drift at a steady speed, the inner one rises then falls (an eased up-and-down = a parabola).
+   */
+  function sparkShower(x, y, { count = 12, spread = 1, power = 1 } = {}) {
+    for (let i = 0; i < count; i += 1) {
+      const angle = (-90 + random(-85, 85) * spread) * (Math.PI / 180);   // mostly upward, fanned out wide
+      const speed = random(70, 160) * power;
+      const ms = random(520, 900);
+      const outer = spawn('fx-spark-x', x, y, {
+        lifetime: ms + 60,
+        vars: { '--dx': `${(Math.cos(angle) * speed).toFixed(1)}px`, '--ms': `${ms.toFixed(0)}ms` },
+      });
+      const dot = document.createElement('i');
+      dot.className = 'fx-spark-dot';
+      dot.style.setProperty('--up', `${(Math.sin(angle) * speed * 0.55).toFixed(1)}px`);
+      dot.style.setProperty('--fall', `${random(45, 95).toFixed(0)}px`);
+      dot.style.setProperty('--size', `${random(3, 6).toFixed(1)}px`);
+      outer.appendChild(dot);
+    }
+  }
+
   return {
+    /** A few sparks where a beam is fixed in place (no sticker, no twinkle). */
     sparks(x, y, { small = false } = {}) {
       if (prefersReducedMotion()) return;
-      const element = spawn('fx-spark', x + random(-8, 8), y + random(-8, 8), { tag: 'img', src: 'assets/images/fx/sparkle-cluster.png', lifetime: 720 });
-      element.style.width = `${small ? 64 : 96}px`;
+      spawn('fx-weld-core fx-weld-core--small', x, y, { lifetime: 320 });
+      sparkShower(x, y, { count: small ? 4 : 7, power: small ? 0.6 : 0.8 });
     },
     /**
-     * The fit: a weld flash at a joint (white-hot bloom, a shockwave ring, sparks flying out on an arc,
-     * and the sparkle sprite). Transform/opacity only, so it stays smooth on phones.
+     * The fit: a weld at a joint. A small white-hot point, the joint glowing yellow then cooling to orange,
+     * a shower of falling sparks and a thin wisp of smoke. Transform/opacity only.
      */
-    weld(x, y, { sparks = 12 } = {}) {
+    weld(x, y) {
       if (prefersReducedMotion()) {
-        spawn('fx-weld-flash fx-weld-flash--still', x, y, { lifetime: 420 });
+        spawn('fx-weld-glow fx-weld-glow--still', x, y, { lifetime: 600 });
         return;
       }
-      spawn('fx-weld-flash', x, y, { lifetime: 760 });
-      spawn('fx-weld-ring', x, y, { lifetime: 760 });
-      const turn = random(0, 360);
-      for (let i = 0; i < sparks; i += 1) {
-        spawn('fx-weld-spark', x, y, {
-          lifetime: 860,
-          vars: {
-            '--a': `${(turn + (360 / sparks) * i + random(-14, 14)).toFixed(0)}deg`,
-            '--d': `${random(95, 165).toFixed(0)}px`,
-            '--fall': `${random(24, 52).toFixed(0)}px`,
-            '--ms': `${random(560, 780).toFixed(0)}ms`,
-          },
-        });
-      }
-      const sprite = spawn('fx-spark', x, y, { tag: 'img', src: 'assets/images/fx/sparkle-cluster.png', lifetime: 720 });
-      sprite.style.width = '150px';
+      spawn('fx-weld-core', x, y, { lifetime: 320 });
+      spawn('fx-weld-glow fx-weld-glow--hot', x, y, { lifetime: 700 });
+      spawn('fx-weld-glow fx-weld-glow--warm', x, y, { lifetime: 1300 });
+      sparkShower(x, y, { count: 13 });
+      setTimeout(() => spawn('fx-smoke', x + random(-6, 6), y - 6, { lifetime: 1500 }), 140);
     },
     /** Comic cartoon puff: three round cloud lobes that burst outward from a point and fade. */
     puff(x, y, { drift = 0 } = {}) {
@@ -74,8 +87,10 @@ export function createConstructionFx({ fxLayer }) {
         spawn('fx-drop', x + random(-30, 30), y - 6, { lifetime: 800, vars: { '--dx': `${random(-34, 34)}px` } });
       }
     },
+    /** The stage is complete: a soft warm glow where the frame went (no sparkle sticker). */
     ding(x, y) {
-      spawn('fx-ding', x, y, { tag: 'img', src: 'assets/images/fx/sparkle-big.png', lifetime: 820 });
+      if (prefersReducedMotion()) return;
+      spawn('fx-weld-glow fx-weld-glow--warm fx-weld-glow--wide', x, y + 80, { lifetime: 1300 });
     },
     confetti(count = 110) {
       if (prefersReducedMotion()) return;

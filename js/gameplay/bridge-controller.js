@@ -3,7 +3,8 @@ import { WATER_LINE_Y, DECK_LAYOUT, PIER_LAYOUT } from '../data/layout.js';
 import { wait, tween, easings, playClassAnimation, prefersReducedMotion } from '../core/motion.js';
 import { createTube, moveTube, createGusset, gussetDefs, svgElement, TUBE_PALETTES } from './svg-tubes.js';
 
-const MEMBER_WIDTH = 18;
+const MEMBER_WIDTH = 18;          // inner bars: navy steel
+const CHORD_WIDTH = 28;           // outer frame: chunky yellow box beams (built in level 1)
 const FRAME_TUBE_WIDTH = 16;   // matches the frames on the yard (frame-shapes.js)
 const PANEL_INSET = 11;        // colour plates sit inside the beams, as on PDF p7
 const COVERED_FRACTION = 0.5;  // a plate mostly hidden behind later plates fades, so no leftover region reads as a triangle
@@ -176,14 +177,21 @@ export function createBridgeController({ bridgeEl, fxEl, fx, audio }) {
   const memberEls = new Map();
   const panelEls = new Map();
   for (const stage of stages) {
+    const outer = stage.id === 'outer-frame';
     for (const [from, to] of stage.members) {
       const [x1, y1] = nodes[from];
       const [x2, y2] = nodes[to];
-      const { group } = createTube(x1, y1, x2, y2, { width: MEMBER_WIDTH, palette: TUBE_PALETTES.paint, className: 'member', drawable: true });
+      const { group } = createTube(x1, y1, x2, y2, {
+        width: outer ? CHORD_WIDTH : MEMBER_WIDTH,
+        palette: outer ? TUBE_PALETTES.paint : TUBE_PALETTES.navy,
+        className: outer ? 'member member--chord' : 'member',
+        drawable: true,
+      });
       group.dataset.id = memberId(from, to);
       group.style.setProperty('--origin-x', `${x1}px`);
       group.style.setProperty('--origin-y', `${y1}px`);
-      membersGroup.appendChild(group);
+      if (outer) membersGroup.appendChild(group);
+      else membersGroup.insertBefore(group, membersGroup.querySelector('.member--chord'));
       memberEls.set(memberId(from, to), group);
     }
     panelEls.set(stage.id, stage.panels.map((names) => {

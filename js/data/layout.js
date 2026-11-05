@@ -48,7 +48,7 @@ export const CRANE_LAYOUT = Object.freeze({
   maxX: 1690,
   homeX: 1660,
   parkX: 1660,
-  restY: 200,         // claw top when fully raised: below the task panel, so the claw is never hidden behind it
+  restY: 236,         // claw top when fully raised: below the task sign, so the claw is never hidden behind it
   maxY: 760,           // claw top when fully lowered: reaches the apex of the flattest frame
   maxSpeed: 560,       // px per second along the jib
   hoistSpeed: 520,     // px per second up/down

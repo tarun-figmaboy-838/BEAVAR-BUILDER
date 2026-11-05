@@ -8,8 +8,8 @@ export async function zoomToCab({ camera, builder, signal, duration = 1300 }) {
   const { x, y } = builder.cabCenter;
   await camera.focus({ x, y, scale: CAB_ZOOM, duration, signal });
   const anchor = camera.project(builder.bubbleAnchor.x, builder.bubbleAnchor.y);
-  // The bubble's tail (46 px below its top edge) lines up with the operator's mouth.
-  return { x: anchor.x + 44, y: Math.max(40, anchor.y - 46) };
+  // Where the bubble's tail tip goes: just outside the cab glass, level with the operator's mouth.
+  return { x: anchor.x + 16, y: anchor.y };
 }
 
 /** G0.1 Meet the Builder: the crane rolls in, then we meet its operator in the cab. */
