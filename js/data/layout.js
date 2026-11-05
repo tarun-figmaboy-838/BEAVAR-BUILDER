@@ -13,7 +13,7 @@ export const CRANE_RIG = Object.freeze({
     top: 15.5,
     width: 312.8,
     topSrc: 'assets/images/crane-kit/tower-top.png', topHeight: 318.2,
-    mastSrc: 'assets/images/crane-kit/tower-mast.png', mastHeight: 42.84, mastSections: 4,
+    mastSrc: 'assets/images/crane-kit/tower-mast.png', mastHeight: 42.84, mastSections: 5,
     baseSrc: 'assets/images/crane-kit/tower-base.png', baseHeight: 118.3,
   }),
   jibTile: Object.freeze({ src: 'assets/images/crane-kit/jib-tile.png', width: 129, height: 109 }),
@@ -71,7 +71,7 @@ export const CONTROLS_LAYOUT = Object.freeze({
   knobTravel: 52,
 });
 
-export const WATER_LINE_Y = 716;
+export const WATER_LINE_Y = 745;   // where the backdrop's quay blocks meet the water
 
 /** Road deck from quay to quay (the environment sheet's stone ledge and blue railing, tiled). */
-export const DECK_LAYOUT = Object.freeze({ x1: 160, x2: 1820, top: 600, height: 40, railHeight: 32 });
+export const DECK_LAYOUT = Object.freeze({ x1: 160, x2: 1820, top: 640, height: 40, railHeight: 32 });

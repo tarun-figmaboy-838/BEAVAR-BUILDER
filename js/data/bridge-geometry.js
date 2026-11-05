@@ -17,9 +17,9 @@
  *   the apex diagonals meet the deck so A-D1-D2 is equilateral (and so are A-H1-H2 and A-K1-K2),
  *   M1/M2 sit high on the chords so the side struts stand nearly upright, the posts and end braces are vertical.
  */
-const DECK_Y = 600;
+const DECK_Y = 640;                                     // the deck rests on the quay blocks of the backdrop
 const SPAN = Object.freeze({ left: 220, right: 1700 });
-const APEX = Object.freeze([960, 250]);
+const APEX = Object.freeze([960, 290]);
 const RISE = DECK_Y - APEX[1];
 const HALF_BASE = RISE / Math.sqrt(3);                  // half of the equilateral A-D1-D2's base
 const CROWN = 0.24;                                     // crown bar, as a share of the rise (PDF p9)
@@ -68,7 +68,7 @@ export const BRIDGE_GEOMETRY = Object.freeze({
   spanLeft: SPAN.left,
   spanRight: SPAN.right,
   pillarXs: Object.freeze([SPAN.left + 70, APEX[0], SPAN.right - 70]),
-  pillarTopY: 636,
+  pillarTopY: 676,
   pillarWidth: 176,
   nodes: NODES,
   stages: withSockets([
@@ -80,19 +80,11 @@ export const BRIDGE_GEOMETRY = Object.freeze({
       panels: [['L', 'A', 'R']],
     },
     {
-      id: 'apex-diagonals',   // p12 → p13: both diagonals at once
+      id: 'apex-diagonals',   // p12 → p13: both diagonals at once; the crew also bolts the frame
       panelType: 'equilateral',
       members: [['A', 'D1'], ['A', 'D2']],
-      bolts: [],
-      panels: [['A', 'D1', 'D2']],
-    },
-    {
-      id: 'middle-bar',   // p13 → p14: the second equilateral. The deck adds no beam here, so the middle bar
-                          // (from p16) comes in now and makes the equilateral A-H1-H2; the crew also bolts the frame
-      panelType: 'equilateral',
-      members: [['H1', 'H2']],
       bolts: ['L', 'A', 'R', 'D1', 'D2'],
-      panels: [['A', 'H1', 'H2']],
+      panels: [['A', 'D1', 'D2']],
     },
     {
       id: 'side-struts',   // p14 → p15
@@ -102,9 +94,9 @@ export const BRIDGE_GEOMETRY = Object.freeze({
       panels: [['L', 'M1', 'D1'], ['R', 'M2', 'D2']],
     },
     {
-      id: 'crown-bar',   // p15 → p16
+      id: 'crown-bar',   // p15 → p16: the crown bar and the middle bar below it, as drawn on p16
       panelType: 'acute',
-      members: [['K1', 'K2']],
+      members: [['K1', 'K2'], ['H1', 'H2']],
       bolts: ['K1', 'K2'],
       panels: [['A', 'K1', 'K2']],
     },
@@ -124,7 +116,7 @@ export const BRIDGE_GEOMETRY = Object.freeze({
     },
   ]),
   /** Hotspots on the How-to-Play screen (PDF p6 marks three spots on the deck). */
-  demoSpots: Object.freeze([[690, 540], [960, 520], [1230, 540]]),
+  demoSpots: Object.freeze([[690, 580], [960, 560], [1230, 580]]),
 });
 
 export function stageById(stageId) {

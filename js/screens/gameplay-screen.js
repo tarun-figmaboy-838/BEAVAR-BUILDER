@@ -1,6 +1,6 @@
 import { playClassAnimation } from '../core/motion.js';
 
-/** The seven tasks: the level engine takes over straight away (the task card is the only text). */
+/** The six levels: the level engine takes over straight away (the task card is the only text). */
 export function createGameplayScreen({ els, feedback, triangles, camera, builder, levelEngine }) {
   return {
     async enter() {

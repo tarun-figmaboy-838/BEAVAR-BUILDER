@@ -14,29 +14,29 @@ import { FRAME_PAD } from '../js/gameplay/frame-shapes.js';
 const PDF_INSTRUCTIONS = [
   'Choose a triangle with exactly 2 equal sides.',
   'Choose an equilateral triangle.',
-  'Choose an equilateral triangle.',
   'Choose a triangle where all 3 sides have different lengths.',
   'Choose an acute-angled triangle.',
   'Choose a triangle with one 90° angle.',
   'Choose a triangle with one angle greater than 90°.',
 ];
 
-test('seven tasks in the deck order with the exact PDF wording', () => {
-  assert.equal(LEVEL_COUNT, 7);
+test('six levels, one per triangle type of the PDF p7 legend, in the deck order with the exact PDF wording', () => {
+  assert.equal(LEVEL_COUNT, 6);
   assert.deepEqual(LEVELS.map((level) => level.instruction), PDF_INSTRUCTIONS);
-  assert.deepEqual(LEVELS.map((level) => level.id), [1, 2, 3, 4, 5, 6, 7]);
+  assert.deepEqual(LEVELS.map((level) => level.id), [1, 2, 3, 4, 5, 6]);
+  assert.deepEqual([...new Set(LEVELS.map((level) => level.correctTriangleId))].sort(), ['acute', 'equilateral', 'isosceles', 'obtuse', 'right', 'scalene']);
 });
 
 test('correct answers match the deck', () => {
   assert.deepEqual(
     LEVELS.map((level) => level.correctTriangleId),
-    ['isosceles', 'equilateral', 'equilateral', 'scalene', 'acute', 'right', 'obtuse']
+    ['isosceles', 'equilateral', 'scalene', 'acute', 'right', 'obtuse']
   );
 });
 
-test('option groups follow the deck (sides for tasks 1-4, angles for tasks 5-7), same three frames each', () => {
-  assert.deepEqual(LEVELS.slice(0, 4).map((level) => level.optionGroup), ['sides', 'sides', 'sides', 'sides']);
-  assert.deepEqual(LEVELS.slice(4).map((level) => level.optionGroup), ['angles', 'angles', 'angles']);
+test('option groups follow the deck (sides for levels 1-3, angles for levels 4-6), same three frames each', () => {
+  assert.deepEqual(LEVELS.slice(0, 3).map((level) => level.optionGroup), ['sides', 'sides', 'sides']);
+  assert.deepEqual(LEVELS.slice(3).map((level) => level.optionGroup), ['angles', 'angles', 'angles']);
   assert.deepEqual([...OPTION_GROUPS.sides].sort(), ['equilateral', 'isosceles', 'scalene']);
   assert.deepEqual([...OPTION_GROUPS.angles].sort(), ['acute', 'obtuse', 'right']);
 });
@@ -105,7 +105,7 @@ test('the right-angle square sits on the 90° corner, and the shapes are clearly
 
 test('bridge stages exist for every task and together make the full deck design', () => {
   const stageIds = LEVELS.map((level) => level.bridgeStage);
-  assert.deepEqual(stageIds, ['outer-frame', 'apex-diagonals', 'middle-bar', 'side-struts', 'crown-bar', 'center-posts', 'upper-diagonals']);
+  assert.deepEqual(stageIds, ['outer-frame', 'apex-diagonals', 'side-struts', 'crown-bar', 'center-posts', 'upper-diagonals']);
   const allMembers = new Set();
   for (const id of stageIds) {
     const stage = stageById(id);
@@ -122,9 +122,9 @@ test('bridge stages exist for every task and together make the full deck design'
   assert.equal(allMembers.size, 20);
 });
 
-test('every task builds something new: task 2 adds both apex diagonals, task 3 the middle bar', () => {
+test('every level builds something new: level 2 adds both apex diagonals (p13), level 4 the crown and middle bars (p16)', () => {
   assert.deepEqual(stageById('apex-diagonals').members, [['A', 'D1'], ['A', 'D2']]);
-  assert.deepEqual(stageById('middle-bar').members, [['H1', 'H2']]);
+  assert.deepEqual(stageById('crown-bar').members, [['K1', 'K2'], ['H1', 'H2']]);
   for (const level of LEVELS) assert.ok(stageById(level.bridgeStage).members.length > 0, `task ${level.id} adds no beam`);
 });
 
@@ -132,7 +132,7 @@ test('the truss reaches from quay to quay', () => {
   assert.ok(BRIDGE_GEOMETRY.spanLeft <= 240 && BRIDGE_GEOMETRY.spanRight >= 1680);
 });
 
-test('PDF progression: end braces arrive with the centre posts (p17); task 7 adds the upper diagonals (p18)', () => {
+test('PDF progression: end braces arrive with the centre posts (p17); level 6 adds the upper diagonals (p18)', () => {
   const posts = stageById('center-posts').members.map((pair) => pair.join('-'));
   for (const brace of ['E1-F1', 'E1-D1', 'E2-F2', 'E2-D2']) assert.ok(posts.includes(brace), `missing ${brace}`);
   assert.deepEqual(stageById('upper-diagonals').members, [['M1', 'K1'], ['M2', 'K2']]);
@@ -142,7 +142,6 @@ test('PDF progression: end braces arrive with the centre posts (p17); task 7 add
 const PANEL_RULE_BY_STAGE = {
   'outer-frame': 'exactlyTwoEqualSides',
   'apex-diagonals': 'equilateral',
-  'middle-bar': 'equilateral',
   'side-struts': 'allSidesDifferent',
   'crown-bar': 'acute',
   'center-posts': 'rightAngle',

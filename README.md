@@ -26,17 +26,18 @@ writes `dist/`, the compressed copy to put online (about 2.8 MB instead of about
 
 ## Flow (from the PDF)
 
-Start → G0.1 Meet the Builder → G0.2 Your Help Is Needed → G0.3 How to Play (the real crane demonstrates move, pick, place) → tasks 1–7 → "Excellent work! Our bridge is complete." → BRIDGE BUILT! celebration → Build it again.
+Drone intro (seven aerial shots of the canal town, one continuous flight, tap to skip) → Start → G0.1 Meet the Builder → G0.2 Your Help Is Needed → G0.3 How to Play (the real crane demonstrates move, pick, place) → levels 1–6 → "Excellent work! Our bridge is complete." → BRIDGE BUILT! celebration → Build it again.
 
-| Task | Instruction (PDF wording) | Frames offered | Correct | What gets built (PDF page) |
+| Level | Instruction (PDF wording) | Frames offered | Correct | What gets built (PDF page) |
 |---|---|---|---|---|
 | 1 | Choose a triangle with exactly 2 equal sides. | isosceles, scalene, equilateral | isosceles | outer frame (p12) |
 | 2 | Choose an equilateral triangle. | same | equilateral | both apex diagonals (p13) |
-| 3 | Choose an equilateral triangle. | same | equilateral | the middle bar, making a second equilateral (p14 adds no beam, so this bar from p16 comes in one step early, so the two equilateral tasks look different) |
-| 4 | Choose a triangle where all 3 sides have different lengths. | same | scalene | side struts (p15) |
-| 5 | Choose an acute-angled triangle. | acute, obtuse, right | acute | the crown bar (p16) |
-| 6 | Choose a triangle with one 90° angle. | same | right | centre posts and end braces (p17) |
-| 7 | Choose a triangle with one angle greater than 90°. | same | obtuse | upper diagonals (p18) |
+| 3 | Choose a triangle where all 3 sides have different lengths. | same | scalene | side struts (p15) |
+| 4 | Choose an acute-angled triangle. | acute, obtuse, right | acute | the crown bar and the middle bar (p16) |
+| 5 | Choose a triangle with one 90° angle. | same | right | centre posts and end braces (p17) |
+| 6 | Choose a triangle with one angle greater than 90°. | same | obtuse | upper diagonals (p18) |
+
+Six levels, one for each triangle type of the PDF p7 legend. The deck repeats the equilateral task on p13 without adding a beam, so it is played once.
 
 The frames are the PDF's, arranged so the correct frame never starts under its own drop spot (in the PDF order the answer sat right under the drop spot in tasks 1 and 5). `tests/level-data.test.js` checks all of this, including that every task needs the hook to travel: wording, order, answers, that exactly one frame fits each task (classified from the measured sprite corners), and that every bridge panel a task lights up really is that triangle type.
 
@@ -56,7 +57,7 @@ python3 tools/qa/playthrough.py                                                 
 python3 tools/qa/devices.py                                                                                      # laptops, tablets, phones in Chromium + WebKit (Safari); GAME_ROOT=dist to test the build
 ```
 
-The play-through drives the real controls: wrong answers first, a full collapse, then all seven tasks, replay, and resizing. It fails on any console error.
+The play-through drives the real controls: wrong answers first, a full collapse, then all six levels, replay, and resizing. It fails on any console error.
 
 Set `DEBUG_MODE = true` in `js/config.js` for a live state overlay and `window.__bridgeGame`. URL options: `?vo=0` turns narration off; `?vorate=2` plays it faster.
 

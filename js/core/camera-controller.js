@@ -1,5 +1,5 @@
 import { STAGE } from '../data/layout.js';
-import { prefersReducedMotion, wait } from './motion.js';
+import { prefersReducedMotion, wait, tween, easings } from './motion.js';
 
 /**
  * Focus controller: transforms the world layer (never the browser viewport).
@@ -100,6 +100,43 @@ export function createCameraController({ worldEl, shakeEl, screenFixedEl }) {
     await wait(duration, signal);
   }
 
+  /**
+   * Drone flight: the camera glides along one smooth curve (Catmull-Rom) through the given shots,
+   * at an even speed, easing in at the start and out at the end, never stopping in between.
+   */
+  async function fly(shots, { duration = 4000, signal } = {}) {
+    const points = shots.map(({ x = STAGE.centerX, y = STAGE.centerY, scale = 1 }) => [x, y, Math.log(Math.max(0.5, scale))]);
+    if (!points.length) return;
+    const last = points[points.length - 1];
+    if (prefersReducedMotion() || points.length === 1) {
+      target = { x: last[0], y: last[1], logScale: last[2] };
+      snap();
+      return;
+    }
+    const ZOOM_WEIGHT = 900; // how much a zoom counts against a pan when spacing the flight evenly
+    const lengths = points.slice(1).map((p, i) => Math.hypot(p[0] - points[i][0], p[1] - points[i][1], (p[2] - points[i][2]) * ZOOM_WEIGHT) || 1);
+    const total = lengths.reduce((sum, length) => sum + length, 0);
+    const at = (i) => points[Math.max(0, Math.min(points.length - 1, i))];
+    const catmullRom = (a, b, c, d, t) => 0.5 * ((2 * b) + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t * t + (-a + 3 * b - 3 * c + d) * t * t * t);
+    smoothTime = 0.14;
+    movingUntil = performance.now() + duration;
+    setMoving(true);
+    await tween({
+      duration,
+      ease: easings.mechanical,
+      signal,
+      onUpdate: (u) => {
+        let distance = u * total;
+        let i = 0;
+        while (i < lengths.length - 1 && distance > lengths[i]) distance -= lengths[i++];
+        const t = Math.min(1, distance / lengths[i]);
+        const [x, y, logScale] = [0, 1, 2].map((k) => catmullRom(at(i - 1)[k], at(i)[k], at(i + 1)[k], at(i + 2)[k], t));
+        target = { x, y, logScale };
+        setMoving(true);
+      },
+    });
+  }
+
   function reset(duration = 640, signal) {
     return focus({ ...STANDARD_SHOT, duration, signal });
   }
@@ -125,6 +162,7 @@ export function createCameraController({ worldEl, shakeEl, screenFixedEl }) {
   return {
     update,
     focus,
+    fly,
     reset,
     shake,
     project,

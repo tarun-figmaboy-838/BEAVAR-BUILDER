@@ -16,11 +16,10 @@ OUT = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, "test-results")
 os.makedirs(OUT, exist_ok=True)
 PORT, DEBUG_PORT = 8787, 9333
 GAME_URL = os.environ.get("GAME_URL") or f"http://127.0.0.1:{PORT}/?vo=0&vorate=4"
-CORRECT = ["isosceles", "equilateral", "equilateral", "scalene", "acute", "right", "obtuse"]
+CORRECT = ["isosceles", "equilateral", "scalene", "acute", "right", "obtuse"]
 GROUPS = {"sides": ["isosceles", "scalene", "equilateral"], "angles": ["acute", "obtuse", "right"]}
 INSTRUCTIONS = [
     "Choose a triangle with exactly 2 equal sides.",
-    "Choose an equilateral triangle.",
     "Choose an equilateral triangle.",
     "Choose a triangle where all 3 sides have different lengths.",
     "Choose an acute-angled triangle.",
@@ -249,38 +248,38 @@ def run():
         game.shot("task2-ready")
 
         # Tasks 2 and 3 correct, then a wrong answer at task 4 to see a full collapse.
-        for index in (1, 2):
+        for index in (1,):
             game.pick(CORRECT[index])
             game.carry_to_socket()
             game.drop()
             state = game.wait(lambda s, i=index: s["instruction"] == INSTRUCTIONS[i + 1] and s["crane"] in ("idle", "moving", "hoveringOption"), 45, f"task {index + 2} ready")
-        check(state["builtMembers"] == 6, f"task 2 adds both apex diagonals, task 3 the middle bar (6 beams), got {state['builtMembers']}")
-        check(state["bolts"] == 7, f"7 bolted joints after task 3, got {state['bolts']}")
-        game.shot("task4-ready")
+        check(state["builtMembers"] == 5, f"level 2 adds both apex diagonals (5 beams), got {state['builtMembers']}")
+        check(state["bolts"] == 5, f"5 joints after level 2, got {state['bolts']}")
+        game.shot("task3-ready")
         game.pick("isosceles")
         game.carry_to_socket()
         game.drop()
         page.pump(3.2)
-        game.shot("task4-wrong-sway")
+        game.shot("task3-wrong-sway")
         page.pump(1.4)
-        game.shot("task4-wrong-collapse")
+        game.shot("task3-wrong-collapse")
         state = game.wait(lambda s: s["instruction"] == INSTRUCTIONS[0] and s["builtMembers"] == 0 and s["crane"] in ("idle", "moving", "hoveringOption") and len(s["options"]) == 3, 45, "back to task 1 after the collapse")
         check(state["instruction"] == INSTRUCTIONS[0], "task card back to task 1 after the collapse")
         game.shot("after-collapse-reset")
 
-        # All seven correct.
+        # All six correct.
         for index, correct in enumerate(CORRECT):
             game.pick(correct)
             game.carry_to_socket()
             game.drop()
-            if index == 4:
+            if index == 3:
                 page.pump(1.5)
-                game.shot("task5-construction")
-            if index < 6:
+                game.shot("task4-construction")
+            if index < 5:
                 state = game.wait(lambda s, i=index: s["instruction"] == INSTRUCTIONS[i + 1] and s["crane"] in ("idle", "moving", "hoveringOption"), 45, f"task {index + 2} ready")
-                if index == 3:
-                    check(state["options"] == GROUPS["angles"], f"angle group appears at task 5: {state['options']}")
-                    game.shot("task5-ready")
+                if index == 2:
+                    check(state["options"] == GROUPS["angles"], f"angle group appears at level 4: {state['options']}")
+                    game.shot("task4-ready")
             else:
                 state = game.wait(lambda s: s["completion"], 60, "completion overlay")
         check(state["builtMembers"] == 20, f"complete bridge matches PDF p18 (20 members), got {state['builtMembers']}")

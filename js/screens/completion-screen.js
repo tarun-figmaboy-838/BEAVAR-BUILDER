@@ -48,7 +48,7 @@ export function createCompletionScreen({ els, audio, voice, camera, crane, claw,
       const banner = feedback.setInstruction(copy.banner, { swap: true, complete: true });
       claw.relief();
       crane.parkAway({ signal: scope.signal }).catch(() => {});
-      await camera.focus({ x: 960, y: 430, scale: 1.12, pull: 0.6, duration: 1200, signal: scope.signal });
+      await camera.focus({ x: 960, y: 470, scale: 1.12, pull: 0.6, duration: 1200, signal: scope.signal });
       await bridge.completeSettle();
       audio.play('ding');
       await banner;

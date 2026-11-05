@@ -1,6 +1,7 @@
 /**
- * The seven tasks, in the deck's order (PDF pages 11-17). Only data lives here;
- * one level engine renders and runs all of them.
+ * Six levels, one per triangle type of the PDF p7 legend, in the deck's build order (PDF pages 11-17;
+ * the deck repeats the equilateral task on p13 without adding a beam, so it is played once).
+ * Only data lives here; one level engine renders and runs all of them.
  */
 /**
  * The same frames as the PDF (p11-17), arranged so no correct frame sits right under its own drop spot:
@@ -31,14 +32,6 @@ export const LEVELS = Object.freeze([
   }),
   Object.freeze({
     id: 3,
-    instruction: 'Choose an equilateral triangle.',
-    optionGroup: 'sides',
-    correctTriangleId: 'equilateral',
-    rule: 'equilateral',
-    bridgeStage: 'middle-bar',
-  }),
-  Object.freeze({
-    id: 4,
     instruction: 'Choose a triangle where all 3 sides have different lengths.',
     optionGroup: 'sides',
     correctTriangleId: 'scalene',
@@ -46,7 +39,7 @@ export const LEVELS = Object.freeze([
     bridgeStage: 'side-struts',
   }),
   Object.freeze({
-    id: 5,
+    id: 4,
     instruction: 'Choose an acute-angled triangle.',
     optionGroup: 'angles',
     correctTriangleId: 'acute',
@@ -54,7 +47,7 @@ export const LEVELS = Object.freeze([
     bridgeStage: 'crown-bar',
   }),
   Object.freeze({
-    id: 6,
+    id: 5,
     instruction: 'Choose a triangle with one 90° angle.',
     optionGroup: 'angles',
     correctTriangleId: 'right',
@@ -62,7 +55,7 @@ export const LEVELS = Object.freeze([
     bridgeStage: 'center-posts',
   }),
   Object.freeze({
-    id: 7,
+    id: 6,
     instruction: 'Choose a triangle with one angle greater than 90°.',
     optionGroup: 'angles',
     correctTriangleId: 'obtuse',

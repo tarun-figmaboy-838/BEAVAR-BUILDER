@@ -371,11 +371,6 @@
   50% { transform: rotate(5deg); }
 }
 
-@keyframes glint-twinkle {
-  0%, 55%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(0.4) rotate(0deg); }
-  68% { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(22deg); }
-  82% { opacity: 0; transform: translate(-50%, -50%) scale(0.6) rotate(40deg); }
-}
 
 /* ----- Weld flash when a frame fits ----- */
 @keyframes weld-flash {
@@ -397,5 +392,17 @@
   0% { opacity: 1; transform: translateY(0) rotate(var(--a)) translateX(6px) scaleX(0.3); }
   55% { opacity: 1; transform: translateY(calc(var(--fall) * 0.25)) rotate(var(--a)) translateX(calc(var(--d) * 0.8)) scaleX(1); }
   100% { opacity: 0; transform: translateY(var(--fall)) rotate(var(--a)) translateX(var(--d)) scaleX(0.5); }
+}
+
+/* ----- Start button arrives after the drone intro ----- */
+@keyframes start-enter {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+  100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+/* The drone holds its line but never sits perfectly still. */
+@keyframes drone-hover {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(2px, -2px); }
 }
 

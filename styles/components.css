@@ -439,3 +439,10 @@
 .start-button::before { content: "▶"; margin-right: 22px; font-size: 52px; }
 .start-button:active, .start-button.is-pressed { transform: translate(-50%, -50%) translateY(8px); box-shadow: 0 4px 0 #a86f00, 0 10px 18px rgba(0, 0, 0, 0.3); animation: none; }
 .start-button.is-leaving { animation: start-leave 380ms var(--ease-in) forwards; }
+.start-button.is-entering { animation: start-enter 520ms var(--ease-back) both; }
+
+/* ---------- Drone intro: aerial shots played as one flight (js/screens/drone-intro.js) ---------- */
+.drone-intro { position: absolute; inset: 0; overflow: hidden; background: #6fc3ff; }
+.drone-intro__hover { position: absolute; inset: 0; animation: drone-hover 3.2s ease-in-out infinite; }
+.drone-intro__shot { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; will-change: transform, opacity; }
+

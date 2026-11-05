@@ -1,19 +1,10 @@
 
-/* ---------- Living water: a WebGL canvas over the painted canal (js/gameplay/environment.js) ---------- */
+/* ---------- Moving water: the backdrop's own water, rippled on the GPU (js/gameplay/environment.js sets top/height) ---------- */
 .water-canvas {
   position: absolute;
-  left: 0; top: 405px;
-  width: 1920px; height: 675px;
+  left: 0;
+  width: 1920px;
   pointer-events: none;
-}
-.water-glitter { position: absolute; inset: 0; pointer-events: none; }
-/* Sun glitter: composited opacity/transform only, so it costs nothing per frame on the main thread. */
-.water-glint {
-  position: absolute;
-  opacity: 0;
-  transform: translate(-50%, -50%) scale(0.5);
-  animation: glint-twinkle var(--glint-ms, 3000ms) ease-in-out infinite;
-  animation-delay: var(--glint-delay, 0ms);
 }
 
 /* ---------- Bridge: pillars standing in the water ---------- */

@@ -22,6 +22,7 @@ import { buildEnvironment } from './gameplay/environment.js';
 import { createBuilderCharacter, BUILDER_FRAME_SOURCES } from './gameplay/builder-character.js';
 import { CRANE_RIG } from './data/layout.js';
 import { createTitleScreen } from './screens/title-screen.js';
+import { DRONE_SHOTS } from './screens/drone-intro.js';
 import { createMeetBuilderScreen, createHelpNeededScreen } from './screens/story-screens.js';
 import { createHowToPlayScreen } from './screens/how-to-play-screen.js';
 import { createGameplayScreen } from './screens/gameplay-screen.js';
@@ -52,6 +53,7 @@ const CRITICAL_IMAGES = [
   'assets/images/fx/sparkle-big.png',
   'assets/images/fx/ripple-1.png',
   'assets/images/fx/ripple-2.png',
+  ...DRONE_SHOTS.map((shot) => shot.src),
 ].map((src) => ({ key: src, src }));
 
 function queryElements() {
