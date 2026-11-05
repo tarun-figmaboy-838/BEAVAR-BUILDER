@@ -60,7 +60,7 @@ STATE_JS = """(() => {
 })()"""
 
 failures = []
-OPTION_OFFSET_JS = '(() => { const c = document.querySelector(\'.claw\').getBoundingClientRect(); const r = document.querySelector(\'.triangle--option[data-triangle-id="%s"]\').getBoundingClientRect(); return (r.left + r.width / 2) - (c.left + c.width / 2); })()'
+OPTION_OFFSET_JS = '(() => { const c = document.querySelector(\'.claw\').getBoundingClientRect(); const o = document.querySelector(\'.triangle--option[data-triangle-id="%s"]\'); const top = [...o.querySelectorAll(\'.frame__plate\')].map((p) => p.getBoundingClientRect()).sort((a, b) => a.top - b.top)[0]; return (top.left + top.width / 2) - (c.left + c.width / 2); })()'
 SOCKET_OFFSET_JS = "(() => { const s = document.querySelector('.socket').getBoundingClientRect(); const t = document.querySelector('.claw-cargo .triangle').getBoundingClientRect(); return (s.left + s.width / 2) - (t.left + t.width / 2); })()"
 
 
@@ -164,19 +164,15 @@ def run():
         game.shot("meet-builder")
         check(game.state()["builderInCab"], "the beaver operator speaks from the crane cab")
         check(not page.evaluate("!!document.querySelector('.title-banner')", await_promise=False), "title banner removed after Start")
-        check(game.state()["ctaCount"] <= 1, "only one CTA button on screen")
-        state = game.wait(lambda s: s["cta"] == "Next", 20, "Next after the builder line")
+        check(game.state()["ctaCount"] == 0, "no text buttons: the story moves on by itself")
 
-        # ---- Your help is needed ----
-        game.click(".cta-button")
-        state = game.wait(lambda s: "choose the right frames" in (s["bubble"] or ""), 12, "G0.2 builder line")
+        # ---- Your help is needed (advances on its own) ----
+        state = game.wait(lambda s: "choose the right frames" in (s["bubble"] or ""), 25, "G0.2 builder line")
         page.pump(1.2)
         game.shot("help-needed-focus")
-        state = game.wait(lambda s: s["cta"] == "Next", 20, "Next after G0.2")
 
-        # ---- How to play ----
-        game.click(".cta-button")
-        state = game.wait(lambda s: page.evaluate("!!document.querySelector('.howto-card')", await_promise=False), 12, "G0.3 card")
+        # ---- How to play (advances on its own) ----
+        state = game.wait(lambda s: page.evaluate("!!document.querySelector('.howto-card')", await_promise=False), 30, "G0.3 card")
         page.pump(3.5)
         game.shot("how-to-play-demo-move")
         page.pump(4.0)
@@ -285,9 +281,10 @@ def run():
         check(state["builtMembers"] == 20, f"complete bridge matches PDF p18 (20 members), got {state['builtMembers']}")
         page.pump(1.5)
         game.shot("completion")
-        state = game.wait(lambda s: s["cta"] == "Build it again", 30, "replay button")
+        state = game.wait(lambda s: page.evaluate("!!document.querySelector('.completion__replay')", await_promise=False), 30, "replay button")
+        check(page.evaluate("(() => { const b = document.querySelector('.completion__replay'); return !b.textContent.trim() && b.getAttribute('aria-label') === 'Build it again'; })()", await_promise=False), "replay is an icon button (no text)")
         game.shot("completion-final")
-        game.click(".cta-button")
+        game.click(".completion__replay")
         state = game.wait(lambda s: s["instruction"] == INSTRUCTIONS[0] and s["crane"] in ("idle", "moving", "hoveringOption") and len(s["options"]) == 3 and s["builtMembers"] == 0, 45, "replay returns to task 1")
         check(not state["completion"], "completion overlay removed on replay")
         game.shot("replay-task1")

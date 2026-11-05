@@ -21,30 +21,24 @@
   -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 calc(var(--wet) - 6px), rgba(0,0,0,0.55) calc(var(--wet) + 4px), rgba(0,0,0,0) calc(var(--wet) + 60px));
   mask-image: linear-gradient(to bottom, #000 0, #000 calc(var(--wet) - 6px), rgba(0,0,0,0.55) calc(var(--wet) + 4px), rgba(0,0,0,0) calc(var(--wet) + 60px));
 }
+/* The pillar mirrored at the waterline: only the part above the water is reflected, hanging down
+   into the canal, strongest at the waterline and fading with depth (it used to flip upward and
+   show as a ghost above the deck). */
 .pillar__reflection {
   position: absolute;
-  left: 0; top: var(--wet);
+  left: 0; top: 0;
   width: 100%;
   transform: scaleY(-0.6);
-  transform-origin: 50% 0;
+  transform-origin: 50% var(--wet);
   opacity: 0.22;
-  -webkit-mask-image: linear-gradient(to top, #000, transparent 85%);
-  mask-image: linear-gradient(to top, #000, transparent 85%);
+  clip-path: inset(0 0 calc(100% - var(--wet)) 0);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 var(--wet));
+  mask-image: linear-gradient(to bottom, transparent 0, #000 var(--wet));
   filter: blur(1px);
 }
 .pillar__reflection.motion-ambient { animation: reflection-wobble 3.4s ease-in-out infinite; }
 
 /* Deck girder lying on the pillars */
-.deck-girder__plate { fill: url(#girder-face); stroke: #272e38; stroke-width: 3; }
-.deck-girder__flange { fill: #dfe5ec; opacity: 0.85; }
-.deck-girder__lip { fill: #2c323b; opacity: 0.6; }
-.deck-girder__rivet { fill: #39414c; stroke: #a9b4c1; stroke-width: 1; }
-.deck-girder__bearing { fill: #4c5563; stroke: #272e38; stroke-width: 2.5; }
-.deck-road { fill: #3b3f46; }
-.deck-road__line { stroke: #f6c21a; stroke-width: 3; stroke-dasharray: 26 18; }
-.deck-curb { fill: #d9dde3; stroke: #8d96a1; stroke-width: 2; }
-.deck-rail { stroke: #ffcf3d; stroke-width: 5; stroke-linecap: round; }
-.deck-rail__post { stroke: #e6a300; stroke-width: 4; stroke-linecap: round; }
 
 /* Triangle panels light up where the chosen triangle belongs */
 /* Colour plates: each placed triangle keeps its PDF p7 legend colour inside the beams */
@@ -270,27 +264,15 @@
 .hotspot--demo { opacity: 0; }
 .hotspot--demo.is-visible { opacity: 1; transform: scale(0.78); }
 
-/* ---------- Deck: a bare riveted steel girder while building; road and railings go on at the end ---------- */
-.deck { position: absolute; }
-.deck__svg { position: absolute; left: 0; top: 0; overflow: visible; }
-.deck__web { fill: url(#deck-steel); stroke: #272e38; stroke-width: 3; }
-.deck__flange { fill: #dfe5ec; opacity: 0.8; }
-.deck__flange--low { fill: #2c323b; opacity: 0.55; }
-.deck__stiffener { fill: #9ba5b2; stroke: #3b4250; stroke-width: 1.5; }
-.deck__rivets { stroke: #343b45; stroke-width: 3.6; stroke-linecap: round; stroke-dasharray: 0 15; }
-.deck__rivets--shine { stroke: #d5dce4; stroke-width: 1.3; }
-.deck__shadow {
-  position: absolute; left: 40px; right: 40px; bottom: -46px; height: 46px;
-  background: linear-gradient(to bottom, rgba(8, 30, 60, 0.4), rgba(8, 30, 60, 0));
-}
-/* Finishing: the road rolls out from the left quay, then the railings rise into place. */
-.deck__finish { opacity: 0; transition: opacity 240ms; }
-.deck.is-finished .deck__finish { opacity: 1; }
-.deck__road { fill: #3b3f46; stroke: #22252b; stroke-width: 1.5; transform-box: fill-box; transform-origin: 0 50%; transform: scaleX(0); transition: transform 700ms var(--ease-out); }
-.deck.is-finished .deck__road { transform: scaleX(1); }
-.deck__rails { transform: translateY(14px); opacity: 0; transition: transform 460ms var(--ease-back) 620ms, opacity 260ms 620ms; }
-.deck.is-finished .deck__rails { transform: translateY(0); opacity: 1; }
-.deck-rail--mid { stroke-width: 4; opacity: 0.9; }
+/* ---------- Deck: low road deck at walkway level (sliced supplied art), arches over three piers ---------- */
+.deck { position: absolute; inset: 0; pointer-events: none; }
+.deck__piece, .deck__plates, .deck__bracket { position: absolute; display: block; }
+.deck__plates { background-repeat: repeat-x; background-position: 0 0; }
+.deck__piece, .deck__plates { filter: drop-shadow(0 7px 5px rgba(8, 30, 60, 0.25)); }
+.deck__arches { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.deck__arch-rim { fill: none; stroke: #2f3a4f; stroke-width: 13; stroke-linecap: round; }
+.deck__arch { fill: none; stroke: #8794ae; stroke-width: 8.5; stroke-linecap: round; }
+.deck__arch-light { fill: none; stroke: #c4cde0; stroke-width: 2.5; stroke-linecap: round; opacity: 0.8; }
 
 /* ---------- Kit tower crane ---------- */
 .crane-structure { position: absolute; inset: 0; }

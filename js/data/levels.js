@@ -17,6 +17,7 @@ export const LEVELS = Object.freeze([
   Object.freeze({
     id: 1,
     instruction: 'Choose a triangle with exactly 2 equal sides.',
+    focus: 'exactly 2 equal sides',   // key words, shown in the highlight colour
     optionGroup: 'sides',
     correctTriangleId: 'isosceles',
     rule: 'exactlyTwoEqualSides',
@@ -25,6 +26,7 @@ export const LEVELS = Object.freeze([
   Object.freeze({
     id: 2,
     instruction: 'Choose an equilateral triangle.',
+    focus: 'equilateral',   // key words, shown in the highlight colour
     optionGroup: 'sides',
     correctTriangleId: 'equilateral',
     rule: 'equilateral',
@@ -33,6 +35,7 @@ export const LEVELS = Object.freeze([
   Object.freeze({
     id: 3,
     instruction: 'Choose a triangle where all 3 sides have different lengths.',
+    focus: 'all 3 sides have different lengths',   // key words, shown in the highlight colour
     optionGroup: 'sides',
     correctTriangleId: 'scalene',
     rule: 'allSidesDifferent',
@@ -41,6 +44,7 @@ export const LEVELS = Object.freeze([
   Object.freeze({
     id: 4,
     instruction: 'Choose an acute-angled triangle.',
+    focus: 'acute-angled',   // key words, shown in the highlight colour
     optionGroup: 'angles',
     correctTriangleId: 'acute',
     rule: 'acute',
@@ -49,6 +53,7 @@ export const LEVELS = Object.freeze([
   Object.freeze({
     id: 5,
     instruction: 'Choose a triangle with one 90° angle.',
+    focus: 'one 90° angle',   // key words, shown in the highlight colour
     optionGroup: 'angles',
     correctTriangleId: 'right',
     rule: 'rightAngle',
@@ -57,6 +62,7 @@ export const LEVELS = Object.freeze([
   Object.freeze({
     id: 6,
     instruction: 'Choose a triangle with one angle greater than 90°.',
+    focus: 'one angle greater than 90°',   // key words, shown in the highlight colour
     optionGroup: 'angles',
     correctTriangleId: 'obtuse',
     rule: 'obtuseAngle',

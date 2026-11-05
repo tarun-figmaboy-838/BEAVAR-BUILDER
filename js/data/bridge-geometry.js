@@ -17,9 +17,9 @@
  *   the apex diagonals meet the deck so A-D1-D2 is equilateral (and so are A-H1-H2 and A-K1-K2),
  *   M1/M2 sit high on the chords so the side struts stand nearly upright, the posts and end braces are vertical.
  */
-const DECK_Y = 640;                                     // the deck rests on the quay blocks of the backdrop
+const DECK_Y = 672;                                     // where frames stand on the steel deck's road plates
 const SPAN = Object.freeze({ left: 220, right: 1700 });
-const APEX = Object.freeze([960, 290]);
+const APEX = Object.freeze([960, 332]);   // rise 340: flatter makes the scalene panel look right-angled
 const RISE = DECK_Y - APEX[1];
 const HALF_BASE = RISE / Math.sqrt(3);                  // half of the equilateral A-D1-D2's base
 const CROWN = 0.24;                                     // crown bar, as a share of the rise (PDF p9)
@@ -67,9 +67,7 @@ export const BRIDGE_GEOMETRY = Object.freeze({
   apex: APEX,
   spanLeft: SPAN.left,
   spanRight: SPAN.right,
-  pillarXs: Object.freeze([SPAN.left + 70, APEX[0], SPAN.right - 70]),
-  pillarTopY: 676,
-  pillarWidth: 176,
+
   nodes: NODES,
   stages: withSockets([
     {

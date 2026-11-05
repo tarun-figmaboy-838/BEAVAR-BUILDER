@@ -1,6 +1,5 @@
 import { COPY } from '../data/copy.js';
 import { createSequenceScope, wait } from '../core/motion.js';
-import { createCtaButton } from './screen-helpers.js';
 
 const CAB_ZOOM = 2.2;
 
@@ -14,13 +13,13 @@ export async function zoomToCab({ camera, builder, signal, duration = 1300 }) {
 }
 
 /** G0.1 Meet the Builder: the crane rolls in, then we meet its operator in the cab. */
-export function createMeetBuilderScreen({ els, audio, camera, crane, claw, triangles, feedback, builder, screenManager }) {
+export function createMeetBuilderScreen({ camera, crane, claw, triangles, feedback, builder, screenManager }) {
   const scope = createSequenceScope();
-  let cta = null;
   const copy = COPY.screens.meetBuilder;
 
-  return {
-    async enter() {
+  /** Runs after the screen has entered, so it can move the story on by itself (no button). */
+  async function run() {
+    try {
       camera.reset(0);
       triangles.showIntroPile();
       triangles.enterPlatform();
@@ -33,23 +32,31 @@ export function createMeetBuilderScreen({ els, audio, camera, crane, claw, trian
       const bubble = feedback.showBubble(copy.line, { anchor });
       await bubble.finished;
       builder.worry();
-      cta = createCtaButton({ overlaysEl: els.overlays, audio, label: copy.cta, onPress: () => screenManager.go('help-needed') });
+      // No button: once the line has been read, the story moves on by itself.
+      await wait(1300, scope.signal);
+      screenManager.go('help-needed');
+    } catch {
+      /* the screen was left early */
+    }
+  }
+
+  return {
+    async enter() {
+      run();
     },
     async exit() {
-      cta?.remove();
-      cta = null;
+      scope.cancel();
     },
   };
 }
 
 /** G0.2 Your Help Is Needed: the operator asks, then the camera shows the frames he means. */
-export function createHelpNeededScreen({ els, audio, camera, triangles, feedback, builder, screenManager }) {
+export function createHelpNeededScreen({ camera, triangles, feedback, builder, screenManager }) {
   const scope = createSequenceScope();
-  let cta = null;
   const copy = COPY.screens.helpNeeded;
 
-  return {
-    async enter() {
+  async function run() {
+    try {
       const anchor = await zoomToCab({ camera, builder, signal: scope.signal, duration: 600 }).catch(() => null);
       const bubble = feedback.showBubble(copy.line, { anchor });
       await bubble.finished;
@@ -57,11 +64,19 @@ export function createHelpNeededScreen({ els, audio, camera, triangles, feedback
       await feedback.hideBubble();
       await camera.focus({ x: 960, y: 880, scale: 1.12, pull: 0.5, duration: 1300, signal: scope.signal }).catch(() => {});
       await triangles.focusPulseSequence(scope.signal).catch(() => {});
-      cta = createCtaButton({ overlaysEl: els.overlays, audio, label: copy.cta, onPress: () => screenManager.go('how-to-play') });
+      await wait(500, scope.signal);
+      screenManager.go('how-to-play');
+    } catch {
+      /* the screen was left early */
+    }
+  }
+
+  return {
+    async enter() {
+      run();
     },
     async exit() {
-      cta?.remove();
-      cta = null;
+      scope.cancel();
       await feedback.hideBubble();
     },
   };

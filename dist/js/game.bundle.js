@@ -17,7 +17,13 @@ __define('js/config.js', function () {
 const DEBUG_MODE = false;
 
 const GAME_VERSION = '1.0.0';
-  return { DEBUG_MODE, GAME_VERSION };
+
+/**
+ * Draft, switched off: the drone flight over the canal town after Start (js/screens/drone-intro.js,
+ * shots in assets/images/drone/). true plays it again; false goes straight from Start to the story.
+ */
+const DRONE_INTRO = false;
+  return { DEBUG_MODE, GAME_VERSION, DRONE_INTRO };
 });
 __define('js/data/layout.js', function () {
 /**
@@ -95,9 +101,29 @@ const CONTROLS_LAYOUT = Object.freeze({
 
 const WATER_LINE_Y = 745;   // where the backdrop's quay blocks meet the water
 
-/** Road deck from quay to quay (the environment sheet's stone ledge and blue railing, tiled). */
-const DECK_LAYOUT = Object.freeze({ x1: 160, x2: 1820, top: 640, height: 40, railHeight: 32 });
-  return { STAGE, KIT_SCALE, CRANE_RIG, CRANE_LAYOUT, PLATFORM_LAYOUT, CONTROLS_LAYOUT, WATER_LINE_Y, DECK_LAYOUT };
+/**
+ * The low road deck at walkway level (supplied deck art, sliced): left end cap, repeated road plates,
+ * right end cap, all at `scale`. Its end caps rest on the quay walkways, so the road runs straight on
+ * from both banks; grey arches under its yellow beam spring from three piers in the canal.
+ * Art rows (supplied deck art): road top 316, frame-standing line 370, beam bottom 431, cap bottom 470.
+ */
+const DECK_LAYOUT = Object.freeze({
+  x1: 168, x2: 1752,
+  scale: 0.37,
+  art: Object.freeze({ top: 316, stand: 370, beamBottom: 431, capBottom: 470 }),
+  left: Object.freeze({ src: 'assets/images/bridge/deck-left.webp', width: 351, height: 154 }),
+  tile: Object.freeze({ src: 'assets/images/bridge/deck-tile.webp', width: 224, height: 115 }),
+  right: Object.freeze({ src: 'assets/images/bridge/deck-right.webp', width: 347, height: 154 }),
+  bracket: Object.freeze({ src: 'assets/images/bridge/deck-bracket.webp', width: 180, height: 108, scale: 0.36 }),
+});
+
+/** The three short brick piers in the canal (cap + bricks cut from the supplied bridge reference). */
+const PIER_LAYOUT = Object.freeze({
+  src: 'assets/images/bridge/pier.webp', artWidth: 292, artHeight: 154,
+  xs: Object.freeze([345, 960, 1575]), width: 118, topY: 724,
+  waterY: 796,          // where the bricks start to disappear into the canal
+});
+  return { STAGE, KIT_SCALE, CRANE_RIG, CRANE_LAYOUT, PLATFORM_LAYOUT, CONTROLS_LAYOUT, WATER_LINE_Y, DECK_LAYOUT, PIER_LAYOUT };
 });
 __define('js/data/levels.js', function () {
 /**
@@ -119,6 +145,7 @@ const LEVELS = Object.freeze([
   Object.freeze({
     id: 1,
     instruction: 'Choose a triangle with exactly 2 equal sides.',
+    focus: 'exactly 2 equal sides',   // key words, shown in the highlight colour
     optionGroup: 'sides',
     correctTriangleId: 'isosceles',
     rule: 'exactlyTwoEqualSides',
@@ -127,6 +154,7 @@ const LEVELS = Object.freeze([
   Object.freeze({
     id: 2,
     instruction: 'Choose an equilateral triangle.',
+    focus: 'equilateral',   // key words, shown in the highlight colour
     optionGroup: 'sides',
     correctTriangleId: 'equilateral',
     rule: 'equilateral',
@@ -135,6 +163,7 @@ const LEVELS = Object.freeze([
   Object.freeze({
     id: 3,
     instruction: 'Choose a triangle where all 3 sides have different lengths.',
+    focus: 'all 3 sides have different lengths',   // key words, shown in the highlight colour
     optionGroup: 'sides',
     correctTriangleId: 'scalene',
     rule: 'allSidesDifferent',
@@ -143,6 +172,7 @@ const LEVELS = Object.freeze([
   Object.freeze({
     id: 4,
     instruction: 'Choose an acute-angled triangle.',
+    focus: 'acute-angled',   // key words, shown in the highlight colour
     optionGroup: 'angles',
     correctTriangleId: 'acute',
     rule: 'acute',
@@ -151,6 +181,7 @@ const LEVELS = Object.freeze([
   Object.freeze({
     id: 5,
     instruction: 'Choose a triangle with one 90° angle.',
+    focus: 'one 90° angle',   // key words, shown in the highlight colour
     optionGroup: 'angles',
     correctTriangleId: 'right',
     rule: 'rightAngle',
@@ -159,6 +190,7 @@ const LEVELS = Object.freeze([
   Object.freeze({
     id: 6,
     instruction: 'Choose a triangle with one angle greater than 90°.',
+    focus: 'one angle greater than 90°',   // key words, shown in the highlight colour
     optionGroup: 'angles',
     correctTriangleId: 'obtuse',
     rule: 'obtuseAngle',
@@ -287,7 +319,7 @@ function preloadImages(entries, onProgress) {
 __define('js/core/audio-manager.js', function () {
 /**
  * Procedural sound design on WebAudio. No recordings ship with the project (see docs/ASSETS.md
- * for the drop-in hook); every cue is synthesised so the game is self-contained.
+ * for the drop-in hook); every cue, and the background music, is synthesised so the game is self-contained.
  * Guards: per-sound minimum interval, and loud cues are staggered so two never fire at once.
  */
 const LOUD_GAP_SECONDS = 0.085;
@@ -537,6 +569,140 @@ const LOOPS = {
   },
 };
 
+/* ---- Background music: a light, looping construction-site tune, synthesised (no file ships) ----
+   104 BPM, eight bars in C major (C G Am F C G F G): marimba melody, plucked off-beat chords, soft
+   bass and kick, a shaker on every eighth. Notes are scheduled slightly ahead on the audio clock, so
+   timing stays tight whatever the frame rate. */
+const BPM = 104;
+const EIGHTH = 60 / BPM / 2;
+const CHORDS = [[60, 64, 67], [59, 62, 67], [57, 60, 64], [57, 60, 65], [60, 64, 67], [59, 62, 67], [57, 60, 65], [59, 62, 67]];
+const BASS = [36, 43, 45, 41, 36, 43, 41, 43];
+/** [beat, midi note, length in beats] over the 32-beat loop. */
+const MELODY = [
+  [0, 76, 1], [1, 79, 1], [2, 81, 1], [3, 79, 1],
+  [4, 74, 2], [6, 79, 1], [7, 76, 1],
+  [8, 76, 1], [9, 81, 1], [10, 79, 1], [11, 76, 1],
+  [12, 74, 1], [13, 72, 2],
+  [16, 79, 1], [17, 81, 1], [18, 84, 1], [19, 81, 1],
+  [20, 79, 1], [21, 76, 1], [22, 74, 2],
+  [24, 72, 1], [25, 74, 1], [26, 76, 1], [27, 79, 1],
+  [28, 74, 2], [30, 79, 0.5], [30.5, 76, 0.5], [31, 74, 1],
+];
+const MELODY_BY_STEP = new Map(MELODY.map(([beat, note, length]) => [Math.round(beat * 2), [note, length]]));
+const midiHz = (note) => 440 * Math.pow(2, (note - 69) / 12);
+
+function createMusic(context, out, noiseBuffer) {
+  const bus = context.createGain();
+  bus.gain.value = 0;
+  bus.connect(out);
+  let timer = 0;
+  let nextTime = 0;
+  let step = 0;
+
+  function envelope(t0, peak, decay) {
+    const gain = context.createGain();
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(peak, t0 + 0.006);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + decay);
+    gain.connect(bus);
+    return gain;
+  }
+  function osc(type, freq, t0, length, destination) {
+    const node = context.createOscillator();
+    node.type = type;
+    node.frequency.setValueAtTime(freq, t0);
+    node.connect(destination);
+    node.start(t0);
+    node.stop(t0 + length + 0.05);
+    return node;
+  }
+  /** Marimba-like mallet: a sine fundamental and a short bright fourth partial. */
+  function mallet(note, t0, length, peak) {
+    const decay = Math.min(1.1, 0.35 + length * EIGHTH);
+    osc('sine', midiHz(note), t0, decay, envelope(t0, peak, decay));
+    osc('sine', midiHz(note) * 4, t0, 0.09, envelope(t0, peak * 0.22, 0.09));
+  }
+  function pluck(note, t0, peak) {
+    const filter = context.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = 2200;
+    filter.connect(envelope(t0, peak, 0.22));
+    osc('triangle', midiHz(note), t0, 0.22, filter);
+  }
+  function bass(note, t0, peak) {
+    const decay = EIGHTH * 1.8;
+    osc('triangle', midiHz(note), t0, decay, envelope(t0, peak, decay));
+    osc('sine', midiHz(note), t0, decay, envelope(t0, peak * 0.8, decay));
+  }
+  function kick(t0, peak) {
+    const node = osc('sine', 120, t0, 0.16, envelope(t0, peak, 0.16));
+    node.frequency.exponentialRampToValueAtTime(48, t0 + 0.14);
+  }
+  function shaker(t0, peak) {
+    const source = context.createBufferSource();
+    source.buffer = noiseBuffer;
+    const filter = context.createBiquadFilter();
+    filter.type = 'highpass';
+    filter.frequency.value = 6500;
+    source.connect(filter).connect(envelope(t0, peak, 0.05));
+    source.start(t0, Math.random() * 1.2);
+    source.stop(t0 + 0.07);
+  }
+
+  function scheduleStep(index, t0) {
+    const inBar = index % 8;
+    const bar = Math.floor(index / 8);
+    if (inBar === 0 || inBar === 4) {
+      kick(t0, 0.09);
+      bass(BASS[bar] + (inBar === 4 ? 7 : 0), t0, 0.07);
+    }
+    if (index % 2 === 1) CHORDS[bar].forEach((note) => pluck(note, t0, 0.022));
+    shaker(t0, index % 2 ? 0.03 : 0.018);
+    const melody = MELODY_BY_STEP.get(index);
+    if (melody) mallet(melody[0], t0, melody[1] * 2, 0.06);
+  }
+
+  function tick() {
+    const now = context.currentTime;
+    if (nextTime < now - 0.1) nextTime = now + 0.05;      // after a stall, rejoin the beat instead of bursting
+    while (nextTime < now + 0.2) {
+      scheduleStep(step, nextTime);
+      nextTime += EIGHTH;
+      step = (step + 1) % 64;
+    }
+  }
+
+  return {
+    start() {
+      if (timer) return;
+      const now = context.currentTime;
+      nextTime = now + 0.08;
+      step = 0;
+      bus.gain.cancelScheduledValues(now);
+      bus.gain.setValueAtTime(0.0001, now);
+      bus.gain.exponentialRampToValueAtTime(1, now + 1.6);
+      tick();
+      timer = setInterval(tick, 50);
+    },
+    stop() {
+      if (!timer) return;
+      clearInterval(timer);
+      timer = 0;
+      const now = context.currentTime;
+      bus.gain.cancelScheduledValues(now);
+      bus.gain.setTargetAtTime(0.0001, now, 0.25);
+    },
+    /** Music sits further under the narration than the effects do. */
+    duck(on) {
+      if (!timer) return;
+      bus.gain.setTargetAtTime(on ? 0.45 : 1, context.currentTime, 0.12);
+    },
+    get playing() {
+      return Boolean(timer);
+    },
+  };
+}
+
 function readStoredMute() {
   try {
     return localStorage.getItem(STORAGE_KEY) === '1';
@@ -555,6 +721,17 @@ function createAudioManager() {
   const lastPlayed = new Map();
   const activeLoops = new Map();
   const listeners = new Set();
+  let music = null;
+  let musicWanted = false;
+  let musicPaused = false;
+
+  function syncMusic() {
+    if (!context) return;
+    music ??= createMusic(context, master, noiseBuffer);
+    const shouldPlay = musicWanted && !musicPaused && context.state === 'running';
+    if (shouldPlay && !music.playing) music.start();
+    else if (!shouldPlay && music.playing) music.stop();
+  }
 
   function ensureContext() {
     if (context) return context;
@@ -635,6 +812,24 @@ function createAudioManager() {
     duck(on) {
       ducked = Boolean(on);
       applyMasterGain();
+      music?.duck(ducked);
+    },
+    /** Background music: starts once audio is unlocked (the Start tap), loops until stopped. */
+    startMusic() {
+      musicWanted = true;
+      const ctx = ensureContext();
+      if (!ctx) return;
+      if (ctx.state === 'running') syncMusic();
+      else ctx.resume().then(syncMusic).catch(() => {});
+    },
+    stopMusic() {
+      musicWanted = false;
+      syncMusic();
+    },
+    /** Hidden tab: the music pauses, and picks up again when the game is back in view. */
+    setMusicPaused(paused) {
+      musicPaused = Boolean(paused);
+      syncMusic();
     },
     toggleMuted() {
       this.setMuted(!muted);
@@ -2031,9 +2226,9 @@ __define('js/data/bridge-geometry.js', function () {
  *   the apex diagonals meet the deck so A-D1-D2 is equilateral (and so are A-H1-H2 and A-K1-K2),
  *   M1/M2 sit high on the chords so the side struts stand nearly upright, the posts and end braces are vertical.
  */
-const DECK_Y = 640;                                     // the deck rests on the quay blocks of the backdrop
+const DECK_Y = 672;                                     // where frames stand on the steel deck's road plates
 const SPAN = Object.freeze({ left: 220, right: 1700 });
-const APEX = Object.freeze([960, 290]);
+const APEX = Object.freeze([960, 332]);   // rise 340: flatter makes the scalene panel look right-angled
 const RISE = DECK_Y - APEX[1];
 const HALF_BASE = RISE / Math.sqrt(3);                  // half of the equilateral A-D1-D2's base
 const CROWN = 0.24;                                     // crown bar, as a share of the rise (PDF p9)
@@ -2081,9 +2276,7 @@ const BRIDGE_GEOMETRY = Object.freeze({
   apex: APEX,
   spanLeft: SPAN.left,
   spanRight: SPAN.right,
-  pillarXs: Object.freeze([SPAN.left + 70, APEX[0], SPAN.right - 70]),
-  pillarTopY: 676,
-  pillarWidth: 176,
+
   nodes: NODES,
   stages: withSockets([
     {
@@ -2665,77 +2858,62 @@ function createTriangleController({ platformEl, placedLayerEl }) {
 });
 __define('js/gameplay/bridge-controller.js', function () {
 const { BRIDGE_GEOMETRY, stageById, memberId } = __require('js/data/bridge-geometry.js');
-const { WATER_LINE_Y, DECK_LAYOUT } = __require('js/data/layout.js');
+const { WATER_LINE_Y, DECK_LAYOUT, PIER_LAYOUT } = __require('js/data/layout.js');
 const { wait, tween, easings, playClassAnimation, prefersReducedMotion } = __require('js/core/motion.js');
 const { createTube, moveTube, createGusset, gussetDefs, svgElement, TUBE_PALETTES } = __require('js/gameplay/svg-tubes.js');
-const PILLAR_IMAGE = { src: 'assets/images/bridge/pillar-brick.webp', width: 268, height: 321 };
 const MEMBER_WIDTH = 18;
 const FRAME_TUBE_WIDTH = 16;   // matches the frames on the yard (frame-shapes.js)
 const PANEL_INSET = 11;        // colour plates sit inside the beams, as on PDF p7
 const COVERED_FRACTION = 0.5;  // a plate mostly hidden behind later plates fades, so no leftover region reads as a triangle
 const HOTSPOT_MARKUP = '<span class="hotspot__pad"></span><span class="hotspot__column"></span><span class="hotspot__sparks"><i></i><i></i><i></i><i></i></span><span class="hotspot__chevrons"><i></i><i></i></span>';
 
-/* ---------- Pillars standing in the canal ---------- */
+/* ---------- Piers: short brick piers standing in the canal under the deck ---------- */
 function buildPillar(x) {
-  const { pillarTopY, pillarWidth } = BRIDGE_GEOMETRY;
-  const height = Math.round((pillarWidth * PILLAR_IMAGE.height) / PILLAR_IMAGE.width);
+  const { src, artWidth, artHeight, width, topY, waterY } = PIER_LAYOUT;
+  const height = (width * artHeight) / artWidth;
   const unit = document.createElement('div');
   unit.className = 'pillar-unit';
-  unit.style.left = `${x - pillarWidth / 2}px`;
-  unit.style.top = `${pillarTopY}px`;
-  unit.style.width = `${pillarWidth}px`;
-  unit.style.height = `${height}px`;
-  unit.style.setProperty('--wet', `${WATER_LINE_Y - pillarTopY}px`);
+  Object.assign(unit.style, { left: `${x - width / 2}px`, top: `${topY}px`, width: `${width}px`, height: `${height.toFixed(1)}px` });
+  unit.style.setProperty('--wet', `${waterY - topY}px`);
   unit.innerHTML = `
-    <img class="pillar__reflection motion-ambient" src="${PILLAR_IMAGE.src}" alt="" draggable="false">
-    <img class="pillar__body" src="${PILLAR_IMAGE.src}" alt="" draggable="false">
-`;
+    <img class="pillar__reflection motion-ambient" src="${src}" alt="" draggable="false">
+    <img class="pillar__body" src="${src}" alt="" draggable="false">`;
   return unit;
 }
 
-/* ---------- Deck: a bare riveted steel girder from quay to quay while the bridge is being built ----------
-   The road surface and the safety railings are laid on it only when the bridge is complete (finishDeck). */
+/* ---------- Deck: the low road deck at walkway level (sliced supplied art) ----------
+   Grey arches under the yellow beam springing from the piers, a yellow
+   bracket over each pier, and the end caps resting on the quay walkways so the road runs on from both banks. */
 function buildDeck(bridgeEl) {
-  const { x1, x2, top, height, railHeight } = DECK_LAYOUT;
-  const width = x2 - x1;
-  const above = railHeight + 6;                  // room above the girder for the finished road and railings
-  const g = above;                               // girder top, in deck coordinates
-  const bottom = g + height;
-  const stiffeners = [];
-  for (let x = 46; x < width - 30; x += 104) stiffeners.push(x);
-  const posts = [];
-  for (let x = 18; x <= width - 18; x += 58) posts.push(x);
-  const bearings = BRIDGE_GEOMETRY.pillarXs.map((px) => px - x1);
-  const rivetRow = (y) => `
-    <line x1="14" y1="${y}" x2="${width - 14}" y2="${y}" class="deck__rivets"/>
-    <line x1="14" y1="${y - 0.9}" x2="${width - 14}" y2="${y - 0.9}" class="deck__rivets deck__rivets--shine"/>`;
+  const { x1, x2, scale: k, art, left, tile, right, bracket } = DECK_LAYOUT;
+  const top = BRIDGE_GEOMETRY.deckY - (art.stand - art.top) * k;          // road plates' top edge
+  const beamBottom = top + (art.beamBottom - art.top) * k;
+  const capBottom = top + (art.capBottom - art.top) * k;
+  const leftW = left.width * k;
+  const rightW = right.width * k;
+  const middle = x2 - x1 - leftW - rightW;
+  const tiles = Math.max(1, Math.round(middle / (tile.width * k)));
+  const tileW = middle / tiles;
+  const spring = PIER_LAYOUT.topY + 3;
+  const stops = [[x1 + 30, capBottom - 3], ...PIER_LAYOUT.xs.map((x) => [x, spring]), [x2 - 30, capBottom - 3]];
+  const crown = beamBottom + 3;
+  const arches = stops.slice(1).map(([bx, by], i) => {
+    const [ax, ay] = stops[i];
+    const cy = 2 * crown - (ay + by) / 2;
+    return `M ${ax} ${ay} Q ${(ax + bx) / 2} ${cy.toFixed(1)} ${bx} ${by}`;
+  });
+  const bw = bracket.width * bracket.scale;
+  const bh = bracket.height * bracket.scale;
   const deck = document.createElement('div');
   deck.className = 'deck';
-  Object.assign(deck.style, { left: `${x1}px`, top: `${top - above}px`, width: `${width}px`, height: `${height + above}px` });
   deck.innerHTML = `
-    <span class="deck__shadow"></span>
-    <svg class="deck__svg" width="${width}" height="${height + above}" viewBox="0 0 ${width} ${height + above}" aria-hidden="true">
-      <defs>
-        <linearGradient id="deck-steel" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stop-color="#b9c2cd"/><stop offset="0.35" stop-color="#8c96a3"/><stop offset="0.72" stop-color="#6b7583"/><stop offset="1" stop-color="#4a525e"/>
-        </linearGradient>
-      </defs>
-      <g class="deck__finish">
-        <g class="deck__rails">
-          ${posts.map((x) => `<line x1="${x}" y1="${g - railHeight + 3}" x2="${x}" y2="${g - 2}" class="deck-rail__post"/>`).join('')}
-          <line x1="8" y1="${g - railHeight + 3}" x2="${width - 8}" y2="${g - railHeight + 3}" class="deck-rail"/>
-          <line x1="8" y1="${g - railHeight / 2}" x2="${width - 8}" y2="${g - railHeight / 2}" class="deck-rail deck-rail--mid"/>
-        </g>
-        <rect class="deck__road" x="2" y="${g - 7}" width="${width - 4}" height="9" rx="2"/>
-      </g>
-      <rect class="deck__web" x="1.5" y="${g}" width="${width - 3}" height="${height}" rx="3"/>
-      <rect class="deck__flange" x="3" y="${g + 1.5}" width="${width - 6}" height="5.5"/>
-      <rect class="deck__flange deck__flange--low" x="3" y="${bottom - 8}" width="${width - 6}" height="6.5"/>
-      ${stiffeners.map((x) => `<rect class="deck__stiffener" x="${x - 3}" y="${g + 7}" width="6" height="${height - 15}" rx="1"/>`).join('')}
-      ${rivetRow(g + 11)}
-      ${rivetRow(bottom - 13)}
-      ${bearings.map((x) => `<path class="deck-girder__bearing" d="M ${x - 34} ${bottom} h 68 l -8 7 h -52 z"/>`).join('')}
-    </svg>`;
+    <svg class="deck__arches" viewBox="0 0 1920 1080" aria-hidden="true">
+      ${arches.map((d) => `<path d="${d}" class="deck__arch-rim"/><path d="${d}" class="deck__arch"/><path d="${d}" class="deck__arch-light" transform="translate(0 -2.5)"/>`).join('')}
+    </svg>
+    ${PIER_LAYOUT.xs.map((x) => `<img class="deck__bracket" src="${bracket.src}" alt="" draggable="false" style="left:${(x - bw / 2).toFixed(1)}px;top:${(beamBottom - 3).toFixed(1)}px;width:${bw.toFixed(1)}px;height:${bh.toFixed(1)}px">`).join('')}
+    <img class="deck__piece" src="${left.src}" alt="" draggable="false" style="left:${x1}px;top:${top.toFixed(1)}px;width:${leftW.toFixed(1)}px;height:${(left.height * k).toFixed(1)}px">
+    <span class="deck__plates" style="left:${(x1 + leftW).toFixed(1)}px;top:${top.toFixed(1)}px;width:${middle.toFixed(1)}px;height:${(tile.height * k).toFixed(1)}px;background-image:url('${tile.src}');background-size:${tileW.toFixed(2)}px 100%"></span>
+    <img class="deck__piece" src="${right.src}" alt="" draggable="false" style="left:${(x2 - rightW).toFixed(1)}px;top:${top.toFixed(1)}px;width:${rightW.toFixed(1)}px;height:${(right.height * k).toFixed(1)}px">`;
   bridgeEl.appendChild(deck);
   return deck;
 }
@@ -2835,7 +3013,7 @@ function centroid(points) {
  */
 function createBridgeController({ bridgeEl, fxEl, fx, audio }) {
   const { nodes, stages } = BRIDGE_GEOMETRY;
-  const pillars = BRIDGE_GEOMETRY.pillarXs.map((x) => {
+  const pillars = PIER_LAYOUT.xs.map((x) => {
     const unit = buildPillar(x);
     bridgeEl.appendChild(unit);
     return unit;
@@ -3100,7 +3278,6 @@ function createBridgeController({ bridgeEl, fxEl, fx, audio }) {
     flightLayer.replaceChildren();
     builtStages.length = 0;
     socket.classList.remove('is-visible', 'is-aligned', 'is-armed');
-    deck.classList.remove('is-finished');
   }
 
   /** warning wobble → growing sway → sections fall → splash → reset (PDF p10). */
@@ -3185,14 +3362,6 @@ function createBridgeController({ bridgeEl, fxEl, fx, audio }) {
       demoSpots.forEach((spot) => spot.classList.remove('is-visible'));
     },
     completeSettle: () => playClassAnimation(root, 'is-proud', 1100),
-    /** The finishing touch once every frame is in: the road rolls out along the girder and the railings go up. */
-    async finishDeck({ signal } = {}) {
-      deck.classList.add('is-finished');
-      audio.play('bolt');
-      await wait(prefersReducedMotion() ? 0 : 650, signal);
-      audio.play('clank', { variant: 1 });
-      await wait(prefersReducedMotion() ? 0 : 500, signal);
-    },
     impactPillars: () => pillars.forEach((pillar) => playClassAnimation(pillar, 'is-impact', 500)),
   };
 }
@@ -3249,7 +3418,19 @@ const READING_MS_PER_CHARACTER = 42;
  * Types `text` into `element` over `totalMs`. A hidden full-length copy reserves the final size so the
  * card never grows while typing, and screen readers get the whole line at once.
  */
-function typeText(element, text, totalMs, signal) {
+const escapeHtml = (value) => value.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+/** The first `count` characters of `text`, with the `focus` phrase (if any) wrapped in a coloured span. */
+function markup(text, count, focus) {
+  const start = focus ? text.indexOf(focus) : -1;
+  if (start < 0) return escapeHtml(text.slice(0, count));
+  const end = start + focus.length;
+  const part = (a, b) => escapeHtml(text.slice(a, Math.max(a, Math.min(b, count))));
+  const marked = part(start, end);
+  return part(0, start) + (marked ? `<span class="instruction-focus">${marked}</span>` : '') + part(end, text.length);
+}
+
+function typeText(element, text, totalMs, signal, focus = null) {
   element.textContent = '';
   const screenReaderCopy = document.createElement('span');
   screenReaderCopy.className = 'visually-hidden';
@@ -3259,13 +3440,16 @@ function typeText(element, text, totalMs, signal) {
   line.setAttribute('aria-hidden', 'true');
   const ghost = document.createElement('span');
   ghost.className = 'typed-line__ghost';
-  ghost.textContent = text;
+  ghost.innerHTML = markup(text, text.length, focus);
   const visible = document.createElement('span');
   visible.className = 'typed-line__text';
   line.append(ghost, visible);
   element.append(screenReaderCopy, line);
+  const show = (count) => {
+    visible.innerHTML = markup(text, count, focus);
+  };
   if (prefersReducedMotion() || totalMs <= 0) {
-    visible.textContent = text;
+    show(text.length);
     return Promise.resolve();
   }
   return new Promise((resolve) => {
@@ -3273,13 +3457,13 @@ function typeText(element, text, totalMs, signal) {
     let frame = 0;
     const finish = () => {
       cancelAnimationFrame(frame);
-      visible.textContent = text;
+      show(text.length);
       resolve();
     };
     signal?.addEventListener('abort', finish, { once: true });
     const step = (now) => {
       const progress = Math.min(1, (now - start) / totalMs);
-      visible.textContent = text.slice(0, Math.ceil(text.length * progress));
+      show(Math.ceil(text.length * progress));
       if (progress < 1) frame = requestAnimationFrame(step);
       else finish();
     };
@@ -3292,16 +3476,16 @@ function createFeedbackController({ hudEl, overlaysEl, voice, builder }) {
   const instructionEl = document.getElementById('instruction');
   let bubbleEl = null;
 
-  function speakAndType(element, text, { speaker }) {
+  function speakAndType(element, text, { speaker, focus = null }) {
     const spoken = voice.say(text, { speaker });
     const typingMs = spoken.spoke ? Math.max(300, (spoken.seconds - 0.35) * 1000) : Math.min(2600, text.length * READING_MS_PER_CHARACTER);
-    typeText(element, text, typingMs);
+    typeText(element, text, typingMs, undefined, focus);
     return spoken.finished;
   }
 
   return {
     /** Shows the task line; the narrator reads it and the words appear at the voice's pace. */
-    async setInstruction(text, { swap = false, complete = false } = {}) {
+    async setInstruction(text, { swap = false, complete = false, focus = null } = {}) {
       const wasHidden = instructionEl.hidden;
       instructionEl.hidden = false;
       instructionEl.classList.toggle('is-complete', complete);
@@ -3310,12 +3494,12 @@ function createFeedbackController({ hudEl, overlaysEl, voice, builder }) {
         void instructionEl.offsetWidth;
         instructionEl.classList.add('is-swapping');
         await wait(prefersReducedMotion() ? 0 : 190);
-        const finished = speakAndType(instructionEl, text, { speaker: 'narrator' });
+        const finished = speakAndType(instructionEl, text, { speaker: 'narrator', focus });
         await wait(prefersReducedMotion() ? 0 : 340);
         instructionEl.classList.remove('is-swapping');
         return finished;
       }
-      const finished = speakAndType(instructionEl, text, { speaker: 'narrator' });
+      const finished = speakAndType(instructionEl, text, { speaker: 'narrator', focus });
       playClassAnimation(instructionEl, 'is-entering', 720);
       return finished;
     },
@@ -3610,7 +3794,7 @@ function createLevelEngine({ gameState, crane, claw, triangles, bridge, placemen
     currentGroup = level.optionGroup;
     camera.reset(900, scope.signal).catch(() => {});
     await triangles.showPlatform();
-    feedback.setInstruction(level.instruction, { swap: !firstEntry });
+    feedback.setInstruction(level.instruction, { swap: !firstEntry, focus: level.focus });
     feedback.pushInstruction();
     await triangles.showOptions(OPTION_GROUPS[level.optionGroup], { refreshAll: groupChanged });
     bridge.showSocket(level.bridgeStage);
@@ -3640,7 +3824,7 @@ function createLevelEngine({ gameState, crane, claw, triangles, bridge, placemen
         triangles.clearFocus();
       }
       triangles.hidePlatform();
-      camera.focus({ x: 960, y: 460, scale: 1.2, pull: 0.6, duration: 1100, signal: scope.signal }).catch(() => {});
+      camera.focus({ x: 960, y: 520, scale: 1.2, pull: 0.6, duration: 1100, signal: scope.signal }).catch(() => {});
     } catch (error) {
       if (!isAbortError(error)) throw error;
     } finally {
@@ -3695,7 +3879,7 @@ function createLevelEngine({ gameState, crane, claw, triangles, bridge, placemen
     claw.relief();
     await crane.liftAway({ signal: scope.signal });
     crane.parkAway({ signal: scope.signal }).catch(() => {});
-    await camera.focus({ x: 960, y: 480, scale: 1.1, pull: 0.55, duration: 800, signal: scope.signal });
+    await camera.focus({ x: 960, y: 540, scale: 1.1, pull: 0.55, duration: 800, signal: scope.signal });
     triangles.release(option);
     await bridge.absorbFrame(option, level.bridgeStage, scope.signal);
     await bridge.constructStage(level.bridgeStage, { signal: scope.signal });
@@ -4265,6 +4449,7 @@ __define('js/screens/title-screen.js', function () {
 const { COPY } = __require('js/data/copy.js');
 const { playClassAnimation, createSequenceScope, prefersReducedMotion, wait } = __require('js/core/motion.js');
 const { createDroneIntro } = __require('js/screens/drone-intro.js');
+const { DRONE_INTRO } = __require('js/config.js');
 /** Cartoon letters, each in its own span so they can hop one after another (celebration headline). */
 function cartoonLetters(text, startIndex = 0) {
   return [...text].map((char, offset) => (char === ' '
@@ -4329,27 +4514,36 @@ function createTitleScreen({ els, audio, voice, camera, builder, screenManager }
   return {
     async enter() {
       builder.show(); // the operator is already waiting in the cab
-      await camera.fly([prefersReducedMotion() ? FULL_SITE : LANDING], { duration: 0 });
-      flight = createDroneIntro(els.stage, {
+      const withFlight = DRONE_INTRO && !prefersReducedMotion();
+      await camera.fly([withFlight ? LANDING : FULL_SITE], { duration: 0 });
+      flight = withFlight ? createDroneIntro(els.stage, {
         before: els.hud,
         onReveal: () => {
           camera.fly([LANDING, FULL_SITE], { duration: 1500, signal: scope.signal }).catch(() => {});
           setTimeout(() => builder.cheer(), 500);
         },
-      });
+      }) : null;
       card = buildTitleCard();
       card.classList.add('is-entering');
       els.overlays.appendChild(card);
       button = document.createElement('button');
       button.type = 'button';
       button.className = 'start-button';
-      button.textContent = COPY.title.start;
+      button.setAttribute('aria-label', COPY.title.start);
+      // Chunky play disc: a light sweeping round a crisp ring, and a pulse rippling out from the rim.
+      button.innerHTML = `
+        <span class="start-button__glow"></span>
+        <span class="start-button__ring"></span>
+        <span class="start-button__face">
+          <svg class="start-button__icon" viewBox="0 0 100 100" aria-hidden="true"><polygon points="34,22 80,50 34,78"/></svg>
+        </span>`;
       let pressed = false;
       button.addEventListener('click', async () => {
         if (pressed) return;
         pressed = true;
         audio.unlock();
         audio.play('uiTap');
+        audio.startMusic();
         voice.unlock();
         voice.prefetch();
         await Promise.all([playClassAnimation(button, 'is-leaving', 420), playClassAnimation(card, 'is-leaving', 460)]);
@@ -4357,7 +4551,7 @@ function createTitleScreen({ els, audio, voice, camera, builder, screenManager }
         card?.remove();
         button = null;
         card = null;
-        await fly();
+        if (flight) await fly();
         screenManager.go('meet-builder');
       });
       button.classList.add('is-entering');
@@ -4380,33 +4574,9 @@ function createTitleScreen({ els, audio, voice, camera, builder, screenManager }
 }
   return { cartoonLetters, createTitleScreen };
 });
-__define('js/screens/screen-helpers.js', function () {
-const { playClassAnimation } = __require('js/core/motion.js');
-/** The one "next" button style every intro screen shares (bottom-right action corner). */
-function createCtaButton({ overlaysEl, audio, label, onPress }) {
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.className = 'cta-button overlay-cta';
-  button.textContent = label;
-  let pressed = false;
-  button.addEventListener('click', () => {
-    if (pressed) return;
-    pressed = true;
-    audio.unlock();
-    audio.play('uiTap');
-    onPress();
-  });
-  overlaysEl.appendChild(button);
-  playClassAnimation(button, 'is-entering', 600);
-  button.focus({ preventScroll: true });
-  return button;
-}
-  return { createCtaButton };
-});
 __define('js/screens/story-screens.js', function () {
 const { COPY } = __require('js/data/copy.js');
 const { createSequenceScope, wait } = __require('js/core/motion.js');
-const { createCtaButton } = __require('js/screens/screen-helpers.js');
 const CAB_ZOOM = 2.2;
 
 /** Zoom into the crane cab, where the beaver operator sits, and return where his bubble should go. */
@@ -4419,13 +4589,13 @@ async function zoomToCab({ camera, builder, signal, duration = 1300 }) {
 }
 
 /** G0.1 Meet the Builder: the crane rolls in, then we meet its operator in the cab. */
-function createMeetBuilderScreen({ els, audio, camera, crane, claw, triangles, feedback, builder, screenManager }) {
+function createMeetBuilderScreen({ camera, crane, claw, triangles, feedback, builder, screenManager }) {
   const scope = createSequenceScope();
-  let cta = null;
   const copy = COPY.screens.meetBuilder;
 
-  return {
-    async enter() {
+  /** Runs after the screen has entered, so it can move the story on by itself (no button). */
+  async function run() {
+    try {
       camera.reset(0);
       triangles.showIntroPile();
       triangles.enterPlatform();
@@ -4438,23 +4608,31 @@ function createMeetBuilderScreen({ els, audio, camera, crane, claw, triangles, f
       const bubble = feedback.showBubble(copy.line, { anchor });
       await bubble.finished;
       builder.worry();
-      cta = createCtaButton({ overlaysEl: els.overlays, audio, label: copy.cta, onPress: () => screenManager.go('help-needed') });
+      // No button: once the line has been read, the story moves on by itself.
+      await wait(1300, scope.signal);
+      screenManager.go('help-needed');
+    } catch {
+      /* the screen was left early */
+    }
+  }
+
+  return {
+    async enter() {
+      run();
     },
     async exit() {
-      cta?.remove();
-      cta = null;
+      scope.cancel();
     },
   };
 }
 
 /** G0.2 Your Help Is Needed: the operator asks, then the camera shows the frames he means. */
-function createHelpNeededScreen({ els, audio, camera, triangles, feedback, builder, screenManager }) {
+function createHelpNeededScreen({ camera, triangles, feedback, builder, screenManager }) {
   const scope = createSequenceScope();
-  let cta = null;
   const copy = COPY.screens.helpNeeded;
 
-  return {
-    async enter() {
+  async function run() {
+    try {
       const anchor = await zoomToCab({ camera, builder, signal: scope.signal, duration: 600 }).catch(() => null);
       const bubble = feedback.showBubble(copy.line, { anchor });
       await bubble.finished;
@@ -4462,11 +4640,19 @@ function createHelpNeededScreen({ els, audio, camera, triangles, feedback, build
       await feedback.hideBubble();
       await camera.focus({ x: 960, y: 880, scale: 1.12, pull: 0.5, duration: 1300, signal: scope.signal }).catch(() => {});
       await triangles.focusPulseSequence(scope.signal).catch(() => {});
-      cta = createCtaButton({ overlaysEl: els.overlays, audio, label: copy.cta, onPress: () => screenManager.go('how-to-play') });
+      await wait(500, scope.signal);
+      screenManager.go('how-to-play');
+    } catch {
+      /* the screen was left early */
+    }
+  }
+
+  return {
+    async enter() {
+      run();
     },
     async exit() {
-      cta?.remove();
-      cta = null;
+      scope.cancel();
       await feedback.hideBubble();
     },
   };
@@ -4480,10 +4666,18 @@ const { BRIDGE_GEOMETRY } = __require('js/data/bridge-geometry.js');
 const DEMO_PILE_INDEX = 3;              // the tall frame in the yard
 const DEMO_TARGET = { x: 960 }; // the middle hotspot (PDF p6 marks spots on the deck)
 
-const STEP_ICONS = [
-  '<span class="howto-arrow howto-arrow--left"></span><span class="howto-arrow howto-arrow--right"></span>',
-  '<img src="assets/images/crane-kit/claw-open.webp" alt="" draggable="false">',
-  '<img src="assets/images/crane-kit/claw-closed.webp" alt="" draggable="false">',
+/** Each step shows the real control it teaches: the joystick, the green PICK button, the orange DROP button. */
+const STEP_CHIPS = [
+  `<span class="howto-chip howto-chip--move">
+     <span class="howto-joy__ring"></span><span class="howto-joy__face"></span>
+     <svg class="howto-joy__arrows" viewBox="0 0 100 100" aria-hidden="true">
+       <polygon class="howto-joy__arrow howto-joy__arrow--left" points="12,50 30,37 30,63"/>
+       <polygon class="howto-joy__arrow howto-joy__arrow--right" points="88,50 70,37 70,63"/>
+     </svg>
+     <span class="howto-joy__knob"></span>
+   </span>`,
+  `<span class="howto-chip howto-chip--pick"><img src="assets/images/crane-kit/claw-open.webp" alt="" draggable="false"></span>`,
+  `<span class="howto-chip howto-chip--drop"><img src="assets/images/crane-kit/claw-closed.webp" alt="" draggable="false"><span class="howto-chip__arrow"></span></span>`,
 ];
 
 /** G0.3 How to Play: each instruction is demonstrated with the real crane and the real controls, input gated. */
@@ -4497,15 +4691,18 @@ function createHowToPlayScreen({ els, voice, camera, crane, triangles, bridge, i
     card.className = 'howto-card';
     card.setAttribute('aria-label', copy.title);
     card.innerHTML = `
-      <p class="howto-card__intro">${copy.intro}</p>
-      <ol class="howto-steps">
-        ${copy.steps.map((step, index) => `
-          <li class="howto-step" data-step="${index}">
-            <span class="howto-step__number">${index + 1}</span>
-            <span class="howto-step__text">${step}</span>
-            <span class="howto-step__icon">${STEP_ICONS[index]}</span>
-          </li>`).join('')}
-      </ol>`;
+      <header class="howto-card__header">${copy.title}</header>
+      <div class="howto-card__body">
+        <p class="howto-card__intro">${copy.intro}</p>
+        <ol class="howto-steps">
+          ${copy.steps.map((step, index) => `
+            <li class="howto-step" data-step="${index}">
+              ${STEP_CHIPS[index]}
+              <span class="howto-step__text">${step}</span>
+              <span class="howto-step__check" aria-hidden="true"></span>
+            </li>`).join('')}
+        </ol>
+      </div>`;
     els.overlays.appendChild(card);
     playClassAnimation(card, 'is-entering', 620);
   }
@@ -4515,6 +4712,19 @@ function createHowToPlayScreen({ els, voice, camera, crane, triangles, bridge, i
       step.classList.toggle('is-active', k === index);
       step.classList.toggle('is-done', k < index);
     });
+  }
+
+  /** The card's own controls copy what the demo is doing with the real ones. */
+  function cardJoystick(direction) {
+    card?.querySelector('.howto-chip--move')?.setAttribute('data-dir', direction ?? '');
+  }
+  function cardPress(kind) {
+    const chip = card?.querySelector(`.howto-chip--${kind}`);
+    if (chip) playClassAnimation(chip, 'is-pressed', 400);
+  }
+  function demoAxis(x) {
+    input.showDemoAxis(x ? { x, y: 0 } : null);
+    cardJoystick(x < 0 ? 'left' : x > 0 ? 'right' : '');
   }
 
   async function sayStep(index) {
@@ -4533,11 +4743,11 @@ function createHowToPlayScreen({ els, voice, camera, crane, triangles, bridge, i
 
   /** Left, then right, in the open middle of the canal (the card sits on the right). */
   async function demoMove() {
-    input.showDemoAxis({ x: -1, y: 0 });
+    demoAxis(-1);
     await crane.glideTo(760, { signal: scope.signal });
-    input.showDemoAxis({ x: 1, y: 0 });
+    demoAxis(1);
     await crane.glideTo(1060, { signal: scope.signal });
-    input.showDemoAxis(null);
+    demoAxis(0);
   }
 
   async function demoPickAndPlace() {
@@ -4545,17 +4755,19 @@ function createHowToPlayScreen({ els, voice, camera, crane, triangles, bridge, i
     if (!item) return;
     const grab = { x: item.homeCenterX - item.width / 2 + item.grabX * item.width, y: item.baseY - item.baseOffset + item.grabY };
     await sayStep(1);
-    input.showDemoAxis({ x: grab.x < crane.position.x ? -1 : 1, y: 0 });
+    demoAxis(grab.x < crane.position.x ? -1 : 1);
     await crane.glideTo(grab.x, { signal: scope.signal });
-    input.showDemoAxis(null);
+    demoAxis(0);
+    cardPress('pick');
     await input.demoPress('pick');
     await crane.pickUp({ ...item, id: 'demo', grabStageX: grab.x, grabStageY: grab.y }, { signal: scope.signal });
     input.setActionState({ mode: 'drop', enabled: false });
     await wait(200, scope.signal);
     await sayStep(2);
-    input.showDemoAxis({ x: DEMO_TARGET.x < crane.position.x ? -1 : 1, y: 0 });
+    demoAxis(DEMO_TARGET.x < crane.position.x ? -1 : 1);
     await crane.glideTo(DEMO_TARGET.x, { signal: scope.signal });
-    input.showDemoAxis(null);
+    demoAxis(0);
+    cardPress('drop');
     await input.demoPress('drop');
     const released = await crane.lowerAndRelease(
       { craneX: DEMO_TARGET.x, gripY: BRIDGE_GEOMETRY.deckY - item.baseOffset + item.grabY },
@@ -4587,7 +4799,7 @@ function createHowToPlayScreen({ els, voice, camera, crane, triangles, bridge, i
       } catch (error) {
         if (!isAbortError(error)) throw error;
       } finally {
-        input.showDemoAxis(null);
+        demoAxis(0);
         input.setActionState({ mode: 'pick', enabled: false });
       }
       highlightStep(copy.steps.length);
@@ -4595,7 +4807,7 @@ function createHowToPlayScreen({ els, voice, camera, crane, triangles, bridge, i
       const footer = document.createElement('p');
       footer.className = 'howto-card__footer';
       footer.textContent = copy.cta;
-      card.appendChild(footer);
+      card.querySelector('.howto-card__body').appendChild(footer);
       playClassAnimation(footer, 'is-entering', 600);
       // Not awaited: this screen finishes entering first, then the line plays and the round begins.
       voice.say(copy.cta, { speaker: 'builder' }).finished
@@ -4636,6 +4848,34 @@ function createGameplayScreen({ els, feedback, triangles, camera, builder, level
   };
 }
   return { createGameplayScreen };
+});
+__define('js/screens/screen-helpers.js', function () {
+const { playClassAnimation } = __require('js/core/motion.js');
+const ICONS = {
+  replay: '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 12a20 20 0 1 1-18.4 12.2" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round"/><path d="M6 14 L17 30 L26 13 Z" fill="currentColor" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/></svg>',
+};
+
+/** Round icon button (no text: `label` is only its accessible name), e.g. replay on the completion screen. */
+function createCtaButton({ overlaysEl, audio, label, icon = 'replay', onPress }) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = `cta-button icon-cta icon-cta--${icon} overlay-cta`;
+  button.setAttribute('aria-label', label);
+  button.innerHTML = ICONS[icon] ?? '';
+  let pressed = false;
+  button.addEventListener('click', () => {
+    if (pressed) return;
+    pressed = true;
+    audio.unlock();
+    audio.play('uiTap');
+    onPress();
+  });
+  overlaysEl.appendChild(button);
+  playClassAnimation(button, 'is-entering', 600);
+  button.focus({ preventScroll: true });
+  return button;
+}
+  return { createCtaButton };
 });
 __define('js/screens/completion-screen.js', function () {
 const { COPY } = __require('js/data/copy.js');
@@ -4687,8 +4927,7 @@ function createCompletionScreen({ els, audio, voice, camera, crane, claw, bridge
       const banner = feedback.setInstruction(copy.banner, { swap: true, complete: true });
       claw.relief();
       crane.parkAway({ signal: scope.signal }).catch(() => {});
-      await camera.focus({ x: 960, y: 470, scale: 1.12, pull: 0.6, duration: 1200, signal: scope.signal });
-      await bridge.finishDeck({ signal: scope.signal });
+      await camera.focus({ x: 960, y: 520, scale: 1.12, pull: 0.6, duration: 1200, signal: scope.signal });
       await bridge.completeSettle();
       audio.play('ding');
       await banner;
@@ -4743,7 +4982,7 @@ function createCompletionScreen({ els, audio, voice, camera, crane, claw, bridge
   return { createCompletionScreen };
 });
 __define('js/app.js', function () {
-const { DEBUG_MODE } = __require('js/config.js');
+const { DEBUG_MODE, DRONE_INTRO } = __require('js/config.js');
 const { STAGE } = __require('js/data/layout.js');
 const { LEVELS } = __require('js/data/levels.js');
 const { createGameState } = __require('js/core/game-state.js');
@@ -4776,7 +5015,11 @@ const { createCompletionScreen } = __require('js/screens/completion-screen.js');
 // fallback through <picture>), so boot waits on that element instead of fetching it a second time.
 const CRITICAL_IMAGES = [
   'assets/images/bridge/yard-platform.webp',
-  'assets/images/bridge/pillar-brick.webp',
+  'assets/images/bridge/pier.webp',
+  'assets/images/bridge/deck-left.webp',
+  'assets/images/bridge/deck-tile.webp',
+  'assets/images/bridge/deck-right.webp',
+  'assets/images/bridge/deck-bracket.webp',
   CRANE_RIG.tower.topSrc,
   CRANE_RIG.tower.mastSrc,
   CRANE_RIG.tower.baseSrc,
@@ -4793,7 +5036,7 @@ const CRITICAL_IMAGES = [
   'assets/images/fx/sparkle-big.webp',
   'assets/images/fx/ripple-1.webp',
   'assets/images/fx/ripple-2.webp',
-  ...DRONE_SHOTS.map((shot) => shot.src),
+  ...(DRONE_INTRO ? DRONE_SHOTS.map((shot) => shot.src) : []),
 ].map((src) => ({ key: src, src }));
 
 function queryElements() {
@@ -4863,7 +5106,7 @@ async function boot() {
   const audio = createAudioManager();
   const voice = createVoiceManager({ audio });
   const loop = createGameLoop();
-  const camera = createCameraController({ worldEl: els.world, shakeEl: els.shake, screenFixedEl: document.getElementById('screen-fixed') });
+  const camera = createCameraController({ worldEl: els.world, shakeEl: els.shake });
   const input = createInputManager({ controlsEl: els.controls, audio });
   const fx = createConstructionFx({ fxLayer: els.fx });
   const claw = createClawController({ clawEl: els.crane.querySelector('.claw') });
@@ -4891,6 +5134,7 @@ async function boot() {
   loop.add(camera.update);
   loop.start();
   document.addEventListener('visibilitychange', () => {
+    audio.setMusicPaused(document.hidden);
     if (document.hidden) {
       input.releaseAll();
       audio.stopAllLoops();

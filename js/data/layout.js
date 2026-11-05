@@ -73,5 +73,25 @@ export const CONTROLS_LAYOUT = Object.freeze({
 
 export const WATER_LINE_Y = 745;   // where the backdrop's quay blocks meet the water
 
-/** Road deck from quay to quay (the environment sheet's stone ledge and blue railing, tiled). */
-export const DECK_LAYOUT = Object.freeze({ x1: 160, x2: 1820, top: 640, height: 40, railHeight: 32 });
+/**
+ * The low road deck at walkway level (supplied deck art, sliced): left end cap, repeated road plates,
+ * right end cap, all at `scale`. Its end caps rest on the quay walkways, so the road runs straight on
+ * from both banks; grey arches under its yellow beam spring from three piers in the canal.
+ * Art rows (supplied deck art): road top 316, frame-standing line 370, beam bottom 431, cap bottom 470.
+ */
+export const DECK_LAYOUT = Object.freeze({
+  x1: 168, x2: 1752,
+  scale: 0.37,
+  art: Object.freeze({ top: 316, stand: 370, beamBottom: 431, capBottom: 470 }),
+  left: Object.freeze({ src: 'assets/images/bridge/deck-left.png', width: 351, height: 154 }),
+  tile: Object.freeze({ src: 'assets/images/bridge/deck-tile.png', width: 224, height: 115 }),
+  right: Object.freeze({ src: 'assets/images/bridge/deck-right.png', width: 347, height: 154 }),
+  bracket: Object.freeze({ src: 'assets/images/bridge/deck-bracket.png', width: 180, height: 108, scale: 0.36 }),
+});
+
+/** The three short brick piers in the canal (cap + bricks cut from the supplied bridge reference). */
+export const PIER_LAYOUT = Object.freeze({
+  src: 'assets/images/bridge/pier.png', artWidth: 292, artHeight: 154,
+  xs: Object.freeze([345, 960, 1575]), width: 118, topY: 724,
+  waterY: 796,          // where the bricks start to disappear into the canal
+});

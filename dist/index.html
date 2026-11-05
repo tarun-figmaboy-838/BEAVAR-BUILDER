@@ -23,10 +23,6 @@
           <div id="placed" class="placed-layer"></div>
           <div id="focus-dim" class="focus-dim" aria-hidden="true"></div>
           <div id="platform" class="platform"></div>
-          <!-- Fixed on screen while the camera moves, but behind the crane: the claw passes in front of the task card. -->
-          <div id="screen-fixed" class="screen-fixed">
-            <div id="instruction" class="instruction-banner" role="status" aria-live="polite" hidden></div>
-          </div>
           <div id="crane" class="crane"></div>
           <div id="fx" class="fx-layer" aria-hidden="true"></div>
         </div>
@@ -34,6 +30,8 @@
 
       <!-- HUD: fixed to the stage, never moved by the camera. -->
       <div id="hud" class="hud">
+        <!-- The task card stays fixed and on top while the camera zooms (nothing in the scene passes over it). -->
+        <div id="instruction" class="instruction-banner" role="status" aria-live="polite" hidden></div>
         <button id="mute" class="icon-button mute-button" type="button" aria-label="Mute sound" aria-pressed="false"></button>
       </div>
 

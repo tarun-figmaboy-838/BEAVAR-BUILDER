@@ -22,11 +22,11 @@ writes `dist/`, the compressed copy to put online (about 2.8 MB instead of about
 - Each correct frame is drawn in code as an exact smaller copy of the bridge panel it fits (same shape and orientation), so after the drop it only grows in place. Frames are riveted steel girders like the bridge's own members, without notation marks (`SHOW_PDF_MARKS` in `js/data/triangles.js` turns the PDF's tick marks and angle marks back on). When a frame fits, each corner is welded in with a flash, a shockwave ring and flying sparks.
 - **Action button (bottom-right):** reads PICK when the claw is empty and flips to DROP while a frame is carried. It lights up only when it can be used. Space presses it.
 - Frames and the glowing spot are not tappable: the crane is driven only with the joystick and the action button.
-- The ♪ button mutes all sound.
+- The ♪ button mutes all sound, music included. The background music is a cheerful looping tune synthesised in `js/core/audio-manager.js` (no music file ships); it starts with the Start tap, sits under the narration and pauses in a hidden tab.
 
 ## Flow (from the PDF)
 
-Drone intro (seven aerial shots of the canal town, one continuous flight, tap to skip) → Start → G0.1 Meet the Builder → G0.2 Your Help Is Needed → G0.3 How to Play (the real crane demonstrates move, pick, place) → levels 1–6 → "Excellent work! Our bridge is complete." → BRIDGE BUILT! celebration → Build it again.
+Title (BRIDGE BUILDER, round ▶ Start) → G0.1 Meet the Builder → G0.2 Your Help Is Needed → G0.3 How to Play (the real crane demonstrates move, pick, place) → levels 1–6 → "Excellent work! Our bridge is complete." → BRIDGE BUILT! celebration → ↻ replay. There are no text buttons: the story screens move on by themselves once each line has been read. The drone-flight intro (seven aerial shots, `js/screens/drone-intro.js`) is kept as a draft, switched off with `DRONE_INTRO` in `js/config.js`.
 
 | Level | Instruction (PDF wording) | Frames offered | Correct | What gets built (PDF page) |
 |---|---|---|---|---|

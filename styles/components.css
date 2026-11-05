@@ -1,28 +1,27 @@
-/* ---------- Instruction banner (PDF: light-blue rounded card, top-left) ---------- */
+/* ---------- Instruction panel: simple, high contrast, the key words in the highlight colour ---------- */
 .instruction-banner {
   position: absolute;
   left: 236px;            /* right of the crane cab */
   top: 138px;             /* just under the crane's jib */
-  min-width: 760px;
-  max-width: 1250px;
-  min-height: 82px;
   display: flex;
   align-items: center;
-  padding: 14px 32px;
-  border-radius: var(--radius-m);
-  background: var(--color-sky-card);
-  border: 4px solid #ffffff;
-  color: var(--color-ink);
+  padding: 16px 34px 18px;
+  border-radius: 20px;
+  background: #0f2d4d;
+  border: 4px solid #fff;
+  color: #fff;
   font-family: var(--font-display);
-  font-size: 32px;
-  line-height: 1.25;
+  font-size: 36px;
+  line-height: 1.2;
   white-space: nowrap;
-  box-shadow: 0 8px 0 rgba(15, 45, 77, 0.25), var(--shadow-soft);
+  box-shadow: 0 7px 0 rgba(6, 24, 48, 0.35), 0 14px 24px rgba(6, 24, 48, 0.3);
   transform-origin: left top;
+  pointer-events: none;
 }
+.instruction-focus { color: #ffd23f; }
 .instruction-banner.is-entering { animation: banner-enter 620ms var(--ease-out) both; }
 .instruction-banner.is-swapping { animation: banner-swap 520ms var(--ease-out) both; }
-.instruction-banner.is-complete { background: #d9f3dc; }
+.instruction-banner.is-complete { background: #1f7a3f; }
 .instruction-banner.is-pushed { animation: banner-push 520ms var(--ease-out) 1; }
 
 /* ---------- Mute button ---------- */
@@ -78,62 +77,79 @@
 .speech-bubble--cab { max-width: 640px; transform-origin: left top; }
 .speech-bubble--cab::after { left: -16px; top: 34px; bottom: auto; }
 
-/* ---------- How to play card (PDF: G0.3) ---------- */
+/* ---------- How to play card (PDF: G0.3): clean card, a title tab, one row per control ---------- */
 .howto-card {
   position: absolute;
-  right: 50px;
-  top: 250px;
-  width: 560px;
-  padding: 26px 28px 24px;
-  border-radius: 22px;
+  right: 44px;
+  top: 178px;
+  width: 580px;
+  padding: 44px 24px 20px;
+  border-radius: 28px;
   background: var(--color-card);
-  border: 4px solid #fff;
+  border: 5px solid #fff;
   box-shadow: 0 8px 0 rgba(15, 45, 77, 0.2), var(--shadow-card);
   color: var(--color-navy);
 }
 .howto-card.is-entering { animation: bubble-enter 520ms var(--ease-back) both; }
 .howto-card.is-leaving { animation: card-leave-right 420ms var(--ease-in) forwards; }
+.howto-card__header {
+  position: absolute; left: 50%; top: -28px; transform: translateX(-50%);
+  padding: 8px 30px 10px; border-radius: 999px;
+  background: var(--color-navy); border: 4px solid #fff; color: #fff;
+  font-family: var(--font-display); font-size: 28px; letter-spacing: 2px; text-transform: uppercase; white-space: nowrap;
+  box-shadow: 0 5px 0 rgba(15, 45, 77, 0.3);
+}
 .howto-card__intro {
-  margin: 0 0 18px;
-  text-align: center;
-  font-family: var(--font-display);
-  font-size: 28px;
-  line-height: 1.3;
+  margin: 0 10px 16px; text-align: center;
+  font-family: var(--font-display); font-size: 26px; line-height: 1.25;
 }
-.howto-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.howto-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
 .howto-step {
-  display: flex; align-items: center; gap: 16px;
-  padding: 10px 14px;
-  border-radius: 14px;
-  font-size: 25px;
-  font-weight: 700;
-  transition: background var(--t-fast), transform var(--t-fast) var(--ease-out);
-}
-.howto-step__number {
-  flex: none;
-  width: 44px; height: 44px; border-radius: 50%;
-  display: grid; place-items: center;
-  background: var(--color-navy); color: #fff;
-  font-family: var(--font-display); font-size: 22px;
-  transition: background var(--t-fast);
+  display: flex; align-items: center; gap: 18px;
+  padding: 7px 14px 7px 8px; border-radius: 20px;
+  background: #fff; border: 3px solid #ece3d2;
+  font-family: var(--font-display); font-size: 27px;
+  opacity: 0.6;
+  transition: opacity var(--t-fast), background var(--t-fast), border-color var(--t-fast), transform var(--t-fast) var(--ease-out);
 }
 .howto-step__text { flex: 1; }
-.howto-step__icon { flex: none; display: flex; align-items: center; gap: 8px; min-width: 70px; justify-content: flex-end; }
-.howto-step__icon img { height: 46px; width: auto; }
-.howto-arrow { width: 0; height: 0; border: 12px solid transparent; }
-.howto-arrow--left { border-right: 20px solid var(--color-navy); border-left: 0; }
-.howto-arrow--right { border-left: 20px solid var(--color-navy); border-right: 0; }
-.howto-arrow--down { border-top: 22px solid var(--color-navy); border-bottom: 0; }
-.howto-step.is-active { background: var(--color-sky-card); transform: translateX(6px); }
-.howto-step.is-done .howto-step__number { background: var(--color-green); }
+.howto-step.is-active { opacity: 1; transform: scale(1.02); background: #fff3c4; border-color: #f2b400; }
+.howto-step.is-done { opacity: 1; background: #e5f6e9; border-color: #3bc26a; }
+.howto-step__check {
+  width: 40px; height: 40px; border-radius: 50%; flex: none; position: relative;
+  background: #2fa957; border: 3px solid #fff; box-shadow: 0 3px 0 rgba(0, 0, 0, 0.2);
+  transform: scale(0); opacity: 0;
+}
+.howto-step__check::after {
+  content: ""; position: absolute; left: 11px; top: 5px; width: 10px; height: 18px;
+  border: solid #fff; border-width: 0 5px 5px 0; border-radius: 2px; transform: rotate(40deg);
+}
+.howto-step.is-done .howto-step__check { animation: check-pop 420ms var(--ease-back) forwards; }
+/* The step's control chip: the same look as the real controls */
+.howto-chip { position: relative; flex: none; width: 66px; height: 66px; border-radius: 50%; display: grid; place-items: center; transition: transform 160ms var(--ease-out); }
+.howto-chip.is-pressed { animation: chip-press 380ms var(--ease-out) 1; }
+.howto-chip img { height: 38px; width: auto; filter: brightness(0) invert(1) drop-shadow(0 3px 0 rgba(0, 0, 0, 0.35)); }
+.howto-chip--pick { background: radial-gradient(circle at 38% 28%, #b6f59a 0%, #4fcf48 34%, #22962c 72%, #146b1d 100%); border: 5px solid #fff7d6; box-shadow: 0 6px 0 #0f4f16; }
+.howto-chip--drop { background: radial-gradient(circle at 38% 28%, #ffd59a 0%, #ff9a2e 34%, #f0631c 72%, #b8380d 100%); border: 5px solid #fff7d6; box-shadow: 0 6px 0 #7e2408; }
+.howto-chip__arrow { position: absolute; left: 50%; bottom: 7px; margin-left: -8px; border: 8px solid transparent; border-top: 10px solid #fff; border-bottom: 0; }
+.howto-joy__ring { position: absolute; inset: 0; border-radius: 50%; background: linear-gradient(165deg, #ffd34a 0%, #ffb21a 45%, #f59200 100%); box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.6), 0 5px 0 #a45c00; }
+.howto-joy__face { position: absolute; inset: 7px; border-radius: 50%; background: radial-gradient(circle at 50% 30%, #4c516b, #30334a); }
+.howto-joy__arrows { position: absolute; inset: 0; width: 100%; height: 100%; }
+.howto-joy__arrow { fill: #f3f5fa; transition: fill 120ms; }
+.howto-chip--move[data-dir="left"] .howto-joy__arrow--left, .howto-chip--move[data-dir="right"] .howto-joy__arrow--right { fill: #ffd34a; }
+.howto-joy__knob {
+  position: absolute; left: 50%; top: 50%; width: 30px; height: 30px; margin: -15px 0 0 -15px; border-radius: 50%;
+  background: radial-gradient(circle at 38% 32%, #8fe3ff 0%, #3cb4ff 25%, #1a84f5 55%, #0a44ad 100%);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.45);
+  transition: transform 200ms var(--ease-out);
+}
+.howto-chip--move[data-dir="left"] .howto-joy__knob { transform: translateX(-9px); }
+.howto-chip--move[data-dir="right"] .howto-joy__knob { transform: translateX(9px); }
 .howto-card__footer {
-  margin: 16px 0 0;
-  padding-top: 14px;
-  border-top: 3px dashed rgba(15, 45, 77, 0.18);
-  text-align: center;
-  font-family: var(--font-display);
-  font-size: 28px;
-  color: var(--color-ink);
+  margin: 16px 0 0; padding: 9px 16px 11px; border-radius: 16px;
+  background: linear-gradient(#ffe066, #f2b400); color: #2a1a05; text-align: center;
+  font-family: var(--font-display); font-size: 26px;
+  border: 4px solid #fff; box-shadow: 0 6px 0 #a86f00;
 }
 .howto-card__footer.is-entering { animation: cta-enter 480ms var(--ease-back) both; }
 
@@ -153,6 +169,9 @@
 .cta-button:active, .cta-button.is-pressed { transform: translateY(6px); box-shadow: 0 2px 0 #a86f00, 0 6px 10px rgba(0,0,0,0.25); }
 .cta-button.is-entering { animation: cta-enter 480ms var(--ease-back) both; }
 .overlay-cta { position: absolute; right: 60px; bottom: 60px; }
+/* Icon-only round buttons (no text buttons): the icon says what it does, aria-label names it. */
+.icon-cta { width: 132px; height: 132px; padding: 0; border-radius: 50%; display: grid; place-items: center; color: #2a1a05; }
+.icon-cta svg { width: 66px; height: 66px; }
 .skip-hint {
   position: absolute; right: 60px; bottom: 50px;
   padding: 10px 20px; border-radius: 999px;
@@ -419,25 +438,53 @@
 .action-button.is-pressed:not(:disabled), .action-button:active:not(:disabled) { transform: translateY(9px); }
 .action-button.is-denied { animation: button-denied 320ms var(--ease-out) 1; }
 
-/* ---------- Title: one big Start button over the live site ---------- */
+/* ---------- Title: one chunky play button, a light sweeping round a crisp ring, a pulse rippling out ---------- */
 .start-button {
   position: absolute;
   left: 50%; top: 64%;
+  width: 320px; height: 320px; padding: 0;
   transform: translate(-50%, -50%);
-  padding: 30px 90px 32px;
-  border-radius: 999px;
-  background: linear-gradient(#ffe066, #f2b400 55%, #e08e00);
-  border: 8px solid #fff;
-  box-shadow: 0 12px 0 #a86f00, 0 24px 40px rgba(0, 0, 0, 0.35);
-  font-family: var(--font-display);
-  font-size: 64px;
-  letter-spacing: 2px;
-  color: #2a1a05;
-  transition: transform var(--t-micro) var(--ease-out), box-shadow var(--t-micro) var(--ease-out);
-  animation: start-breathe 1.8s ease-in-out infinite;
+  border-radius: 50%;
+  display: grid; place-items: center;
 }
-.start-button::before { content: "▶"; margin-right: 22px; font-size: 52px; }
-.start-button:active, .start-button.is-pressed { transform: translate(-50%, -50%) translateY(8px); box-shadow: 0 4px 0 #a86f00, 0 10px 18px rgba(0, 0, 0, 0.3); animation: none; }
+.start-button > * { position: absolute; pointer-events: none; }
+/* Pulse: a clean ring that ripples out from the rim and fades. */
+.start-button__glow {
+  width: 236px; height: 236px; border-radius: 50%;
+  border: 6px solid rgba(255, 236, 140, 0.95);
+  animation: start-ripple 1.6s ease-out infinite;
+}
+/* Track ring hugging the button, with a bright light sweeping round it. */
+.start-button__ring {
+  width: 262px; height: 262px; border-radius: 50%;
+  background:
+    conic-gradient(from 0deg, rgba(255, 255, 255, 0) 0deg, rgba(255, 214, 63, 0.2) 200deg, #ffe680 320deg, #ffffff 356deg, rgba(255, 255, 255, 0) 360deg),
+    rgba(15, 45, 77, 0.55);
+  -webkit-mask: radial-gradient(circle, transparent 0 121px, #000 122px 130px, transparent 131px);
+  mask: radial-gradient(circle, transparent 0 121px, #000 122px 130px, transparent 131px);
+  animation: start-spin 1.4s linear infinite;
+}
+.start-button__face {
+  width: 214px; height: 214px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: radial-gradient(circle at 36% 28%, #fff7c2 0 10%, #ffdc4f 32%, #f7b200 64%, #dc8c00 100%);
+  border: 10px solid #fff;
+  box-shadow: 0 0 0 5px #0f2d4d, 0 15px 0 5px #0a1f36, 0 24px 30px rgba(0, 0, 0, 0.3), inset 0 -14px 0 rgba(160, 85, 0, 0.3), inset 0 10px 0 rgba(255, 255, 255, 0.55);
+  animation: start-breathe 1.6s ease-in-out infinite;
+  transition: transform var(--t-micro) var(--ease-out), box-shadow var(--t-micro) var(--ease-out);
+}
+.start-button__face::after {
+  content: ""; position: absolute; left: 34px; top: 20px; width: 92px; height: 38px; border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5); transform: rotate(-24deg);
+}
+.start-button__icon { width: 118px; height: 118px; margin-left: 14px; overflow: visible; filter: drop-shadow(0 6px 0 rgba(130, 64, 0, 0.45)); }
+.start-button__icon polygon { fill: #fff; stroke: #0f2d4d; stroke-width: 10; stroke-linejoin: round; paint-order: stroke fill; }
+.start-button:active .start-button__face, .start-button.is-pressed .start-button__face {
+  animation: none; transform: translateY(10px) scale(0.97);
+  box-shadow: 0 0 0 5px #0f2d4d, 0 5px 0 5px #0a1f36, 0 10px 16px rgba(0, 0, 0, 0.3), inset 0 -10px 0 rgba(160, 85, 0, 0.3), inset 0 10px 0 rgba(255, 255, 255, 0.55);
+}
+.start-button:focus-visible { outline: none; box-shadow: none; }
+.start-button:focus-visible .start-button__face { border-color: #fff9d6; }
 .start-button.is-leaving { animation: start-leave 380ms var(--ease-in) forwards; }
 .start-button.is-entering { animation: start-enter 520ms var(--ease-back) both; }
 
@@ -446,14 +493,21 @@
 .drone-intro__hover { position: absolute; inset: 0; animation: drone-hover 3.2s ease-in-out infinite; }
 .drone-intro__shot { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; will-change: transform, opacity; }
 
-/* ---------- Title card over the first drone shot, and the caption during the flight ---------- */
-.title-card { position: absolute; left: 0; right: 0; top: 190px; text-align: center; pointer-events: none; }
+/* ---------- Title: clean solid lettering (one outline, one crisp 3D edge, no blur), a small navy badge ---------- */
+.title-card { position: absolute; left: 0; right: 0; top: 176px; text-align: center; pointer-events: none; }
 .title-card__eyebrow {
-  margin: 0 0 6px; font-family: var(--font-display); font-size: 42px; letter-spacing: 14px; color: #fff;
-  -webkit-text-stroke: 7px #0f2d4d; paint-order: stroke fill; text-shadow: 0 5px 0 #0f2d4d;
+  display: inline-block; margin: 0 0 10px; padding: 6px 26px 8px; border-radius: 999px;
+  background: #0f2d4d; border: 4px solid #fff; color: #fff;
+  font-family: var(--font-display); font-size: 34px; letter-spacing: 10px;
+  box-shadow: 0 5px 0 rgba(6, 24, 48, 0.3);
 }
 .title-card__headline { margin: 0; font-family: var(--font-display); font-size: 132px; line-height: 1.02; white-space: nowrap; }
-.title-card__headline .cartoon-letter { -webkit-text-stroke: 11px #2a1605; }
+.title-card__headline .cartoon-letter {
+  color: #ffd23f;
+  -webkit-text-stroke: 12px #2a1605;
+  paint-order: stroke fill;
+  text-shadow: 0 9px 0 #2a1605;
+}
 .title-card.is-entering .cartoon-letter { animation: letter-hop 600ms var(--ease-back) both; animation-delay: calc(250ms + var(--i) * 55ms); }
 .title-card.is-entering .title-card__eyebrow { animation: cta-enter 520ms var(--ease-back) both; }
 .title-card.is-leaving { animation: title-leave 460ms var(--ease-in) forwards; }

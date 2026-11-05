@@ -44,7 +44,6 @@
 .focus-dim { position: absolute; inset: -400px; z-index: 3; pointer-events: none; background: rgba(4, 14, 32, 0.62); opacity: 0; transition: opacity 380ms var(--ease-out); }
 .focus-dim.is-on { opacity: 1; }
 .platform { z-index: 4; }
-.screen-fixed { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; z-index: 4; pointer-events: none; }
 .crane { z-index: 5; }
 .fx-layer { z-index: 6; }
 

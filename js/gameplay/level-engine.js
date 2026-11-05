@@ -87,7 +87,7 @@ export function createLevelEngine({ gameState, crane, claw, triangles, bridge, p
     currentGroup = level.optionGroup;
     camera.reset(900, scope.signal).catch(() => {});
     await triangles.showPlatform();
-    feedback.setInstruction(level.instruction, { swap: !firstEntry });
+    feedback.setInstruction(level.instruction, { swap: !firstEntry, focus: level.focus });
     feedback.pushInstruction();
     await triangles.showOptions(OPTION_GROUPS[level.optionGroup], { refreshAll: groupChanged });
     bridge.showSocket(level.bridgeStage);
@@ -117,7 +117,7 @@ export function createLevelEngine({ gameState, crane, claw, triangles, bridge, p
         triangles.clearFocus();
       }
       triangles.hidePlatform();
-      camera.focus({ x: 960, y: 460, scale: 1.2, pull: 0.6, duration: 1100, signal: scope.signal }).catch(() => {});
+      camera.focus({ x: 960, y: 520, scale: 1.2, pull: 0.6, duration: 1100, signal: scope.signal }).catch(() => {});
     } catch (error) {
       if (!isAbortError(error)) throw error;
     } finally {
@@ -172,7 +172,7 @@ export function createLevelEngine({ gameState, crane, claw, triangles, bridge, p
     claw.relief();
     await crane.liftAway({ signal: scope.signal });
     crane.parkAway({ signal: scope.signal }).catch(() => {});
-    await camera.focus({ x: 960, y: 480, scale: 1.1, pull: 0.55, duration: 800, signal: scope.signal });
+    await camera.focus({ x: 960, y: 540, scale: 1.1, pull: 0.55, duration: 800, signal: scope.signal });
     triangles.release(option);
     await bridge.absorbFrame(option, level.bridgeStage, scope.signal);
     await bridge.constructStage(level.bridgeStage, { signal: scope.signal });

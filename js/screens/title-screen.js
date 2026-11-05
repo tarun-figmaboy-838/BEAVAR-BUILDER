@@ -1,6 +1,7 @@
 import { COPY } from '../data/copy.js';
 import { playClassAnimation, createSequenceScope, prefersReducedMotion, wait } from '../core/motion.js';
 import { createDroneIntro } from './drone-intro.js';
+import { DRONE_INTRO } from '../config.js';
 
 /** Cartoon letters, each in its own span so they can hop one after another (celebration headline). */
 export function cartoonLetters(text, startIndex = 0) {
@@ -66,27 +67,36 @@ export function createTitleScreen({ els, audio, voice, camera, builder, screenMa
   return {
     async enter() {
       builder.show(); // the operator is already waiting in the cab
-      await camera.fly([prefersReducedMotion() ? FULL_SITE : LANDING], { duration: 0 });
-      flight = createDroneIntro(els.stage, {
+      const withFlight = DRONE_INTRO && !prefersReducedMotion();
+      await camera.fly([withFlight ? LANDING : FULL_SITE], { duration: 0 });
+      flight = withFlight ? createDroneIntro(els.stage, {
         before: els.hud,
         onReveal: () => {
           camera.fly([LANDING, FULL_SITE], { duration: 1500, signal: scope.signal }).catch(() => {});
           setTimeout(() => builder.cheer(), 500);
         },
-      });
+      }) : null;
       card = buildTitleCard();
       card.classList.add('is-entering');
       els.overlays.appendChild(card);
       button = document.createElement('button');
       button.type = 'button';
       button.className = 'start-button';
-      button.textContent = COPY.title.start;
+      button.setAttribute('aria-label', COPY.title.start);
+      // Chunky play disc: a light sweeping round a crisp ring, and a pulse rippling out from the rim.
+      button.innerHTML = `
+        <span class="start-button__glow"></span>
+        <span class="start-button__ring"></span>
+        <span class="start-button__face">
+          <svg class="start-button__icon" viewBox="0 0 100 100" aria-hidden="true"><polygon points="34,22 80,50 34,78"/></svg>
+        </span>`;
       let pressed = false;
       button.addEventListener('click', async () => {
         if (pressed) return;
         pressed = true;
         audio.unlock();
         audio.play('uiTap');
+        audio.startMusic();
         voice.unlock();
         voice.prefetch();
         await Promise.all([playClassAnimation(button, 'is-leaving', 420), playClassAnimation(card, 'is-leaving', 460)]);
@@ -94,7 +104,7 @@ export function createTitleScreen({ els, audio, voice, camera, builder, screenMa
         card?.remove();
         button = null;
         card = null;
-        await fly();
+        if (flight) await fly();
         screenManager.go('meet-builder');
       });
       button.classList.add('is-entering');

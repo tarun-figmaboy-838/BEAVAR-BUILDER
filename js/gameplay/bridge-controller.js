@@ -1,76 +1,61 @@
 import { BRIDGE_GEOMETRY, stageById, memberId } from '../data/bridge-geometry.js';
-import { WATER_LINE_Y, DECK_LAYOUT } from '../data/layout.js';
+import { WATER_LINE_Y, DECK_LAYOUT, PIER_LAYOUT } from '../data/layout.js';
 import { wait, tween, easings, playClassAnimation, prefersReducedMotion } from '../core/motion.js';
 import { createTube, moveTube, createGusset, gussetDefs, svgElement, TUBE_PALETTES } from './svg-tubes.js';
 
-const PILLAR_IMAGE = { src: 'assets/images/bridge/pillar-brick.png', width: 268, height: 321 };
 const MEMBER_WIDTH = 18;
 const FRAME_TUBE_WIDTH = 16;   // matches the frames on the yard (frame-shapes.js)
 const PANEL_INSET = 11;        // colour plates sit inside the beams, as on PDF p7
 const COVERED_FRACTION = 0.5;  // a plate mostly hidden behind later plates fades, so no leftover region reads as a triangle
 const HOTSPOT_MARKUP = '<span class="hotspot__pad"></span><span class="hotspot__column"></span><span class="hotspot__sparks"><i></i><i></i><i></i><i></i></span><span class="hotspot__chevrons"><i></i><i></i></span>';
 
-/* ---------- Pillars standing in the canal ---------- */
+/* ---------- Piers: short brick piers standing in the canal under the deck ---------- */
 function buildPillar(x) {
-  const { pillarTopY, pillarWidth } = BRIDGE_GEOMETRY;
-  const height = Math.round((pillarWidth * PILLAR_IMAGE.height) / PILLAR_IMAGE.width);
+  const { src, artWidth, artHeight, width, topY, waterY } = PIER_LAYOUT;
+  const height = (width * artHeight) / artWidth;
   const unit = document.createElement('div');
   unit.className = 'pillar-unit';
-  unit.style.left = `${x - pillarWidth / 2}px`;
-  unit.style.top = `${pillarTopY}px`;
-  unit.style.width = `${pillarWidth}px`;
-  unit.style.height = `${height}px`;
-  unit.style.setProperty('--wet', `${WATER_LINE_Y - pillarTopY}px`);
+  Object.assign(unit.style, { left: `${x - width / 2}px`, top: `${topY}px`, width: `${width}px`, height: `${height.toFixed(1)}px` });
+  unit.style.setProperty('--wet', `${waterY - topY}px`);
   unit.innerHTML = `
-    <img class="pillar__reflection motion-ambient" src="${PILLAR_IMAGE.src}" alt="" draggable="false">
-    <img class="pillar__body" src="${PILLAR_IMAGE.src}" alt="" draggable="false">
-`;
+    <img class="pillar__reflection motion-ambient" src="${src}" alt="" draggable="false">
+    <img class="pillar__body" src="${src}" alt="" draggable="false">`;
   return unit;
 }
 
-/* ---------- Deck: a bare riveted steel girder from quay to quay while the bridge is being built ----------
-   The road surface and the safety railings are laid on it only when the bridge is complete (finishDeck). */
+/* ---------- Deck: the low road deck at walkway level (sliced supplied art) ----------
+   Grey arches under the yellow beam springing from the piers, a yellow
+   bracket over each pier, and the end caps resting on the quay walkways so the road runs on from both banks. */
 function buildDeck(bridgeEl) {
-  const { x1, x2, top, height, railHeight } = DECK_LAYOUT;
-  const width = x2 - x1;
-  const above = railHeight + 6;                  // room above the girder for the finished road and railings
-  const g = above;                               // girder top, in deck coordinates
-  const bottom = g + height;
-  const stiffeners = [];
-  for (let x = 46; x < width - 30; x += 104) stiffeners.push(x);
-  const posts = [];
-  for (let x = 18; x <= width - 18; x += 58) posts.push(x);
-  const bearings = BRIDGE_GEOMETRY.pillarXs.map((px) => px - x1);
-  const rivetRow = (y) => `
-    <line x1="14" y1="${y}" x2="${width - 14}" y2="${y}" class="deck__rivets"/>
-    <line x1="14" y1="${y - 0.9}" x2="${width - 14}" y2="${y - 0.9}" class="deck__rivets deck__rivets--shine"/>`;
+  const { x1, x2, scale: k, art, left, tile, right, bracket } = DECK_LAYOUT;
+  const top = BRIDGE_GEOMETRY.deckY - (art.stand - art.top) * k;          // road plates' top edge
+  const beamBottom = top + (art.beamBottom - art.top) * k;
+  const capBottom = top + (art.capBottom - art.top) * k;
+  const leftW = left.width * k;
+  const rightW = right.width * k;
+  const middle = x2 - x1 - leftW - rightW;
+  const tiles = Math.max(1, Math.round(middle / (tile.width * k)));
+  const tileW = middle / tiles;
+  const spring = PIER_LAYOUT.topY + 3;
+  const stops = [[x1 + 30, capBottom - 3], ...PIER_LAYOUT.xs.map((x) => [x, spring]), [x2 - 30, capBottom - 3]];
+  const crown = beamBottom + 3;
+  const arches = stops.slice(1).map(([bx, by], i) => {
+    const [ax, ay] = stops[i];
+    const cy = 2 * crown - (ay + by) / 2;
+    return `M ${ax} ${ay} Q ${(ax + bx) / 2} ${cy.toFixed(1)} ${bx} ${by}`;
+  });
+  const bw = bracket.width * bracket.scale;
+  const bh = bracket.height * bracket.scale;
   const deck = document.createElement('div');
   deck.className = 'deck';
-  Object.assign(deck.style, { left: `${x1}px`, top: `${top - above}px`, width: `${width}px`, height: `${height + above}px` });
   deck.innerHTML = `
-    <span class="deck__shadow"></span>
-    <svg class="deck__svg" width="${width}" height="${height + above}" viewBox="0 0 ${width} ${height + above}" aria-hidden="true">
-      <defs>
-        <linearGradient id="deck-steel" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stop-color="#b9c2cd"/><stop offset="0.35" stop-color="#8c96a3"/><stop offset="0.72" stop-color="#6b7583"/><stop offset="1" stop-color="#4a525e"/>
-        </linearGradient>
-      </defs>
-      <g class="deck__finish">
-        <g class="deck__rails">
-          ${posts.map((x) => `<line x1="${x}" y1="${g - railHeight + 3}" x2="${x}" y2="${g - 2}" class="deck-rail__post"/>`).join('')}
-          <line x1="8" y1="${g - railHeight + 3}" x2="${width - 8}" y2="${g - railHeight + 3}" class="deck-rail"/>
-          <line x1="8" y1="${g - railHeight / 2}" x2="${width - 8}" y2="${g - railHeight / 2}" class="deck-rail deck-rail--mid"/>
-        </g>
-        <rect class="deck__road" x="2" y="${g - 7}" width="${width - 4}" height="9" rx="2"/>
-      </g>
-      <rect class="deck__web" x="1.5" y="${g}" width="${width - 3}" height="${height}" rx="3"/>
-      <rect class="deck__flange" x="3" y="${g + 1.5}" width="${width - 6}" height="5.5"/>
-      <rect class="deck__flange deck__flange--low" x="3" y="${bottom - 8}" width="${width - 6}" height="6.5"/>
-      ${stiffeners.map((x) => `<rect class="deck__stiffener" x="${x - 3}" y="${g + 7}" width="6" height="${height - 15}" rx="1"/>`).join('')}
-      ${rivetRow(g + 11)}
-      ${rivetRow(bottom - 13)}
-      ${bearings.map((x) => `<path class="deck-girder__bearing" d="M ${x - 34} ${bottom} h 68 l -8 7 h -52 z"/>`).join('')}
-    </svg>`;
+    <svg class="deck__arches" viewBox="0 0 1920 1080" aria-hidden="true">
+      ${arches.map((d) => `<path d="${d}" class="deck__arch-rim"/><path d="${d}" class="deck__arch"/><path d="${d}" class="deck__arch-light" transform="translate(0 -2.5)"/>`).join('')}
+    </svg>
+    ${PIER_LAYOUT.xs.map((x) => `<img class="deck__bracket" src="${bracket.src}" alt="" draggable="false" style="left:${(x - bw / 2).toFixed(1)}px;top:${(beamBottom - 3).toFixed(1)}px;width:${bw.toFixed(1)}px;height:${bh.toFixed(1)}px">`).join('')}
+    <img class="deck__piece" src="${left.src}" alt="" draggable="false" style="left:${x1}px;top:${top.toFixed(1)}px;width:${leftW.toFixed(1)}px;height:${(left.height * k).toFixed(1)}px">
+    <span class="deck__plates" style="left:${(x1 + leftW).toFixed(1)}px;top:${top.toFixed(1)}px;width:${middle.toFixed(1)}px;height:${(tile.height * k).toFixed(1)}px;background-image:url('${tile.src}');background-size:${tileW.toFixed(2)}px 100%"></span>
+    <img class="deck__piece" src="${right.src}" alt="" draggable="false" style="left:${(x2 - rightW).toFixed(1)}px;top:${top.toFixed(1)}px;width:${rightW.toFixed(1)}px;height:${(right.height * k).toFixed(1)}px">`;
   bridgeEl.appendChild(deck);
   return deck;
 }
@@ -170,7 +155,7 @@ function centroid(points) {
  */
 export function createBridgeController({ bridgeEl, fxEl, fx, audio }) {
   const { nodes, stages } = BRIDGE_GEOMETRY;
-  const pillars = BRIDGE_GEOMETRY.pillarXs.map((x) => {
+  const pillars = PIER_LAYOUT.xs.map((x) => {
     const unit = buildPillar(x);
     bridgeEl.appendChild(unit);
     return unit;
@@ -435,7 +420,6 @@ export function createBridgeController({ bridgeEl, fxEl, fx, audio }) {
     flightLayer.replaceChildren();
     builtStages.length = 0;
     socket.classList.remove('is-visible', 'is-aligned', 'is-armed');
-    deck.classList.remove('is-finished');
   }
 
   /** warning wobble → growing sway → sections fall → splash → reset (PDF p10). */
@@ -520,14 +504,6 @@ export function createBridgeController({ bridgeEl, fxEl, fx, audio }) {
       demoSpots.forEach((spot) => spot.classList.remove('is-visible'));
     },
     completeSettle: () => playClassAnimation(root, 'is-proud', 1100),
-    /** The finishing touch once every frame is in: the road rolls out along the girder and the railings go up. */
-    async finishDeck({ signal } = {}) {
-      deck.classList.add('is-finished');
-      audio.play('bolt');
-      await wait(prefersReducedMotion() ? 0 : 650, signal);
-      audio.play('clank', { variant: 1 });
-      await wait(prefersReducedMotion() ? 0 : 500, signal);
-    },
     impactPillars: () => pillars.forEach((pillar) => playClassAnimation(pillar, 'is-impact', 500)),
   };
 }

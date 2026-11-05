@@ -1,6 +1,6 @@
 /**
  * Procedural sound design on WebAudio. No recordings ship with the project (see docs/ASSETS.md
- * for the drop-in hook); every cue is synthesised so the game is self-contained.
+ * for the drop-in hook); every cue, and the background music, is synthesised so the game is self-contained.
  * Guards: per-sound minimum interval, and loud cues are staggered so two never fire at once.
  */
 const LOUD_GAP_SECONDS = 0.085;
@@ -250,6 +250,140 @@ const LOOPS = {
   },
 };
 
+/* ---- Background music: a light, looping construction-site tune, synthesised (no file ships) ----
+   104 BPM, eight bars in C major (C G Am F C G F G): marimba melody, plucked off-beat chords, soft
+   bass and kick, a shaker on every eighth. Notes are scheduled slightly ahead on the audio clock, so
+   timing stays tight whatever the frame rate. */
+const BPM = 104;
+const EIGHTH = 60 / BPM / 2;
+const CHORDS = [[60, 64, 67], [59, 62, 67], [57, 60, 64], [57, 60, 65], [60, 64, 67], [59, 62, 67], [57, 60, 65], [59, 62, 67]];
+const BASS = [36, 43, 45, 41, 36, 43, 41, 43];
+/** [beat, midi note, length in beats] over the 32-beat loop. */
+const MELODY = [
+  [0, 76, 1], [1, 79, 1], [2, 81, 1], [3, 79, 1],
+  [4, 74, 2], [6, 79, 1], [7, 76, 1],
+  [8, 76, 1], [9, 81, 1], [10, 79, 1], [11, 76, 1],
+  [12, 74, 1], [13, 72, 2],
+  [16, 79, 1], [17, 81, 1], [18, 84, 1], [19, 81, 1],
+  [20, 79, 1], [21, 76, 1], [22, 74, 2],
+  [24, 72, 1], [25, 74, 1], [26, 76, 1], [27, 79, 1],
+  [28, 74, 2], [30, 79, 0.5], [30.5, 76, 0.5], [31, 74, 1],
+];
+const MELODY_BY_STEP = new Map(MELODY.map(([beat, note, length]) => [Math.round(beat * 2), [note, length]]));
+const midiHz = (note) => 440 * Math.pow(2, (note - 69) / 12);
+
+function createMusic(context, out, noiseBuffer) {
+  const bus = context.createGain();
+  bus.gain.value = 0;
+  bus.connect(out);
+  let timer = 0;
+  let nextTime = 0;
+  let step = 0;
+
+  function envelope(t0, peak, decay) {
+    const gain = context.createGain();
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(peak, t0 + 0.006);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + decay);
+    gain.connect(bus);
+    return gain;
+  }
+  function osc(type, freq, t0, length, destination) {
+    const node = context.createOscillator();
+    node.type = type;
+    node.frequency.setValueAtTime(freq, t0);
+    node.connect(destination);
+    node.start(t0);
+    node.stop(t0 + length + 0.05);
+    return node;
+  }
+  /** Marimba-like mallet: a sine fundamental and a short bright fourth partial. */
+  function mallet(note, t0, length, peak) {
+    const decay = Math.min(1.1, 0.35 + length * EIGHTH);
+    osc('sine', midiHz(note), t0, decay, envelope(t0, peak, decay));
+    osc('sine', midiHz(note) * 4, t0, 0.09, envelope(t0, peak * 0.22, 0.09));
+  }
+  function pluck(note, t0, peak) {
+    const filter = context.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = 2200;
+    filter.connect(envelope(t0, peak, 0.22));
+    osc('triangle', midiHz(note), t0, 0.22, filter);
+  }
+  function bass(note, t0, peak) {
+    const decay = EIGHTH * 1.8;
+    osc('triangle', midiHz(note), t0, decay, envelope(t0, peak, decay));
+    osc('sine', midiHz(note), t0, decay, envelope(t0, peak * 0.8, decay));
+  }
+  function kick(t0, peak) {
+    const node = osc('sine', 120, t0, 0.16, envelope(t0, peak, 0.16));
+    node.frequency.exponentialRampToValueAtTime(48, t0 + 0.14);
+  }
+  function shaker(t0, peak) {
+    const source = context.createBufferSource();
+    source.buffer = noiseBuffer;
+    const filter = context.createBiquadFilter();
+    filter.type = 'highpass';
+    filter.frequency.value = 6500;
+    source.connect(filter).connect(envelope(t0, peak, 0.05));
+    source.start(t0, Math.random() * 1.2);
+    source.stop(t0 + 0.07);
+  }
+
+  function scheduleStep(index, t0) {
+    const inBar = index % 8;
+    const bar = Math.floor(index / 8);
+    if (inBar === 0 || inBar === 4) {
+      kick(t0, 0.09);
+      bass(BASS[bar] + (inBar === 4 ? 7 : 0), t0, 0.07);
+    }
+    if (index % 2 === 1) CHORDS[bar].forEach((note) => pluck(note, t0, 0.022));
+    shaker(t0, index % 2 ? 0.03 : 0.018);
+    const melody = MELODY_BY_STEP.get(index);
+    if (melody) mallet(melody[0], t0, melody[1] * 2, 0.06);
+  }
+
+  function tick() {
+    const now = context.currentTime;
+    if (nextTime < now - 0.1) nextTime = now + 0.05;      // after a stall, rejoin the beat instead of bursting
+    while (nextTime < now + 0.2) {
+      scheduleStep(step, nextTime);
+      nextTime += EIGHTH;
+      step = (step + 1) % 64;
+    }
+  }
+
+  return {
+    start() {
+      if (timer) return;
+      const now = context.currentTime;
+      nextTime = now + 0.08;
+      step = 0;
+      bus.gain.cancelScheduledValues(now);
+      bus.gain.setValueAtTime(0.0001, now);
+      bus.gain.exponentialRampToValueAtTime(1, now + 1.6);
+      tick();
+      timer = setInterval(tick, 50);
+    },
+    stop() {
+      if (!timer) return;
+      clearInterval(timer);
+      timer = 0;
+      const now = context.currentTime;
+      bus.gain.cancelScheduledValues(now);
+      bus.gain.setTargetAtTime(0.0001, now, 0.25);
+    },
+    /** Music sits further under the narration than the effects do. */
+    duck(on) {
+      if (!timer) return;
+      bus.gain.setTargetAtTime(on ? 0.45 : 1, context.currentTime, 0.12);
+    },
+    get playing() {
+      return Boolean(timer);
+    },
+  };
+}
+
 function readStoredMute() {
   try {
     return localStorage.getItem(STORAGE_KEY) === '1';
@@ -268,6 +402,17 @@ export function createAudioManager() {
   const lastPlayed = new Map();
   const activeLoops = new Map();
   const listeners = new Set();
+  let music = null;
+  let musicWanted = false;
+  let musicPaused = false;
+
+  function syncMusic() {
+    if (!context) return;
+    music ??= createMusic(context, master, noiseBuffer);
+    const shouldPlay = musicWanted && !musicPaused && context.state === 'running';
+    if (shouldPlay && !music.playing) music.start();
+    else if (!shouldPlay && music.playing) music.stop();
+  }
 
   function ensureContext() {
     if (context) return context;
@@ -348,6 +493,24 @@ export function createAudioManager() {
     duck(on) {
       ducked = Boolean(on);
       applyMasterGain();
+      music?.duck(ducked);
+    },
+    /** Background music: starts once audio is unlocked (the Start tap), loops until stopped. */
+    startMusic() {
+      musicWanted = true;
+      const ctx = ensureContext();
+      if (!ctx) return;
+      if (ctx.state === 'running') syncMusic();
+      else ctx.resume().then(syncMusic).catch(() => {});
+    },
+    stopMusic() {
+      musicWanted = false;
+      syncMusic();
+    },
+    /** Hidden tab: the music pauses, and picks up again when the game is back in view. */
+    setMusicPaused(paused) {
+      musicPaused = Boolean(paused);
+      syncMusic();
     },
     toggleMuted() {
       this.setMuted(!muted);

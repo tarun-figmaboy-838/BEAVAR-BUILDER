@@ -1,4 +1,4 @@
-import { DEBUG_MODE } from './config.js';
+import { DEBUG_MODE, DRONE_INTRO } from './config.js';
 import { STAGE } from './data/layout.js';
 import { LEVELS } from './data/levels.js';
 import { createGameState } from './core/game-state.js';
@@ -32,7 +32,11 @@ import { createCompletionScreen } from './screens/completion-screen.js';
 // fallback through <picture>), so boot waits on that element instead of fetching it a second time.
 const CRITICAL_IMAGES = [
   'assets/images/bridge/yard-platform.png',
-  'assets/images/bridge/pillar-brick.png',
+  'assets/images/bridge/pier.png',
+  'assets/images/bridge/deck-left.png',
+  'assets/images/bridge/deck-tile.png',
+  'assets/images/bridge/deck-right.png',
+  'assets/images/bridge/deck-bracket.png',
   CRANE_RIG.tower.topSrc,
   CRANE_RIG.tower.mastSrc,
   CRANE_RIG.tower.baseSrc,
@@ -49,7 +53,7 @@ const CRITICAL_IMAGES = [
   'assets/images/fx/sparkle-big.png',
   'assets/images/fx/ripple-1.png',
   'assets/images/fx/ripple-2.png',
-  ...DRONE_SHOTS.map((shot) => shot.src),
+  ...(DRONE_INTRO ? DRONE_SHOTS.map((shot) => shot.src) : []),
 ].map((src) => ({ key: src, src }));
 
 function queryElements() {
@@ -119,7 +123,7 @@ async function boot() {
   const audio = createAudioManager();
   const voice = createVoiceManager({ audio });
   const loop = createGameLoop();
-  const camera = createCameraController({ worldEl: els.world, shakeEl: els.shake, screenFixedEl: document.getElementById('screen-fixed') });
+  const camera = createCameraController({ worldEl: els.world, shakeEl: els.shake });
   const input = createInputManager({ controlsEl: els.controls, audio });
   const fx = createConstructionFx({ fxLayer: els.fx });
   const claw = createClawController({ clawEl: els.crane.querySelector('.claw') });
@@ -147,6 +151,7 @@ async function boot() {
   loop.add(camera.update);
   loop.start();
   document.addEventListener('visibilitychange', () => {
+    audio.setMusicPaused(document.hidden);
     if (document.hidden) {
       input.releaseAll();
       audio.stopAllLoops();
