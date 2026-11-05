@@ -119,7 +119,7 @@ export function createHowToPlayScreen({ els, voice, camera, crane, triangles, br
     await wait(prefersReducedMotion() ? 0 : 500, scope.signal);
     await playClassAnimation(item.element, 'is-demo-ghost', 600);
     await triangles.returnToSlot(item);
-    await crane.glideTo(1240, { signal: scope.signal });
+    await crane.glideTo(1100, { signal: scope.signal });   // parks clear of the how-to card
   }
 
   return {

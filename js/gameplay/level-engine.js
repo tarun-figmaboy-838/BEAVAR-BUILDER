@@ -117,7 +117,7 @@ export function createLevelEngine({ gameState, crane, claw, triangles, bridge, p
         triangles.clearFocus();
       }
       triangles.hidePlatform();
-      camera.focus({ x: 960, y: 520, scale: 1.2, pull: 0.6, duration: 1100, signal: scope.signal }).catch(() => {});
+      camera.focus({ x: 960, y: 400, scale: 1.1, pull: 0.6, duration: 1100, signal: scope.signal }).catch(() => {});
     } catch (error) {
       if (!isAbortError(error)) throw error;
     } finally {
@@ -151,7 +151,9 @@ export function createLevelEngine({ gameState, crane, claw, triangles, bridge, p
     lockInput();
     const level = currentLevel();
     const socket = placement.activeStage.socket;
-    camera.focus({ x: socket.x, y: socket.y, scale: 1.28, pull: 0.2, duration: 900, signal: scope.signal }).catch(() => {});
+    // Gentle push toward the drop spot, framed so the claw at rest stays below the task panel and the
+    // bridge stays above the joystick and the action button.
+    camera.focus({ x: 960 + (socket.x - 960) * 0.2, y: 480, scale: 1.12, duration: 900, signal: scope.signal }).catch(() => {});
     const released = await crane.lowerAndRelease(
       { craneX: placement.craneXForSocket(option), gripY: dropGripY(option) },
       { signal: scope.signal }

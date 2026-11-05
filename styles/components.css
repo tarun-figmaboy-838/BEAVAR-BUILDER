@@ -1,27 +1,29 @@
-/* ---------- Instruction panel: simple, high contrast, the key words in the highlight colour ---------- */
+/* ---------- Task panel: glossy white game card, bold ink outline, the key words in colour (no icons, no fills) ---------- */
 .instruction-banner {
   position: absolute;
   left: 318px;            /* right of the operator cab */
   top: 104px;             /* just under the crane's jib, above the claw at rest */
   display: flex;
   align-items: center;
-  padding: 14px 34px 16px;
-  border-radius: 20px;
-  background: #0f2d4d;
-  border: 4px solid #fff;
-  color: #fff;
+  min-height: 84px;
+  padding: 12px 34px 14px;
+  border-radius: 24px;
+  background: linear-gradient(180deg, #ffffff 0%, #ffffff 55%, #e6f1fc 100%);
+  border: 5px solid #0f2d4d;
+  color: #0f2d4d;
   font-family: var(--font-display);
-  font-size: 40px;
+  font-size: 38px;
   line-height: 1.2;
   white-space: nowrap;
-  box-shadow: 0 7px 0 rgba(6, 24, 48, 0.35), 0 14px 24px rgba(6, 24, 48, 0.3);
+  box-shadow: inset 0 4px 0 #ffffff, 0 7px 0 #0f2d4d, 0 16px 20px rgba(6, 24, 48, 0.28);
   transform-origin: left top;
   pointer-events: none;
 }
-.instruction-focus { color: #ffd23f; }
+/* Key words: the same bold text in a strong orange, nothing behind them. */
+.instruction-focus { color: #d9480f; }
 .instruction-banner.is-entering { animation: banner-enter 620ms var(--ease-out) both; }
 .instruction-banner.is-swapping { animation: banner-swap 520ms var(--ease-out) both; }
-.instruction-banner.is-complete { background: #1f7a3f; }
+.instruction-banner.is-complete { background: linear-gradient(180deg, #ffffff 0%, #f1fdf2 55%, #d3f5d8 100%); }
 .instruction-banner.is-pushed { animation: banner-push 520ms var(--ease-out) 1; }
 
 /* ---------- Mute button ---------- */
@@ -52,15 +54,15 @@
   left: 120px;
   top: 236px;
   max-width: 660px;
-  padding: 22px 32px 24px;
-  border-radius: 34px;
-  background: #fff;
-  border: 6px solid #0f2d4d;
+  padding: 20px 32px 22px;
+  border-radius: 30px;
+  background: linear-gradient(180deg, #ffffff 0%, #ffffff 60%, #eef5fd 100%);
+  border: 5px solid #0f2d4d;
   color: #0f2d4d;
   font-family: var(--font-display);
   font-size: 34px;
   line-height: 1.28;
-  box-shadow: 0 8px 0 #0f2d4d;
+  box-shadow: inset 0 4px 0 #ffffff, 0 7px 0 #0f2d4d, 0 16px 20px rgba(6, 24, 48, 0.28);
   transform-origin: left bottom;
 }
 /* Tail: an ink triangle with a white one inside it, so the outline runs unbroken round the bubble. */
@@ -78,8 +80,8 @@
 .speech-bubble.is-leaving { animation: bubble-leave 280ms var(--ease-in) forwards; }
 .speech-bubble--cab { max-width: 640px; transform-origin: left center; }
 /* From the cab: a comic wedge tail pointing left, at the operator's mouth. */
-.speech-bubble--cab::before { left: -44px; top: 24px; bottom: auto; border-width: 22px 44px 22px 0; border-color: transparent #0f2d4d transparent transparent; }
-.speech-bubble--cab::after { left: -28px; top: 33px; bottom: auto; border-width: 13px 30px 13px 0; border-color: transparent #fff transparent transparent; }
+.speech-bubble--cab::before { left: -42px; top: 24px; bottom: auto; border-width: 21px 42px 21px 0; border-color: transparent #0f2d4d transparent transparent; }
+.speech-bubble--cab::after { left: -29px; top: 32px; bottom: auto; border-width: 13px 30px 13px 0; border-color: transparent #fff transparent transparent; }
 
 /* ---------- How to play card (PDF: G0.3): clean card, a title tab, one row per control ---------- */
 .howto-card {
@@ -447,7 +449,7 @@
 /* ---------- Title: one chunky play button, a light sweeping round a crisp ring, a pulse rippling out ---------- */
 .start-button {
   position: absolute;
-  left: 50%; top: 64%;
+  left: 50%; top: 505px;     /* in the open sky between the title and the bridge */
   width: 320px; height: 320px; padding: 0;
   transform: translate(-50%, -50%);
   border-radius: 50%;
