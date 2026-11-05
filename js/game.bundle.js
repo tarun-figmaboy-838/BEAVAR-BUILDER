@@ -23,7 +23,10 @@ const GAME_VERSION = '1.0.0';
  * shots in assets/images/drone/). true plays it again; false goes straight from Start to the story.
  */
 const DRONE_INTRO = false;
-  return { DEBUG_MODE, GAME_VERSION, DRONE_INTRO };
+
+/** TEMPORARY (review aid): a "Skip to end" button that builds the whole bridge and jumps to the ending. Set false to remove. */
+const SKIP_TO_END_BUTTON = true;
+  return { DEBUG_MODE, GAME_VERSION, DRONE_INTRO, SKIP_TO_END_BUTTON };
 });
 __define('js/data/layout.js', function () {
 /**
@@ -387,6 +390,63 @@ function makeNoise(context, out, buffer) {
 /* ---- One-shot cues ---- */
 const SOUNDS = {
   uiTap: { minInterval: 0.04, play: ({ tone, t0 }) => tone({ t0, freq: 720, freqEnd: 960, duration: 0.06, gain: 0.08 }) },
+  /* ---- The opening ceremony and the town on the new bridge ---- */
+  /** Scissors: two quick metallic shears (open, then the blades closing with a ring). */
+  snip: {
+    minInterval: 0.2,
+    play: ({ tone, noise, t0 }) => {
+      noise({ t0, duration: 0.05, gain: 0.16, filter: 'highpass', freq: 5200 });
+      noise({ t0: t0 + 0.11, duration: 0.07, gain: 0.26, filter: 'bandpass', freq: 3800, q: 3 });
+      tone({ t0: t0 + 0.11, type: 'triangle', freq: 2600, freqEnd: 2200, duration: 0.18, gain: 0.05, release: 0.15 });
+    },
+  },
+  /** A soft footstep (pitch varies a little, so a walk does not sound like a metronome). */
+  step: {
+    minInterval: 0.12,
+    play: ({ noise, tone, t0, options }) => {
+      const v = options?.variant ?? 0;
+      noise({ t0, duration: 0.05, gain: 0.08, filter: 'lowpass', freq: 520 + (v % 2) * 90 });
+      tone({ t0, type: 'sine', freq: 110 + (v % 2) * 14, freqEnd: 70, duration: 0.06, gain: 0.06 });
+    },
+  },
+  /** A friendly two-tone car horn. */
+  horn: {
+    minInterval: 0.6,
+    play: ({ tone, t0 }) => {
+      for (const [at, f] of [[0, 392], [0.17, 392]]) {
+        tone({ t0: t0 + at, type: 'square', freq: f, duration: 0.13, gain: 0.035, release: 0.04 });
+        tone({ t0: t0 + at, type: 'square', freq: f * 1.26, duration: 0.13, gain: 0.03, release: 0.04 });
+      }
+    },
+  },
+  /** Bicycle bell: two bright rings. */
+  bell: {
+    minInterval: 0.6,
+    play: ({ tone, t0 }) => {
+      for (const at of [0, 0.16]) {
+        tone({ t0: t0 + at, type: 'sine', freq: 2100, duration: 0.5, gain: 0.05, release: 0.45 });
+        tone({ t0: t0 + at, type: 'sine', freq: 3150, duration: 0.35, gain: 0.025, release: 0.3 });
+      }
+    },
+  },
+  /** A little scooter putting past. */
+  scooter: {
+    minInterval: 0.8,
+    play: ({ tone, noise, t0 }) => {
+      tone({ t0, type: 'sawtooth', freq: 88, freqEnd: 120, duration: 0.7, gain: 0.03, release: 0.3 });
+      noise({ t0, duration: 0.7, gain: 0.03, filter: 'bandpass', freq: 420, freqEnd: 600, q: 2, release: 0.3 });
+    },
+  },
+  /** The town cheers: a bright swell of voices (filtered noise) under a rising fanfare. */
+  cheer: {
+    loud: true,
+    minInterval: 1,
+    play: ({ tone, noise, t0 }) => {
+      noise({ t0, duration: 1.6, gain: 0.12, filter: 'bandpass', freq: 900, freqEnd: 1500, q: 0.7, attack: 0.25, release: 0.9 });
+      noise({ t0: t0 + 0.1, duration: 1.3, gain: 0.07, filter: 'bandpass', freq: 2400, freqEnd: 2000, q: 1.2, attack: 0.2, release: 0.8 });
+      [523, 659, 784, 1047].forEach((f, i) => tone({ t0: t0 + 0.05 + i * 0.11, type: 'triangle', freq: f, duration: 0.32, gain: 0.07, release: 0.2 }));
+    },
+  },
   controlPress: {
     minInterval: 0.05,
     play: ({ tone, noise, t0 }) => {
@@ -3938,7 +3998,6 @@ const COPY = Object.freeze({
     subline: 'Great work, Engineer!',
     builderLine: 'The bridge is complete! Now the people of both towns can visit each other!',
     badge: 'AMAZING JOB!',
-    together: 'TOGETHER WE CONNECT',     // the two banners on the bridge (PDF p19)
     replay: 'Build it again',
   },
   controls: {
@@ -4203,7 +4262,7 @@ function createLevelEngine({ gameState, crane, claw, triangles, bridge, placemen
       crane.teleport(CRANE_LAYOUT.homeX);
       triangles.clearFocus();
       await triangles.clearOptions();
-      await triangles.showPlatform();
+      await triangles.showPlatform();      // back for the next build (the ending rolls it away)
       bridge.reset();
       currentGroup = null;
       currentLevelIndex = 0;
@@ -4786,9 +4845,7 @@ function createTitleScreen({ els, audio, voice, camera, builder, screenManager }
   function buildTitleCard() {
     const element = document.createElement('div');
     element.className = 'title-card';
-    element.innerHTML = `
-      <p class="title-card__eyebrow">${COPY.title.eyebrow}</p>
-      <h1 class="title-card__headline" aria-label="${COPY.title.headline}">${cartoonLetters(COPY.title.headline)}</h1>`;
+    element.innerHTML = `<h1 class="title-card__headline" aria-label="${COPY.title.headline}"><img class="title-card__logo" src="assets/images/kit/title-logo.png" alt="" draggable="false"></h1>`;
     return element;
   }
 
@@ -4883,13 +4940,12 @@ __define('js/gameplay/town-life.js', function () {
 const { BRIDGE_GEOMETRY } = __require('js/data/bridge-geometry.js');
 const { prefersReducedMotion, wait } = __require('js/core/motion.js');
 /**
- * The ending (PDF p19): the beaver opens the new bridge by cutting a ribbon, then the animal town uses it,
- * a car, a scooter, a bicycle and walkers crossing both ways on the deck road. Everything moves on the
+ * The ending (PDF p19), side view: once the bridge is opened, the animal town uses it: a car, a scooter,
+ * a bicycle and walkers crossing both ways on the deck road. Everything moves on the
  * road between the deck and the truss, so the truss bars pass in front of it, as on a real through-truss.
  * Sprites: assets/images/celebration (generated in Figma for this game, cut out of a flat background).
  */
 const ROAD_Y = BRIDGE_GEOMETRY.deckY + 4;          // where wheels and feet meet the road plates
-const RIBBON_X = 960;
 const ENTER_X = -260;
 const EXIT_X = 2180;
 
@@ -4898,15 +4954,13 @@ const TRAVELLERS = Object.freeze({
   car: { src: 'assets/images/celebration/car.png', height: 112, speed: 360, bob: 'ride' },
   scooter: { src: 'assets/images/celebration/scooter.png', height: 106, speed: 300, bob: 'ride' },
   cyclist: { src: 'assets/images/celebration/cyclist.png', height: 104, speed: 210, bob: 'pedal' },
-  walkers: { src: 'assets/images/celebration/walkers.png', height: 96, speed: 120, bob: 'walk' },
+  walkers: { src: 'assets/images/celebration/walk-hedgehogs-side.png', frames: 4, ratio: 380 / 420, height: 96, speed: 120, bob: 'cycle' },
 });
 /** Who crosses, which way, in turn (the near lane goes right, the far lane comes back left). */
 const TRAFFIC = Object.freeze([
   ['car', 1], ['cyclist', -1], ['scooter', 1], ['walkers', -1], ['cyclist', 1], ['car', -1], ['walkers', 1], ['scooter', -1],
 ]);
-const BEAVER = Object.freeze({ src: 'assets/images/celebration/beaver-scissors.png', height: 118, speed: 260 });
-
-const TOWN_LIFE_IMAGES = [BEAVER.src, ...Object.values(TRAVELLERS).map((t) => t.src)];
+const TOWN_LIFE_IMAGES = [...Object.values(TRAVELLERS).map((t) => t.src)];
 
 function createTownLife({ bridgeEl, fx, audio }) {
   const layer = document.createElement('div');
@@ -4918,14 +4972,17 @@ function createTownLife({ bridgeEl, fx, audio }) {
   let turn = 0;
 
   /** A sprite standing on the road at x, facing `dir` (1 right, -1 left). Returns { el, moveTo }. */
-  function sprite({ src, height, bob }, x, dir, lane = 0) {
+  function sprite({ src, height, bob, frames, ratio }, x, dir, lane = 0) {
     const el = document.createElement('div');
     el.className = `townie townie--${bob}${lane ? ' townie--far' : ''}`;
     el.style.setProperty('--h', `${height}px`);
     el.style.left = '0px';
     el.style.top = `${ROAD_Y - (lane ? 6 : 0)}px`;
     el.style.transform = `translateX(${x}px)`;
-    el.innerHTML = `<span class="townie__face" style="--dir:${dir}"><img src="${src}" alt="" draggable="false"></span>`;
+    el.innerHTML = frames
+      // A real walk cycle: the frames of a strip, stepped through (gameplay.css .walk-strip).
+      ? `<span class="townie__face" style="--dir:${dir}"><span class="walk-strip" style="background-image:url('${src}');width:${(height * ratio).toFixed(1)}px;height:${height}px"></span></span>`
+      : `<span class="townie__face" style="--dir:${dir}"><img src="${src}" alt="" draggable="false"></span>`;
     layer.appendChild(el);
     const moveTo = (toX, speed) => new Promise((resolve) => {
       const from = new DOMMatrixReadOnly(getComputedStyle(el).transform).m41;
@@ -4943,34 +5000,6 @@ function createTownLife({ bridgeEl, fx, audio }) {
     return { el, moveTo };
   }
 
-  function buildRibbon() {
-    const ribbon = document.createElement('div');
-    ribbon.className = 'ribbon';
-    ribbon.style.left = `${RIBBON_X}px`;
-    ribbon.style.top = `${ROAD_Y}px`;
-    ribbon.innerHTML = `
-      <span class="ribbon__post ribbon__post--l"></span><span class="ribbon__post ribbon__post--r"></span>
-      <span class="ribbon__half ribbon__half--l"></span><span class="ribbon__half ribbon__half--r"></span>
-      <span class="ribbon__bow"><i></i><i></i><b></b></span>`;
-    layer.appendChild(ribbon);
-    return ribbon;
-  }
-
-  /** PDF p19: two tall banners, purple and blue, hanging from the bridge's top chords, one each side. */
-  function buildBanners(text) {
-    const [lx, ly] = BRIDGE_GEOMETRY.nodes.L;
-    const [ax, ay] = BRIDGE_GEOMETRY.nodes.A;
-    const chordY = (x) => ly + ((x - lx) / (ax - lx)) * (ay - ly);       // the left chord; the right one mirrors it
-    const group = document.createElement('div');
-    group.className = 'town-banners';
-    group.innerHTML = [[600, 'purple'], [2 * ax - 600, 'blue']].map(([x, colour], i) => `
-      <span class="town-banner town-banner--${colour}" style="left:${x}px;top:${chordY(Math.min(x, 2 * ax - x)).toFixed(1)}px;--i:${i}">
-        <span class="town-banner__rod"></span>
-        <span class="town-banner__cloth">${text.split(' ').map((w) => `<b>${w}</b>`).join('')}<i></i></span>
-      </span>`).join('');
-    bridgeEl.appendChild(group);        // in front of the truss: they hang from its chords
-    return group;
-  }
 
   function spawnTraveller() {
     if (!running) return;
@@ -4981,41 +5010,12 @@ function createTownLife({ bridgeEl, fx, audio }) {
     const endX = dir > 0 ? EXIT_X : ENTER_X;
     const { el, moveTo } = sprite(traveller, startX, dir, dir < 0 ? 1 : 0);
     moveTo(endX, traveller.speed).then(() => el.remove());
+    const cue = { car: 'horn', cyclist: 'bell', scooter: 'scooter' }[kind];
+    if (cue && turn % 2) setTimeout(() => running && audio.play(cue), 900);
     trafficTimer = setTimeout(spawnTraveller, 1700 + Math.random() * 900);
   }
 
   return {
-    /** Ribbon and banner in place, before the beaver comes down. */
-    prepare() {
-      layer.replaceChildren();
-      this.ribbon = buildRibbon();
-    },
-    /** The beaver walks out onto the bridge, cuts the ribbon, cheers, and walks back to his crane. */
-    async inaugurate({ bannerText, signal } = {}) {
-      const ribbon = this.ribbon ?? buildRibbon();
-      const reduced = prefersReducedMotion();
-      const beaver = sprite({ ...BEAVER, bob: 'walk' }, reduced ? RIBBON_X - 120 : ENTER_X, 1);
-      if (!reduced) await beaver.moveTo(RIBBON_X - 118, BEAVER.speed);
-      if (signal?.aborted) return;
-      await wait(reduced ? 0 : 260, signal);
-      beaver.el.classList.add('is-snipping');
-      audio.play('clank', { variant: 2 });
-      await wait(reduced ? 0 : 220, signal);
-      ribbon.classList.add('is-cut');
-      audio.play('bolt');
-      fx.weld?.(RIBBON_X, ROAD_Y - 52);
-      fx.confetti(70);
-      audio.play('celebration');
-      this.banner = buildBanners(bannerText);
-      await wait(reduced ? 0 : 500, signal);
-      beaver.el.classList.remove('is-snipping');
-      beaver.el.classList.add('is-cheering');
-      await wait(reduced ? 0 : 1100, signal);
-      beaver.el.classList.remove('is-cheering');
-      beaver.el.querySelector('.townie__face').style.setProperty('--dir', '-1');
-      if (!reduced) await beaver.moveTo(ENTER_X, BEAVER.speed * 1.2);
-      beaver.el.remove();
-    },
     /** The town crosses the new bridge, both ways, until stop(). */
     startTraffic() {
       if (running || prefersReducedMotion()) return;
@@ -5026,9 +5026,6 @@ function createTownLife({ bridgeEl, fx, audio }) {
       running = false;
       clearTimeout(trafficTimer);
       layer.replaceChildren();
-      this.banner?.remove();
-      this.banner = null;
-      this.ribbon = null;
     },
   };
 }
@@ -5041,7 +5038,7 @@ const SHOT_SPRITES = Object.freeze({
   carFront: { src: 'assets/images/celebration/car-front.png', ratio: 429 / 420, size: 0.62 },
   cyclistBack: { src: 'assets/images/celebration/cyclist-back.png', ratio: 191 / 420, size: 0.7 },
   scooterBack: { src: 'assets/images/celebration/scooter-back.png', ratio: 238 / 420, size: 0.68 },
-  walkersFront: { src: 'assets/images/celebration/walkers-front.png', ratio: 325 / 420, size: 0.5 },
+  walkersFront: { src: 'assets/images/celebration/walk-hedgehogs-front.png', ratio: 340 / 420, size: 0.5, frames: 4 },
 });
 /**
  * vp: vanishing point; slopeL/slopeR: road half-width per px below it, on each side.
@@ -5050,37 +5047,52 @@ const SHOT_SPRITES = Object.freeze({
  */
 const SHOTS = Object.freeze([
   {
-    src: 'assets/images/celebration/shot-front.png', ms: 3800, vp: [958, 548], slopeL: 1.8, slopeR: 1.8,
+    // The entrance: the beaver cuts the ribbon tied between the two posts, then the town drives in.
+    src: 'assets/images/celebration/shot-front.png', ms: 4200, vp: [958, 548], slopeL: 1.8, slopeR: 1.8, ceremony: true, sfx: [['bell', 300], ['horn', 1100], ['scooter', 1700]],
     travellers: [
-      { sprite: 'cyclistBack', side: -0.5, z0: 1.6, z1: 7, delay: 0, bob: 'pedal' },
-      { sprite: 'carFront', side: 0.5, z0: 9, z1: 1.25, delay: 500, bob: 'ride' },
-      { sprite: 'scooterBack', side: -0.45, z0: 1.4, z1: 8, delay: 1500, bob: 'ride' },
+      { sprite: 'cyclistBack', side: -0.5, z0: 1.15, z1: 7, delay: 0, bob: 'pedal' },
+      { sprite: 'carFront', side: 0.52, z0: 9, z1: 1.2, delay: 400, bob: 'ride' },
+      { sprite: 'scooterBack', side: -0.45, z0: 1.1, z1: 8, delay: 1500, bob: 'ride' },
     ],
   },
   {
-    src: 'assets/images/celebration/shot-inside.png', ms: 4200, vp: [940, 499], slopeL: 1.6, slopeR: 1.23,
+    // Inside: the road ends at the bridge's far end (y 702), so nobody is placed further than that (z <= 2.75).
+    src: 'assets/images/celebration/shot-inside.png', ms: 4000, vp: [940, 499], slopeL: 1.6, slopeR: 1.23, sfx: [['scooter', 300], ['horn', 1500], ['bell', 2300]],
     travellers: [
-      { sprite: 'walkersFront', side: 1.32, z0: 4.5, z1: 1.15, delay: 0, bob: 'walk' },
-      { sprite: 'scooterBack', side: -0.5, z0: 1.3, z1: 6, delay: 300, bob: 'ride' },
-      { sprite: 'carFront', side: 0.5, z0: 8, z1: 1.2, delay: 1300, bob: 'ride' },
-      { sprite: 'cyclistBack', side: -0.45, z0: 1.4, z1: 6, delay: 2100, bob: 'pedal' },
+      { sprite: 'walkersFront', side: 1.22, z0: 2.7, z1: 1.12, delay: 0, bob: 'walk' },
+      { sprite: 'scooterBack', side: -0.5, z0: 1.05, z1: 2.7, delay: 200, bob: 'ride' },
+      { sprite: 'carFront', side: 0.5, z0: 2.75, z1: 1.05, delay: 1200, bob: 'ride' },
+      { sprite: 'cyclistBack', side: -0.45, z0: 1.05, z1: 2.7, delay: 2000, bob: 'pedal' },
     ],
   },
   {
-    src: 'assets/images/celebration/shot-back.png', ms: 3600, vp: [950, 543], slopeL: 1.32, slopeR: 1.38,
+    // The far end looking back at the crane: the road on the bridge is visible to y 690 (z <= 3.5).
+    src: 'assets/images/celebration/shot-back.png', ms: 3600, vp: [950, 543], slopeL: 1.32, slopeR: 1.38, sfx: [['scooter', 100], ['bell', 1200]],
     travellers: [
-      { sprite: 'scooterBack', side: -0.5, z0: 1.3, z1: 7, delay: 0, bob: 'ride' },
-      { sprite: 'walkersFront', side: 0.82, z0: 5, z1: 1.6, delay: 300, bob: 'walk' },
-      { sprite: 'cyclistBack', side: -0.42, z0: 1.5, z1: 8, delay: 1000, bob: 'pedal' },
+      { sprite: 'scooterBack', side: -0.5, z0: 1.05, z1: 3.5, delay: 0, bob: 'ride' },
+      // No footpath at this end of the bridge (only a kerb under the railing): walkers stay inside, the car comes back.
+      { sprite: 'carFront', side: 0.5, z0: 3.5, z1: 1.1, delay: 300, bob: 'ride' },
+      { sprite: 'cyclistBack', side: -0.42, z0: 1.05, z1: 3.4, delay: 1100, bob: 'pedal' },
     ],
   },
 ]);
+/** The entrance ceremony: the ribbon between the posts (measured on shot-front), the beaver who cuts it. */
+const CEREMONY = Object.freeze({
+  ribbon: { x1: 566, x2: 1356, y: 652, sag: 16 },
+  beaver: { src: 'assets/images/celebration/beaver-scissors.png', ratio: 405 / 420, height: 262, groundY: 792, standX: 896,
+    walk: 'assets/images/celebration/walk-beaver.png', walkRatio: 356 / 420 },
+  walkMs: 1700,
+});
 const SHOT_FADE_MS = 550;
 
-const BRIDGE_SHOT_IMAGES = [...SHOTS.map((shot) => shot.src), ...Object.values(SHOT_SPRITES).map((sprite) => sprite.src)];
+const BRIDGE_SHOT_IMAGES = [...SHOTS.map((shot) => shot.src), ...Object.values(SHOT_SPRITES).map((sprite) => sprite.src), CEREMONY.beaver.src, CEREMONY.beaver.walk];
 
-/** Plays the three road-level shots over `host` (cross-fading, each with a slow push-in). Resolves when done. */
-async function playBridgeShots(host, { signal } = {}) {
+/**
+ * Plays the opening and the three road-level shots over `host` (cross-fading, each with a slow push-in).
+ * `onLastShot` fires as the last shot starts (so the side view can already show the open bridge).
+ */
+async function playBridgeShots(host, { signal, audio, onLastShot } = {}) {
+  // (audio: snip, steps, horn, bell, scooter and cheer cues; see audio-manager.js)
   if (prefersReducedMotion()) return;
   const layer = document.createElement('div');
   layer.className = 'bridge-shots';
@@ -5093,14 +5105,17 @@ async function playBridgeShots(host, { signal } = {}) {
   function runTraveller(shotEl, shot, t) {
     const sprite = SHOT_SPRITES[t.sprite];
     const el = document.createElement('div');
-    el.className = `shot-townie townie--${t.bob}`;
-    el.innerHTML = `<img src="${sprite.src}" alt="" draggable="false">`;
+    el.className = `shot-townie townie--${sprite.frames ? 'cycle' : t.bob}`;
+    el.style.opacity = '0';
+    el.innerHTML = sprite.frames
+      ? `<span class="walk-strip" style="background-image:url('${sprite.src}')"></span>`
+      : `<img src="${sprite.src}" alt="" draggable="false">`;
     shotEl.appendChild(el);
     const [vx, vy] = shot.vp;
     const slope = t.side < 0 ? shot.slopeL : shot.slopeR;
     const yNear = 1080;
     const duration = shot.ms - t.delay;
-    const start = performance.now() + t.delay;
+    const start = performance.now() + t.delay;   // `t.delay` counts from when the road opens
     const place = (now) => {
       const p = Math.max(0, Math.min(1, (now - start) / duration));
       const z = t.z0 + (t.z1 - t.z0) * p;               // steady speed along the road
@@ -5112,8 +5127,11 @@ async function playBridgeShots(host, { signal } = {}) {
       el.style.transform = `translate(${(x - (h * sprite.ratio) / 2).toFixed(1)}px, ${(y - h).toFixed(1)}px)`;
       el.style.height = `${h.toFixed(1)}px`;
       el.style.width = `${(h * sprite.ratio).toFixed(1)}px`;
-      el.style.zIndex = String(Math.round(d * 1000));    // nearer in front
-      el.style.opacity = now < start ? '0' : '1';
+      el.style.zIndex = String(Math.round(d * 1000) + 10); // nearer in front, always over the ribbon
+      // Seamless: whoever is at the far end of the road fades in (arriving) or out (leaving); nobody pops.
+      const farEnd = Math.max(t.z0, t.z1);
+      const nearFar = 1 - Math.min(1, (farEnd - z) / (farEnd * 0.18));
+      el.style.opacity = now < start ? '0' : String(Math.max(0, Math.min(1, 1 - nearFar)).toFixed(3));
       if (alive && p < 1) requestAnimationFrame(place);
     };
     requestAnimationFrame(place);
@@ -5127,8 +5145,11 @@ async function playBridgeShots(host, { signal } = {}) {
       layer.appendChild(shotEl);
       frames.push(shotEl);
       shotEl.animate([{ opacity: 0 }, { opacity: 1 }], { duration: index ? SHOT_FADE_MS : 700, easing: 'ease-in-out', fill: 'forwards' });
-      shotEl.querySelector('.bridge-shot__bg').animate([{ transform: 'scale(1)' }, { transform: 'scale(1.06)' }], { duration: shot.ms + SHOT_FADE_MS, easing: 'linear', fill: 'forwards' });
+      shotEl.querySelector('.bridge-shot__bg').animate([{ transform: 'scale(1)' }, { transform: 'scale(1.04)' }], { duration: shot.ms + SHOT_FADE_MS + (shot.ceremony ? 5200 : 0), easing: 'linear', fill: 'forwards' });
+      if (index === SHOTS.length - 1) onLastShot?.();
+      if (shot.ceremony) await openRibbon(shotEl, { signal, audio });
       shot.travellers.forEach((t) => runTraveller(shotEl, shot, t));
+      (shot.sfx ?? []).forEach(([name, at]) => setTimeout(() => alive && audio?.play(name), at));
       await wait(shot.ms, signal);
       if (index) frames[index - 1].remove();
     }
@@ -5139,6 +5160,73 @@ async function playBridgeShots(host, { signal } = {}) {
     alive = false;
     layer.remove();
   }
+}
+
+/** At the entrance: the ribbon is up; the beaver walks in, snips, the halves drop to the posts, confetti, cheers. */
+async function openRibbon(shotEl, { signal, audio } = {}) {
+  const { ribbon: r, beaver: b, walkMs } = CEREMONY;
+  const ribbon = document.createElement('div');
+  ribbon.className = 'shot-ribbon';
+  const mid = (r.x1 + r.x2) / 2;
+  ribbon.innerHTML = `
+    <svg viewBox="0 0 1920 1080" aria-hidden="true">
+      <path class="shot-ribbon__half shot-ribbon__half--l" d="M ${r.x1} ${r.y} Q ${(r.x1 + mid) / 2} ${r.y + r.sag} ${mid} ${r.y + r.sag * 0.7}"/>
+      <path class="shot-ribbon__half shot-ribbon__half--r" d="M ${mid} ${r.y + r.sag * 0.7} Q ${(mid + r.x2) / 2} ${r.y + r.sag} ${r.x2} ${r.y}"/>
+    </svg>
+    <span class="shot-ribbon__bow" style="left:${mid}px;top:${r.y + r.sag * 0.7}px"><i></i><i></i><b></b></span>`;
+  shotEl.appendChild(ribbon);
+  const w = b.height * b.ratio;
+  const beaver = document.createElement('div');
+  beaver.className = 'shot-beaver';
+  beaver.style.width = `${w}px`;
+  beaver.style.height = `${b.height}px`;
+  beaver.innerHTML = `<img src="${b.src}" alt="" draggable="false"><span class="walk-strip" style="background-image:url('${b.walk}');width:${(b.height * b.walkRatio).toFixed(1)}px"></span>`;
+  shotEl.appendChild(beaver);
+  const at = (x) => `translate(${(x - w / 2).toFixed(1)}px, ${(b.groundY - b.height).toFixed(1)}px)`;
+  // A beaver waddles: each step lifts and rocks the body (CSS), and every step lands with a soft footstep.
+  const STEP_MS = 300;
+  const walk = (from, to, ms) => {
+    beaver.classList.add('is-walking');
+    let n = 0;
+    const steps = setInterval(() => audio?.play('step', { variant: n++ }), STEP_MS);
+    return beaver.animate([{ transform: at(from) }, { transform: at(to) }], { duration: ms, easing: 'cubic-bezier(.3, .05, .3, 1)', fill: 'forwards' }).finished
+      .finally(() => { clearInterval(steps); beaver.classList.remove('is-walking'); });
+  };
+  await walk(-w, b.standX, walkMs);
+  await wait(300, signal);
+  // The cut: he raises the scissors, the blades close on the ribbon (snip, a glint), the halves spring apart.
+  beaver.classList.add('is-raising');
+  await wait(380, signal);
+  beaver.classList.remove('is-raising');
+  beaver.classList.add('is-snipping');
+  audio?.play('snip');
+  await wait(140, signal);
+  const glint = document.createElement('span');
+  glint.className = 'shot-glint';
+  glint.style.left = `${mid}px`;
+  glint.style.top = `${r.y + r.sag * 0.7}px`;
+  shotEl.appendChild(glint);
+  setTimeout(() => glint.remove(), 700);
+  ribbon.classList.add('is-cut');
+  audio?.play('cheer');
+  for (let i = 0; i < 46; i += 1) {
+    const c = document.createElement('i');
+    c.className = 'shot-confetti';
+    c.style.left = `${mid + (Math.random() - 0.5) * 900}px`;
+    c.style.background = ['#e53935', '#fb8c00', '#fdd835', '#43a047', '#1e88e5', '#8e24aa'][i % 6];
+    c.style.setProperty('--dur', `${1600 + Math.random() * 1400}ms`);
+    c.style.setProperty('--delay', `${Math.random() * 500}ms`);
+    c.style.setProperty('--drift', `${(Math.random() - 0.5) * 160}px`);
+    shotEl.appendChild(c);
+  }
+  await wait(360, signal);
+  beaver.classList.remove('is-snipping');
+  beaver.classList.add('is-cheering');
+  await wait(1100, signal);
+  beaver.classList.remove('is-cheering');
+  beaver.style.setProperty('--face', '-1');
+  walk(b.standX, -w, 1300).then(() => beaver.remove());          // steps aside as the traffic starts
+  await wait(500, signal);
 }
   return { TOWN_LIFE_IMAGES, createTownLife, BRIDGE_SHOT_IMAGES, playBridgeShots };
 });
@@ -5380,7 +5468,7 @@ function createHowToPlayScreen({ els, voice, camera, crane, triangles, bridge, i
       // Not awaited: this screen finishes entering first, then the line plays and the round begins.
       voice.say(copy.cta, { speaker: 'builder' }).finished
         .then(() => wait(700))
-        .then(() => screenManager.go('gameplay'));
+        .then(() => { if (screenManager.currentName === 'how-to-play') screenManager.go('gameplay'); });
     },
     async exit() {
       bridge.hideDemoSpots();
@@ -5420,6 +5508,7 @@ function createGameplayScreen({ els, feedback, triangles, camera, builder, level
 __define('js/screens/screen-helpers.js', function () {
 const { playClassAnimation } = __require('js/core/motion.js');
 const ICONS = {
+  'replay-art': '<img src="assets/images/kit/replay-button.png" alt="" draggable="false">',
   replay: '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 12a20 20 0 1 1-18.4 12.2" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round"/><path d="M6 14 L17 30 L26 13 Z" fill="currentColor" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/></svg>',
 };
 
@@ -5449,11 +5538,8 @@ __define('js/screens/completion-screen.js', function () {
 const { COPY } = __require('js/data/copy.js');
 const { wait, playClassAnimation, createSequenceScope } = __require('js/core/motion.js');
 const { createCtaButton } = __require('js/screens/screen-helpers.js');
-const { cartoonLetters } = __require('js/screens/title-screen.js');
 const { zoomToCab } = __require('js/screens/story-screens.js');
 const { createTownLife, playBridgeShots } = __require('js/gameplay/town-life.js');
-const PENNANT_COLORS = ['#e53935', '#fb8c00', '#fdd835', '#43a047', '#1e88e5', '#8e24aa', '#e53935', '#fb8c00', '#fdd835', '#43a047', '#1e88e5', '#8e24aa'];
-
 /** PDF p18 "Excellent work!" state, then the p19 celebration. */
 function createCompletionScreen({ els, audio, voice, camera, crane, claw, bridge, feedback, fx, input, triangles, builder, levelEngine, screenManager }) {
   const scope = createSequenceScope();
@@ -5461,29 +5547,16 @@ function createCompletionScreen({ els, audio, voice, camera, crane, claw, bridge
   let overlay = null;
   const town = createTownLife({ bridgeEl: els.bridge, fx, audio });
 
+  /** BRIDGE BUILT! sign (painted art) hung from the jib on two ropes; the replay button in the centre. */
   function buildOverlay() {
     overlay = document.createElement('section');
     overlay.className = 'completion';
-    overlay.setAttribute('aria-label', copy.headline);
-    const bolt = (corner) => `<img class="completion__bolt completion__bolt--${corner}" src="assets/images/crane/bolt.png" alt="" draggable="false">`;
+    overlay.setAttribute('aria-label', `${copy.headline} ${copy.subline}`);
     overlay.innerHTML = `
       <div class="completion__sign">
         <span class="completion__rope completion__rope--l"></span>
         <span class="completion__rope completion__rope--r"></span>
-        <div class="completion__banner">
-          <svg class="completion__string" viewBox="0 0 860 40" preserveAspectRatio="none" aria-hidden="true"><path d="M 0 4 Q 430 40 860 4" /></svg>
-          <div class="completion__bunting">${PENNANT_COLORS.map((color, i) => `<span class="completion__pennant" style="--pennant:${color};--i:${i}"></span>`).join('')}</div>
-          <span class="completion__planks"></span>
-          ${['tl', 'tr', 'bl', 'br'].map(bolt).join('')}
-          <h1 class="completion__headline" aria-label="${copy.headline}">${cartoonLetters(copy.headline)}</h1>
-          <p class="completion__subline">${copy.subline}</p>
-        </div>
-      </div>
-      <div class="completion__badge" hidden>
-        <div>${copy.badge}</div>
-        <div class="completion__stars">
-          ${[0, 1, 2].map(() => '<img class="completion__star" src="assets/images/fx/sparkle-big.png" alt="" draggable="false">').join('')}
-        </div>
+        <img class="completion__art" src="assets/images/kit/sign-bridge-built.png" alt="" draggable="false">
       </div>`;
     els.overlays.appendChild(overlay);
   }
@@ -5494,12 +5567,12 @@ function createCompletionScreen({ els, audio, voice, camera, crane, claw, bridge
       bridge.hideSocket();
       els.controls.hidden = true;
       triangles.clearOptions();
+      triangles.hidePlatform();          // the yard platform rolls away: the ending is about the bridge
       const banner = feedback.setInstruction(copy.banner, { swap: true, complete: true });
       claw.relief();
       crane.parkAway({ signal: scope.signal }).catch(() => {});
       await camera.focus({ x: 960, y: 520, scale: 1.12, pull: 0.6, duration: 1200, signal: scope.signal });
       await bridge.completeSettle();
-      town.prepare();                 // the opening ribbon goes up across the finished road
       audio.play('ding');
       await banner;
       await wait(400, scope.signal);
@@ -5514,15 +5587,20 @@ function createCompletionScreen({ els, audio, voice, camera, crane, claw, bridge
       await feedback.hideBubble();
       builder.cheer();
       await camera.reset(1600, scope.signal).catch(() => {});
-      // The opening (PDF p19): the beaver leaves his cab, cuts the ribbon, and the town starts crossing.
+      // The opening (PDF p19), at road level: at the entrance the beaver cuts the ribbon and the town drives
+      // in; then inside the bridge, and the far end looking back. Meanwhile the side view gets its banners
+      // and traffic, so the bridge is open and busy when the camera comes back.
       builder.hide();
-      await town.inaugurate({ bannerText: copy.together, signal: scope.signal }).catch(() => {});
+      await playBridgeShots(els.overlays, {
+        signal: scope.signal,
+        audio,
+        onLastShot: () => {
+          town.startTraffic();
+          builder.show();
+        },
+      });
       builder.show();
       builder.cheer();
-      town.startTraffic();
-      await wait(2600, scope.signal).catch(() => {});
-      // The bridge from the road (PDF p19): its entrance, inside it, and the far end looking back.
-      await playBridgeShots(els.overlays, { signal: scope.signal });
       buildOverlay();
       const bannerEl = overlay.querySelector('.completion__sign');
       playClassAnimation(bannerEl, 'is-entering', 800);
@@ -5531,18 +5609,10 @@ function createCompletionScreen({ els, audio, voice, camera, crane, claw, bridge
       const headline = voice.say(`${copy.headline} ${copy.subline}`, { speaker: 'narrator' });
       await headline.finished;
 
-      const badge = overlay.querySelector('.completion__badge');
-      badge.hidden = false;
-      playClassAnimation(badge, 'is-entering', 600);
-      const stars = overlay.querySelectorAll('.completion__star');
-      for (const star of stars) {
-        await wait(260, scope.signal);
-        star.classList.add('is-lit');
-        audio.play('ding');
-      }
       createCtaButton({
         overlaysEl: overlay,
         audio,
+        icon: 'replay-art',
         label: copy.replay,
         onPress: async () => {
           await levelEngine.resetAll();
@@ -5565,7 +5635,7 @@ function createCompletionScreen({ els, audio, voice, camera, crane, claw, bridge
   return { createCompletionScreen };
 });
 __define('js/app.js', function () {
-const { DEBUG_MODE, DRONE_INTRO } = __require('js/config.js');
+const { DEBUG_MODE, DRONE_INTRO, SKIP_TO_END_BUTTON } = __require('js/config.js');
 const { STAGE } = __require('js/data/layout.js');
 const { LEVELS } = __require('js/data/levels.js');
 const { createGameState } = __require('js/core/game-state.js');
@@ -5623,6 +5693,11 @@ const CRITICAL_IMAGES = [
   ...(DRONE_INTRO ? DRONE_SHOTS.map((shot) => shot.src) : []),
   ...STEEL_IMAGES,
   'assets/images/kit/play-button.png',
+  'assets/images/kit/btn-pick.png',
+  'assets/images/kit/btn-drop.png',
+  'assets/images/kit/title-logo.png',
+  'assets/images/kit/sign-bridge-built.png',
+  'assets/images/kit/replay-button.png',
   ...TOWN_LIFE_IMAGES,
   ...BRIDGE_SHOT_IMAGES,
 ].map((src) => ({ key: src, src }));
@@ -5651,6 +5726,29 @@ function whenImageReady(image) {
 function fitStage(stageEl) {
   const scale = Math.min(window.innerWidth / STAGE.width, window.innerHeight / STAGE.height);
   stageEl.style.setProperty('--stage-scale', scale.toFixed(4));
+}
+
+/** TEMPORARY review aid (config SKIP_TO_END_BUTTON): build the whole bridge at once and play the ending. */
+function wireSkipToEnd({ els, audio, voice, bridge, gameState, levelEngine, screenManager }) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'dev-skip';
+  button.textContent = 'Skip to end ⏭';
+  let busy = false;
+  button.addEventListener('click', async () => {
+    if (busy || screenManager.currentName === 'complete') return;
+    busy = true;
+    audio.unlock();
+    voice.unlock?.();
+    voice.stop();
+    await levelEngine.resetAll();
+    for (const level of LEVELS) await bridge.constructStage(level.bridgeStage, { instant: true });
+    gameState.update({ completed: true, bridgeProgress: LEVELS.length });
+    while (screenManager.isTransitioning) await new Promise((resolve) => setTimeout(resolve, 50));
+    await screenManager.go('complete');
+    busy = false;
+  });
+  els.hud.appendChild(button);
 }
 
 function wireMuteButton(button, audio, voice) {
@@ -5733,6 +5831,7 @@ async function boot() {
     }
   });
   wireMuteButton(els.mute, audio, voice);
+  if (SKIP_TO_END_BUTTON) wireSkipToEnd({ els, audio, voice, bridge, gameState, levelEngine, screenManager });
   els.stage.addEventListener('pointerdown', () => audio.unlock(), { passive: true });
 
   createDebugOverlay({

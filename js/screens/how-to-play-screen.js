@@ -151,7 +151,7 @@ export function createHowToPlayScreen({ els, voice, camera, crane, triangles, br
       // Not awaited: this screen finishes entering first, then the line plays and the round begins.
       voice.say(copy.cta, { speaker: 'builder' }).finished
         .then(() => wait(700))
-        .then(() => screenManager.go('gameplay'));
+        .then(() => { if (screenManager.currentName === 'how-to-play') screenManager.go('gameplay'); });
     },
     async exit() {
       bridge.hideDemoSpots();

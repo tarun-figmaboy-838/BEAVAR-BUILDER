@@ -384,24 +384,6 @@
 .ribbon.is-cut .ribbon__half--l { transform: rotate(78deg); }
 .ribbon.is-cut .ribbon__half--r { transform: rotate(-78deg); }
 .ribbon.is-cut .ribbon__bow { opacity: 0; transform: translateY(40px) rotate(30deg); }
-/* TOGETHER WE CONNECT banners: tall cloth pennants on a rod, unfurling from the chord. */
-.town-banners { position: absolute; inset: 0; pointer-events: none; }
-.town-banner { position: absolute; width: 0; height: 0; }
-.town-banner__rod { position: absolute; left: -54px; top: -4px; width: 108px; height: 7px; border-radius: 4px; background: linear-gradient(#e2e6ec, #7c8594); box-shadow: 0 2px 2px rgba(0, 0, 0, 0.3); }
-.town-banner__cloth {
-  position: absolute; left: -44px; top: 2px; width: 88px; padding: 14px 6px 34px; box-sizing: border-box;
-  display: flex; flex-direction: column; align-items: center; gap: 2px;
-  color: #fff; font-family: var(--font-display); font-size: 15px; line-height: 1.05; letter-spacing: 0.5px; text-align: center;
-  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% calc(100% - 18px), 0 100%);
-  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.18);
-  transform-origin: 50% 0;
-  animation: banner-unfurl 900ms var(--ease-out) both;
-  animation-delay: calc(var(--i, 0) * 180ms);
-}
-.town-banner--purple .town-banner__cloth { background: linear-gradient(90deg, #5b2a86, #7b3fb0 50%, #5b2a86); }
-.town-banner--blue .town-banner__cloth { background: linear-gradient(90deg, #17407a, #2459a6 50%, #17407a); }
-.town-banner__cloth b { display: block; }
-.town-banner__cloth i { position: absolute; left: 50%; bottom: 20px; width: 34px; height: 10px; margin-left: -17px; border: solid #f6c21a; border-width: 0 0 5px 5px; transform: rotate(-45deg) skew(8deg, 8deg); }
 /* The bridge from the road: full-stage painted shots, cross-fading, the townsfolk placed in perspective. */
 .bridge-shots { position: absolute; inset: 0; z-index: 40; overflow: hidden; pointer-events: none; background: #8fd0ff; }
 .bridge-shot { position: absolute; inset: 0; opacity: 0; overflow: hidden; }
@@ -411,4 +393,41 @@
 .shot-townie.townie--ride img { animation: townie-ride 300ms ease-in-out infinite alternate; }
 .shot-townie.townie--pedal img { animation: townie-pedal 460ms ease-in-out infinite alternate; }
 .shot-townie.townie--walk img { animation: townie-walk 400ms ease-in-out infinite alternate; transform-origin: 50% 100%; }
+/* Grounded: a soft contact shadow under every traveller and the beaver (no gap under wheels or feet). */
+.shot-townie::before, .shot-beaver::before {
+  content: ""; position: absolute; left: 12%; right: 12%; bottom: -3%; height: 9%; border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(20, 25, 35, 0.5) 0%, rgba(20, 25, 35, 0) 70%);
+  z-index: -1;
+}
+.shot-townie img { filter: none; }
+.shot-beaver { position: absolute; left: 0; top: 0; z-index: 2000; will-change: transform; }
+.shot-beaver img { display: block; width: 100%; height: 100%; transform-origin: 50% 100%; }
+/* Waddle: lift on each step, rock side to side, a little squash on landing (300 ms a step). */
+.shot-beaver.is-walking img { animation: beaver-waddle 600ms ease-in-out infinite; }
+.shot-beaver.is-raising img { transition: transform 300ms var(--ease-out); transform: rotate(-7deg) translateY(-6px); transform-origin: 40% 100%; }
+.shot-beaver.is-snipping img { animation: beaver-snip 360ms var(--ease-out) 1; }
+.shot-glint { position: absolute; width: 0; height: 0; z-index: 2500; pointer-events: none; }
+.shot-glint::before, .shot-glint::after { content: ""; position: absolute; left: -46px; top: -6px; width: 92px; height: 12px; border-radius: 6px; background: radial-gradient(ellipse, #fff 0 30%, rgba(255, 240, 180, 0.8) 55%, rgba(255, 220, 120, 0) 75%); animation: glint-pop 600ms ease-out forwards; }
+.shot-glint::after { left: -6px; top: -46px; width: 12px; height: 92px; }
+.shot-beaver.is-cheering img { animation: townie-cheer 360ms var(--ease-out) 3 alternate; }
+/* The entrance ribbon: a red satin band tied post to post; cut, the halves drop away to the posts. */
+.shot-ribbon { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
+.shot-ribbon svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.shot-ribbon__half { fill: none; stroke: #d81e1e; stroke-width: 24; stroke-linecap: butt; filter: drop-shadow(0 4px 3px rgba(0, 0, 0, 0.3)); transition: transform 520ms cubic-bezier(.2, .9, .3, 1), opacity 300ms ease 300ms; }
+.shot-ribbon__half--l { transform-box: fill-box; transform-origin: 0% 0%; }
+.shot-ribbon__half--r { transform-box: fill-box; transform-origin: 100% 0%; }
+/* Cut: each half springs back to its post and drops into a short hanging tail (like the painted ones). */
+.shot-ribbon.is-cut .shot-ribbon__half--l { transform: rotate(78deg) scaleX(0.16); opacity: 0; }
+.shot-ribbon.is-cut .shot-ribbon__half--r { transform: rotate(-78deg) scaleX(0.16); opacity: 0; }
+.shot-ribbon__bow { position: absolute; width: 0; height: 0; transition: opacity 300ms, transform 700ms var(--ease-in); }
+.shot-ribbon__bow i { position: absolute; top: -26px; width: 66px; height: 50px; border-radius: 50%; background: radial-gradient(circle at 40% 40%, #ff6b5f, #c81414 70%); }
+.shot-ribbon__bow i:first-child { left: -70px; transform: rotate(-16deg); }
+.shot-ribbon__bow i:nth-child(2) { left: 4px; transform: rotate(16deg); }
+.shot-ribbon__bow b { position: absolute; left: -18px; top: -18px; width: 36px; height: 36px; border-radius: 50%; background: #e02a2a; box-shadow: inset 0 -6px 0 rgba(0, 0, 0, 0.25); }
+.shot-ribbon.is-cut .shot-ribbon__bow { opacity: 0; transform: translateY(120px) rotate(40deg); }
+.shot-confetti { position: absolute; top: -30px; width: 14px; height: 22px; border-radius: 3px; z-index: 3000; opacity: 0; animation: shot-confetti var(--dur, 2200ms) linear var(--delay, 0ms) forwards; }
+/* A walk cycle: a strip of 4 frames side by side, stepped through (no in-betweens: each frame is a pose). */
+.walk-strip { display: block; background-repeat: no-repeat; background-size: 400% 100%; animation: walk-frames 600ms steps(4, end) infinite; }
+.shot-townie .walk-strip { width: 100%; height: 100%; }
+.townie.is-moving.townie--cycle .walk-strip { animation-play-state: running; }
 

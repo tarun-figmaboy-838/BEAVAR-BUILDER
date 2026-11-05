@@ -31,9 +31,7 @@ export function createTitleScreen({ els, audio, voice, camera, builder, screenMa
   function buildTitleCard() {
     const element = document.createElement('div');
     element.className = 'title-card';
-    element.innerHTML = `
-      <p class="title-card__eyebrow">${COPY.title.eyebrow}</p>
-      <h1 class="title-card__headline" aria-label="${COPY.title.headline}">${cartoonLetters(COPY.title.headline)}</h1>`;
+    element.innerHTML = `<h1 class="title-card__headline" aria-label="${COPY.title.headline}"><img class="title-card__logo" src="assets/images/kit/title-logo.png" alt="" draggable="false"></h1>`;
     return element;
   }
 

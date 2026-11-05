@@ -453,3 +453,24 @@
 @keyframes townie-cheer { from { transform: translateY(0) scale(1); } to { transform: translateY(-16px) scale(1.04, 0.97); } }
 @keyframes banner-unfurl { 0% { transform: scaleY(0.05); opacity: 0; } 60% { transform: scaleY(1.04); opacity: 1; } 100% { transform: scaleY(1); } }
 @keyframes plate-bolted { 0% { filter: brightness(1.6); } 100% { filter: brightness(1); } }
+
+@keyframes logo-pop { 0% { opacity: 0; transform: scale(0.6) translateY(-30px); } 100% { opacity: 1; transform: scale(1) translateY(0); } }
+@keyframes shot-confetti { 0% { opacity: 1; transform: translate(0, 0) rotate(0deg); } 100% { opacity: 1; transform: translate(var(--drift, 0px), 1140px) rotate(720deg); } }
+/* The BRIDGE BUILT! sign is let down on its ropes: it falls, the ropes go taut, it bounces and settles. */
+@keyframes sign-drop {
+  0% { opacity: 0; transform: translateY(-520px) rotate(-2deg); animation-timing-function: cubic-bezier(.55, 0, .9, .45); }
+  55% { opacity: 1; transform: translateY(18px) rotate(1.2deg); animation-timing-function: cubic-bezier(.2, .6, .35, 1); }
+  78% { transform: translateY(-6px) rotate(-0.6deg); }
+  100% { opacity: 1; transform: translateY(0) rotate(0); }
+}
+@keyframes beaver-waddle {
+  0% { transform: translateY(0) rotate(-3deg) scale(1, 1); }
+  20% { transform: translateY(-9px) rotate(-1deg) scale(0.99, 1.02); }
+  50% { transform: translateY(0) rotate(3deg) scale(1.02, 0.97); }
+  70% { transform: translateY(-9px) rotate(1deg) scale(0.99, 1.02); }
+  100% { transform: translateY(0) rotate(-3deg) scale(1, 1); }
+}
+@keyframes beaver-snip { 0% { transform: rotate(-7deg) translateY(-6px); } 35% { transform: rotate(5deg) translateY(4px) scale(1.03, 0.97); } 100% { transform: rotate(0) translateY(0); } }
+@keyframes glint-pop { 0% { opacity: 0; transform: scale(0.2); } 30% { opacity: 1; transform: scale(1.1); } 100% { opacity: 0; transform: scale(0.6); } }
+@keyframes walk-frames { from { background-position: 0% 0; } to { background-position: 133.333% 0; } }
+

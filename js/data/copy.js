@@ -37,7 +37,6 @@ export const COPY = Object.freeze({
     subline: 'Great work, Engineer!',
     builderLine: 'The bridge is complete! Now the people of both towns can visit each other!',
     badge: 'AMAZING JOB!',
-    together: 'TOGETHER WE CONNECT',     // the two banners on the bridge (PDF p19)
     replay: 'Build it again',
   },
   controls: {

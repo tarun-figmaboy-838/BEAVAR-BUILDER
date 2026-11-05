@@ -1,11 +1,8 @@
 import { COPY } from '../data/copy.js';
 import { wait, playClassAnimation, createSequenceScope } from '../core/motion.js';
 import { createCtaButton } from './screen-helpers.js';
-import { cartoonLetters } from './title-screen.js';
 import { zoomToCab } from './story-screens.js';
 import { createTownLife, playBridgeShots } from '../gameplay/town-life.js';
-
-const PENNANT_COLORS = ['#e53935', '#fb8c00', '#fdd835', '#43a047', '#1e88e5', '#8e24aa', '#e53935', '#fb8c00', '#fdd835', '#43a047', '#1e88e5', '#8e24aa'];
 
 /** PDF p18 "Excellent work!" state, then the p19 celebration. */
 export function createCompletionScreen({ els, audio, voice, camera, crane, claw, bridge, feedback, fx, input, triangles, builder, levelEngine, screenManager }) {
@@ -14,29 +11,16 @@ export function createCompletionScreen({ els, audio, voice, camera, crane, claw,
   let overlay = null;
   const town = createTownLife({ bridgeEl: els.bridge, fx, audio });
 
+  /** BRIDGE BUILT! sign (painted art) hung from the jib on two ropes; the replay button in the centre. */
   function buildOverlay() {
     overlay = document.createElement('section');
     overlay.className = 'completion';
-    overlay.setAttribute('aria-label', copy.headline);
-    const bolt = (corner) => `<img class="completion__bolt completion__bolt--${corner}" src="assets/images/crane/bolt.png" alt="" draggable="false">`;
+    overlay.setAttribute('aria-label', `${copy.headline} ${copy.subline}`);
     overlay.innerHTML = `
       <div class="completion__sign">
         <span class="completion__rope completion__rope--l"></span>
         <span class="completion__rope completion__rope--r"></span>
-        <div class="completion__banner">
-          <svg class="completion__string" viewBox="0 0 860 40" preserveAspectRatio="none" aria-hidden="true"><path d="M 0 4 Q 430 40 860 4" /></svg>
-          <div class="completion__bunting">${PENNANT_COLORS.map((color, i) => `<span class="completion__pennant" style="--pennant:${color};--i:${i}"></span>`).join('')}</div>
-          <span class="completion__planks"></span>
-          ${['tl', 'tr', 'bl', 'br'].map(bolt).join('')}
-          <h1 class="completion__headline" aria-label="${copy.headline}">${cartoonLetters(copy.headline)}</h1>
-          <p class="completion__subline">${copy.subline}</p>
-        </div>
-      </div>
-      <div class="completion__badge" hidden>
-        <div>${copy.badge}</div>
-        <div class="completion__stars">
-          ${[0, 1, 2].map(() => '<img class="completion__star" src="assets/images/fx/sparkle-big.png" alt="" draggable="false">').join('')}
-        </div>
+        <img class="completion__art" src="assets/images/kit/sign-bridge-built.png" alt="" draggable="false">
       </div>`;
     els.overlays.appendChild(overlay);
   }
@@ -47,12 +31,12 @@ export function createCompletionScreen({ els, audio, voice, camera, crane, claw,
       bridge.hideSocket();
       els.controls.hidden = true;
       triangles.clearOptions();
+      triangles.hidePlatform();          // the yard platform rolls away: the ending is about the bridge
       const banner = feedback.setInstruction(copy.banner, { swap: true, complete: true });
       claw.relief();
       crane.parkAway({ signal: scope.signal }).catch(() => {});
       await camera.focus({ x: 960, y: 520, scale: 1.12, pull: 0.6, duration: 1200, signal: scope.signal });
       await bridge.completeSettle();
-      town.prepare();                 // the opening ribbon goes up across the finished road
       audio.play('ding');
       await banner;
       await wait(400, scope.signal);
@@ -67,15 +51,20 @@ export function createCompletionScreen({ els, audio, voice, camera, crane, claw,
       await feedback.hideBubble();
       builder.cheer();
       await camera.reset(1600, scope.signal).catch(() => {});
-      // The opening (PDF p19): the beaver leaves his cab, cuts the ribbon, and the town starts crossing.
+      // The opening (PDF p19), at road level: at the entrance the beaver cuts the ribbon and the town drives
+      // in; then inside the bridge, and the far end looking back. Meanwhile the side view gets its banners
+      // and traffic, so the bridge is open and busy when the camera comes back.
       builder.hide();
-      await town.inaugurate({ bannerText: copy.together, signal: scope.signal }).catch(() => {});
+      await playBridgeShots(els.overlays, {
+        signal: scope.signal,
+        audio,
+        onLastShot: () => {
+          town.startTraffic();
+          builder.show();
+        },
+      });
       builder.show();
       builder.cheer();
-      town.startTraffic();
-      await wait(2600, scope.signal).catch(() => {});
-      // The bridge from the road (PDF p19): its entrance, inside it, and the far end looking back.
-      await playBridgeShots(els.overlays, { signal: scope.signal });
       buildOverlay();
       const bannerEl = overlay.querySelector('.completion__sign');
       playClassAnimation(bannerEl, 'is-entering', 800);
@@ -84,18 +73,10 @@ export function createCompletionScreen({ els, audio, voice, camera, crane, claw,
       const headline = voice.say(`${copy.headline} ${copy.subline}`, { speaker: 'narrator' });
       await headline.finished;
 
-      const badge = overlay.querySelector('.completion__badge');
-      badge.hidden = false;
-      playClassAnimation(badge, 'is-entering', 600);
-      const stars = overlay.querySelectorAll('.completion__star');
-      for (const star of stars) {
-        await wait(260, scope.signal);
-        star.classList.add('is-lit');
-        audio.play('ding');
-      }
       createCtaButton({
         overlaysEl: overlay,
         audio,
+        icon: 'replay-art',
         label: copy.replay,
         onPress: async () => {
           await levelEngine.resetAll();

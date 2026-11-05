@@ -60,6 +60,63 @@ function makeNoise(context, out, buffer) {
 /* ---- One-shot cues ---- */
 const SOUNDS = {
   uiTap: { minInterval: 0.04, play: ({ tone, t0 }) => tone({ t0, freq: 720, freqEnd: 960, duration: 0.06, gain: 0.08 }) },
+  /* ---- The opening ceremony and the town on the new bridge ---- */
+  /** Scissors: two quick metallic shears (open, then the blades closing with a ring). */
+  snip: {
+    minInterval: 0.2,
+    play: ({ tone, noise, t0 }) => {
+      noise({ t0, duration: 0.05, gain: 0.16, filter: 'highpass', freq: 5200 });
+      noise({ t0: t0 + 0.11, duration: 0.07, gain: 0.26, filter: 'bandpass', freq: 3800, q: 3 });
+      tone({ t0: t0 + 0.11, type: 'triangle', freq: 2600, freqEnd: 2200, duration: 0.18, gain: 0.05, release: 0.15 });
+    },
+  },
+  /** A soft footstep (pitch varies a little, so a walk does not sound like a metronome). */
+  step: {
+    minInterval: 0.12,
+    play: ({ noise, tone, t0, options }) => {
+      const v = options?.variant ?? 0;
+      noise({ t0, duration: 0.05, gain: 0.08, filter: 'lowpass', freq: 520 + (v % 2) * 90 });
+      tone({ t0, type: 'sine', freq: 110 + (v % 2) * 14, freqEnd: 70, duration: 0.06, gain: 0.06 });
+    },
+  },
+  /** A friendly two-tone car horn. */
+  horn: {
+    minInterval: 0.6,
+    play: ({ tone, t0 }) => {
+      for (const [at, f] of [[0, 392], [0.17, 392]]) {
+        tone({ t0: t0 + at, type: 'square', freq: f, duration: 0.13, gain: 0.035, release: 0.04 });
+        tone({ t0: t0 + at, type: 'square', freq: f * 1.26, duration: 0.13, gain: 0.03, release: 0.04 });
+      }
+    },
+  },
+  /** Bicycle bell: two bright rings. */
+  bell: {
+    minInterval: 0.6,
+    play: ({ tone, t0 }) => {
+      for (const at of [0, 0.16]) {
+        tone({ t0: t0 + at, type: 'sine', freq: 2100, duration: 0.5, gain: 0.05, release: 0.45 });
+        tone({ t0: t0 + at, type: 'sine', freq: 3150, duration: 0.35, gain: 0.025, release: 0.3 });
+      }
+    },
+  },
+  /** A little scooter putting past. */
+  scooter: {
+    minInterval: 0.8,
+    play: ({ tone, noise, t0 }) => {
+      tone({ t0, type: 'sawtooth', freq: 88, freqEnd: 120, duration: 0.7, gain: 0.03, release: 0.3 });
+      noise({ t0, duration: 0.7, gain: 0.03, filter: 'bandpass', freq: 420, freqEnd: 600, q: 2, release: 0.3 });
+    },
+  },
+  /** The town cheers: a bright swell of voices (filtered noise) under a rising fanfare. */
+  cheer: {
+    loud: true,
+    minInterval: 1,
+    play: ({ tone, noise, t0 }) => {
+      noise({ t0, duration: 1.6, gain: 0.12, filter: 'bandpass', freq: 900, freqEnd: 1500, q: 0.7, attack: 0.25, release: 0.9 });
+      noise({ t0: t0 + 0.1, duration: 1.3, gain: 0.07, filter: 'bandpass', freq: 2400, freqEnd: 2000, q: 1.2, attack: 0.2, release: 0.8 });
+      [523, 659, 784, 1047].forEach((f, i) => tone({ t0: t0 + 0.05 + i * 0.11, type: 'triangle', freq: f, duration: 0.32, gain: 0.07, release: 0.2 }));
+    },
+  },
   controlPress: {
     minInterval: 0.05,
     play: ({ tone, noise, t0 }) => {

@@ -209,94 +209,30 @@
 }
 .cartoon-letter--space { width: 0.32em; }
 
-/* ---------- Completion (PDF p19: BRIDGE BUILT! Great work, Engineer!) ---------- */
+/* ---------- Completion: the painted BRIDGE BUILT! sign on two ropes, the replay button in the centre ---------- */
 .completion { position: absolute; inset: 0; }
-/* The sign hangs from the crane bar on two wire ropes: wooden planks, steel bolts, shaded bunting. */
 .completion__sign {
-  position: absolute;
-  left: 50%; top: 100px;     /* clear of the finished truss's apex */
-  width: 860px;
-  margin-left: -430px;
-  transform-origin: 50% -150px;
+  /* 760 px wide: the plank's top edge is 17 % down the art (y 165 on the stage); the ropes run from the
+     jib's underside (y 97) down behind the plank, so the sign hangs from them with no gap. */
+  position: absolute; left: 50%; top: 120px; width: 760px; margin-left: -380px;
+  transform-origin: 50% -23px;
 }
 .completion__sign.is-entering { animation: sign-drop 1100ms var(--ease-out) both; }
+.completion__art { position: relative; display: block; width: 100%; height: auto; filter: drop-shadow(0 16px 18px rgba(6, 24, 48, 0.35)); }
 .completion__rope {
-  position: absolute; top: -150px; width: 14px; height: 162px;
-  background: url("../assets/images/crane-kit/cable-tile.png") 0 0 / 14px 22px repeat-y;
+  position: absolute; top: -24px; width: 12px; height: 84px;
+  background: url("../assets/images/crane-kit/cable-tile.png") 0 0 / 12px 20px repeat-y;
   filter: drop-shadow(0 4px 3px rgba(0, 0, 0, 0.3));
 }
-.completion__rope--l { left: 140px; }
-.completion__rope--r { right: 140px; }
-.completion__banner {
-  position: relative;
-  padding: 26px 50px 22px;
-  border-radius: 26px;
-  background:
-    repeating-linear-gradient(87deg, rgba(255, 255, 255, 0) 0 22px, rgba(255, 255, 255, 0.05) 22px 24px, rgba(0, 0, 0, 0.06) 24px 27px, rgba(255, 255, 255, 0) 27px 61px),
-    radial-gradient(ellipse 60% 120% at 30% 20%, rgba(255, 220, 160, 0.35), rgba(255, 220, 160, 0) 70%),
-    linear-gradient(180deg, #b77a3c 0%, #955d27 45%, #7a4818 100%);
-  box-shadow:
-    inset 0 5px 0 rgba(255, 236, 200, 0.45),
-    inset 0 -9px 0 rgba(60, 30, 5, 0.5),
-    inset 0 0 0 4px #c48a4c,
-    0 0 0 7px #3a2208,
-    0 14px 0 7px #2a1705,
-    0 30px 40px rgba(0, 0, 0, 0.4);
-  color: #fff;
-  text-align: center;
-}
-.completion__planks {
-  position: absolute; inset: 10px; border-radius: 18px; pointer-events: none;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0) 32%, rgba(60, 30, 5, 0.45) 32.6%, rgba(255, 220, 170, 0.25) 33.4%, rgba(0, 0, 0, 0) 34%, rgba(0, 0, 0, 0) 65.5%, rgba(60, 30, 5, 0.45) 66.1%, rgba(255, 220, 170, 0.25) 66.9%, rgba(0, 0, 0, 0) 67.5%);
-}
-.completion__bolt { position: absolute; width: 34px; filter: drop-shadow(0 2px 1px rgba(0, 0, 0, 0.45)); }
-.completion__bolt--tl { left: 18px; top: 16px; }
-.completion__bolt--tr { right: 18px; top: 16px; }
-.completion__bolt--bl { left: 18px; bottom: 16px; }
-.completion__bolt--br { right: 18px; bottom: 16px; }
-.completion__string { position: absolute; left: 24px; right: 24px; top: -30px; width: calc(100% - 48px); height: 40px; overflow: visible; }
-.completion__string path { fill: none; stroke: #f3ead8; stroke-width: 3; filter: drop-shadow(0 2px 1px rgba(0, 0, 0, 0.35)); }
-.completion__bunting { position: absolute; left: 44px; right: 44px; top: -28px; display: flex; justify-content: space-between; }
-.completion__pennant {
-  width: 44px; height: 46px;
-  clip-path: polygon(0 0, 100% 0, 50% 100%);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0) 40%, rgba(0, 0, 0, 0.18)), var(--pennant);
-  transform-origin: 50% 0;
-  margin-top: calc(sin((var(--i) / 11) * 3.1416) * 15px);
-  animation: pennant-sway 2.4s ease-in-out infinite;
-  animation-delay: calc(var(--i) * -0.2s);
-  filter: drop-shadow(0 3px 2px rgba(0, 0, 0, 0.3));
-}
-.completion__headline { position: relative; margin: 0; font-family: var(--font-display); font-size: 86px; line-height: 1.04; white-space: nowrap; filter: drop-shadow(0 7px 0 #2a1605) drop-shadow(0 12px 10px rgba(0, 0, 0, 0.35)); }
-.completion__headline .cartoon-letter {
-  color: #ffd84a;
-  -webkit-text-stroke: 9px #2a1605;
-  paint-order: stroke fill;
-  text-shadow: 0 -3px 0 #fff3b0, 0 5px 0 #e98a00;
-}
-.completion__sign.is-entering .cartoon-letter { animation: letter-hop 560ms var(--ease-back) both; animation-delay: calc(500ms + var(--i) * 50ms); }
-.completion__subline { position: relative; margin: 10px 0 0; font-family: var(--font-display); font-size: 34px; color: #fff; -webkit-text-stroke: 5px #2a1605; paint-order: stroke fill; filter: drop-shadow(0 3px 0 #2a1605); }
-.completion__bubble { left: 80px; top: auto; bottom: 110px; max-width: 560px; font-size: 30px; }
-.completion__badge {
-  position: absolute;
-  right: 40px; bottom: 40px;
-  width: 300px;
-  padding: 22px 20px 20px;
-  border-radius: 20px;
-  background: var(--color-navy);
-  border: 6px solid var(--color-yellow);
-  color: var(--color-yellow);
-  text-align: center;
-  font-family: var(--font-display);
-  font-size: 34px;
-  box-shadow: var(--shadow-card);
-}
-.completion__badge.is-entering { animation: cta-enter 520ms var(--ease-back) both; }
-.completion__stars { display: flex; justify-content: center; gap: 10px; margin-top: 10px; }
-.completion__star { width: 70px; opacity: 0; transform: scale(0.3); }
-.completion__star.is-lit { animation: star-pop 520ms var(--ease-back) forwards; }
-.completion__replay { position: absolute; left: 50%; bottom: 40px; right: auto; transform: translateX(-50%); }
-.completion__replay:active, .completion__replay.is-pressed { transform: translateX(-50%) translateY(6px); }
+.completion__rope--l { left: 146px; }
+.completion__rope--r { right: 146px; }
+/* The button stays put (centred); only its picture breathes and presses, so a tap always lands on it. */
+.completion__replay.icon-cta { left: 50%; top: 860px; right: auto; bottom: auto; width: 160px; height: 174px; transform: translate(-50%, -50%); background: none; border: 0; box-shadow: none; padding: 0; animation: none; }
+.completion__replay.icon-cta:active, .completion__replay.icon-cta.is-pressed { transform: translate(-50%, -50%); box-shadow: none; }
+.completion__replay.icon-cta img { width: 100%; height: auto; display: block; filter: drop-shadow(0 14px 14px rgba(6, 24, 48, 0.35)); animation: start-breathe 1.7s ease-in-out infinite; }
+.completion__replay.icon-cta:active img { animation: none; transform: translateY(8px) scale(0.96); }
+.completion__replay.icon-cta.is-entering { animation: none; }
+.completion__replay.icon-cta.is-entering img { animation: logo-pop 520ms var(--ease-back) both, start-breathe 1.7s ease-in-out 520ms infinite; }
 
 /* ---------- Debug overlay ---------- */
 .debug-overlay {
@@ -407,58 +343,29 @@
 .action-button:not(:disabled) .action-button__halo { opacity: 1; animation: halo-pulse 1.2s ease-in-out infinite; }
 .action-button__face {
   position: absolute; inset: 0;
-  border-radius: 50%;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0;
-  border: 9px solid #fff7d6;
-  -webkit-backface-visibility: hidden;
-  backface-visibility: hidden;
-  /* Safari ignores backface-visibility while the face carries a filter (the disabled look), and showed the
-     mirrored DROP face over PICK; so the face turned away is also hidden outright, swapped mid-flip. */
-  transition: transform 460ms var(--ease-back), visibility 0s linear 100ms, filter var(--t-fast), box-shadow var(--t-micro) var(--ease-out);
+  display: grid; place-items: center;
+  backface-visibility: hidden; -webkit-backface-visibility: hidden;
+  transition: transform 460ms var(--ease-back), filter var(--t-fast), visibility 0s linear 100ms;
 }
-.action-button[data-mode="pick"] .action-button__face--drop,
-.action-button[data-mode="drop"] .action-button__face--pick { visibility: hidden; }
-.action-button__face--pick {
-  background: radial-gradient(circle at 38% 28%, #b6f59a 0%, #4fcf48 34%, #22962c 72%, #146b1d 100%);
-  box-shadow: 0 12px 0 #0f4f16, 0 22px 30px rgba(0, 0, 0, 0.38), inset 0 -10px 0 rgba(0, 0, 0, 0.18), inset 0 8px 0 rgba(255, 255, 255, 0.35);
-}
-.action-button__face--drop {
-  background: radial-gradient(circle at 38% 28%, #ffd59a 0%, #ff9a2e 34%, #f0631c 72%, #b8380d 100%);
-  box-shadow: 0 12px 0 #7e2408, 0 22px 30px rgba(0, 0, 0, 0.38), inset 0 -10px 0 rgba(0, 0, 0, 0.18), inset 0 8px 0 rgba(255, 255, 255, 0.35);
-  transform: rotateY(180deg);
-}
+/* The painted PICK / DROP buttons (generated for this game); the face flips between them. */
+.action-button__art { width: 100%; height: auto; display: block; filter: drop-shadow(0 12px 12px rgba(6, 24, 48, 0.35)); }
+.action-button__face--drop { transform: rotateY(180deg); }
 .action-button[data-mode="drop"] .action-button__face--pick { transform: rotateY(-180deg); }
 .action-button[data-mode="drop"] .action-button__face--drop { transform: rotateY(0deg); }
-.action-button__icon { height: 98px; width: auto; margin-top: -8px; filter: brightness(0) invert(1) drop-shadow(0 4px 0 rgba(0, 0, 0, 0.35)); }
-.action-button__arrow {
-  position: absolute; left: 50%; top: 109px; width: 0; height: 0; margin-left: -14px;
-  border-left: 14px solid transparent; border-right: 14px solid transparent; border-top: 18px solid #fff;
-  filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.35));
-}
-.action-button__face--drop { gap: 18px; }
-.action-button__face--drop .action-button__icon { height: 78px; }
-.action-button__label {
-  font-family: var(--font-display);
-  font-size: 40px;
-  line-height: 1;
-  letter-spacing: 2px;
-  color: #fff;
-  -webkit-text-stroke: 6px #2a1a05;
-  paint-order: stroke fill;
-  text-shadow: 0 4px 0 #2a1a05;
-}
+.action-button[data-mode="pick"] .action-button__face--drop,
+.action-button[data-mode="drop"] .action-button__face--pick { visibility: hidden; }
 .action-button:disabled { cursor: default; }
 .action-button:disabled .action-button__face { filter: saturate(0.2) brightness(0.85); }
 .action-button.is-ready:not(:disabled) { animation: button-ready 760ms var(--ease-out) 1; }
-.action-button.is-pressed:not(:disabled) .action-button__face,
-.action-button:active:not(:disabled) .action-button__face { box-shadow: 0 3px 0 rgba(0, 0, 0, 0.45), 0 8px 14px rgba(0, 0, 0, 0.3), inset 0 -4px 0 rgba(0, 0, 0, 0.18); }
+.action-button.is-pressed:not(:disabled) .action-button__art,
+.action-button:active:not(:disabled) .action-button__art { filter: drop-shadow(0 4px 5px rgba(6, 24, 48, 0.35)); }
 .action-button.is-pressed:not(:disabled), .action-button:active:not(:disabled) { transform: translateY(9px); }
 .action-button.is-denied { animation: button-denied 320ms var(--ease-out) 1; }
 
 /* ---------- Title: the painted play button, breathing gently, a soft pulse rippling out behind it ---------- */
 .start-button {
   position: absolute;
-  left: 50%; top: 505px;     /* in the open sky between the title and the bridge */
+  left: 50%; top: 596px;     /* lower, standing just above the bridge's road */
   width: 300px; height: 300px; padding: 0;
   transform: translate(-50%, -50%);
   border-radius: 50%;
@@ -487,28 +394,23 @@
 .drone-intro__hover { position: absolute; inset: 0; animation: drone-hover 3.2s ease-in-out infinite; }
 .drone-intro__shot { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; will-change: transform, opacity; }
 
-/* ---------- Title: clean solid lettering (one outline, one crisp 3D edge, no blur), a small navy badge ---------- */
-.title-card { position: absolute; left: 0; right: 0; top: 176px; text-align: center; pointer-events: none; }
-.title-card__eyebrow {
-  display: inline-block; margin: 0 0 10px; padding: 6px 16px 8px 26px; border-radius: 999px;   /* letter-spacing trails the last letter */
-  background: #0f2d4d; border: 4px solid #fff; color: #fff;
-  font-family: var(--font-display); font-size: 34px; letter-spacing: 10px;
-  box-shadow: 0 5px 0 rgba(6, 24, 48, 0.3);
-}
-.title-card__headline { margin: 0; font-family: var(--font-display); font-size: 132px; line-height: 1.02; white-space: nowrap; }
-.title-card__headline .cartoon-letter {
-  color: #ffd23f;
-  -webkit-text-stroke: 12px #2a1605;
-  paint-order: stroke fill;
-  text-shadow: 0 9px 0 #2a1605;
-}
-.title-card.is-entering .cartoon-letter { animation: letter-hop 600ms var(--ease-back) both; animation-delay: calc(250ms + var(--i) * 55ms); }
-.title-card.is-entering .title-card__eyebrow { animation: cta-enter 520ms var(--ease-back) both; }
+/* ---------- Title: the painted BRIDGE BUILDER logo ---------- */
+.title-card { position: absolute; left: 0; right: 0; top: 104px; text-align: center; pointer-events: none; }
+.title-card__headline { margin: 0; }
+.title-card__logo { display: inline-block; width: 900px; height: auto; filter: drop-shadow(0 12px 14px rgba(6, 24, 48, 0.3)); }
+.title-card.is-entering .title-card__logo { animation: logo-pop 700ms var(--ease-back) both; }
 .title-card.is-leaving { animation: title-leave 460ms var(--ease-in) forwards; }
 .drone-caption {
   position: absolute; left: 50%; bottom: 120px; margin: 0; padding: 18px 40px; border-radius: 999px;
   background: rgba(9, 29, 51, 0.55); color: #fff; font-family: var(--font-display); font-size: 40px; white-space: nowrap;
   transform: translateX(-50%); pointer-events: none;
   animation: drone-caption 2600ms ease-in-out both;
+}
+
+/* TEMPORARY review aid (config SKIP_TO_END_BUTTON). */
+.dev-skip {
+  position: absolute; right: 148px; top: 40px; padding: 10px 20px; border-radius: 999px;
+  background: rgba(15, 45, 77, 0.78); color: #fff; border: 3px solid rgba(255, 255, 255, 0.7);
+  font-family: var(--font-display); font-size: 22px; pointer-events: auto; z-index: 50;
 }
 

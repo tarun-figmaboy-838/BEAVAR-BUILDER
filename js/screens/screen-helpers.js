@@ -1,6 +1,7 @@
 import { playClassAnimation } from '../core/motion.js';
 
 const ICONS = {
+  'replay-art': '<img src="assets/images/kit/replay-button.png" alt="" draggable="false">',
   replay: '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 12a20 20 0 1 1-18.4 12.2" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round"/><path d="M6 14 L17 30 L26 13 Z" fill="currentColor" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/></svg>',
 };
 

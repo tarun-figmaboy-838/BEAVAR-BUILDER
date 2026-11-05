@@ -1,4 +1,4 @@
-import { DEBUG_MODE, DRONE_INTRO } from './config.js';
+import { DEBUG_MODE, DRONE_INTRO, SKIP_TO_END_BUTTON } from './config.js';
 import { STAGE } from './data/layout.js';
 import { LEVELS } from './data/levels.js';
 import { createGameState } from './core/game-state.js';
@@ -57,6 +57,11 @@ const CRITICAL_IMAGES = [
   ...(DRONE_INTRO ? DRONE_SHOTS.map((shot) => shot.src) : []),
   ...STEEL_IMAGES,
   'assets/images/kit/play-button.png',
+  'assets/images/kit/btn-pick.png',
+  'assets/images/kit/btn-drop.png',
+  'assets/images/kit/title-logo.png',
+  'assets/images/kit/sign-bridge-built.png',
+  'assets/images/kit/replay-button.png',
   ...TOWN_LIFE_IMAGES,
   ...BRIDGE_SHOT_IMAGES,
 ].map((src) => ({ key: src, src }));
@@ -85,6 +90,29 @@ function whenImageReady(image) {
 function fitStage(stageEl) {
   const scale = Math.min(window.innerWidth / STAGE.width, window.innerHeight / STAGE.height);
   stageEl.style.setProperty('--stage-scale', scale.toFixed(4));
+}
+
+/** TEMPORARY review aid (config SKIP_TO_END_BUTTON): build the whole bridge at once and play the ending. */
+function wireSkipToEnd({ els, audio, voice, bridge, gameState, levelEngine, screenManager }) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'dev-skip';
+  button.textContent = 'Skip to end ⏭';
+  let busy = false;
+  button.addEventListener('click', async () => {
+    if (busy || screenManager.currentName === 'complete') return;
+    busy = true;
+    audio.unlock();
+    voice.unlock?.();
+    voice.stop();
+    await levelEngine.resetAll();
+    for (const level of LEVELS) await bridge.constructStage(level.bridgeStage, { instant: true });
+    gameState.update({ completed: true, bridgeProgress: LEVELS.length });
+    while (screenManager.isTransitioning) await new Promise((resolve) => setTimeout(resolve, 50));
+    await screenManager.go('complete');
+    busy = false;
+  });
+  els.hud.appendChild(button);
 }
 
 function wireMuteButton(button, audio, voice) {
@@ -167,6 +195,7 @@ async function boot() {
     }
   });
   wireMuteButton(els.mute, audio, voice);
+  if (SKIP_TO_END_BUTTON) wireSkipToEnd({ els, audio, voice, bridge, gameState, levelEngine, screenManager });
   els.stage.addEventListener('pointerdown', () => audio.unlock(), { passive: true });
 
   createDebugOverlay({

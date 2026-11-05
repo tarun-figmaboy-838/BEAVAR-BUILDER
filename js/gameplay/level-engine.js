@@ -237,7 +237,7 @@ export function createLevelEngine({ gameState, crane, claw, triangles, bridge, p
       crane.teleport(CRANE_LAYOUT.homeX);
       triangles.clearFocus();
       await triangles.clearOptions();
-      await triangles.showPlatform();
+      await triangles.showPlatform();      // back for the next build (the ending rolls it away)
       bridge.reset();
       currentGroup = null;
       currentLevelIndex = 0;

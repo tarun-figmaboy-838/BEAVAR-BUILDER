@@ -9,3 +9,6 @@ export const GAME_VERSION = '1.0.0';
  */
 export const DRONE_INTRO = false;
 
+/** TEMPORARY (review aid): a "Skip to end" button that builds the whole bridge and jumps to the ending. Set false to remove. */
+export const SKIP_TO_END_BUTTON = true;
+
