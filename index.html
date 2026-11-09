@@ -44,30 +44,21 @@
       <!-- Screen overlays: title banner, builder bubble, how-to card, completion. -->
       <div id="overlays" class="overlays"></div>
 
-      <!-- Crane controls (the kit's joystick and PICK / DROP buttons): move on the left, one contextual action on the right. -->
+      <!-- Crane controls: the arrow pad on the left with PICK as its centre button; DROP on the right,
+           usable only once a frame is on the hook. -->
       <section id="controls" class="controls" aria-label="Crane controls" hidden>
-        <div class="joystick-dock">
-          <div id="joystick" class="joystick" role="application" tabindex="0"
-               aria-label="Crane joystick. Drag it, or use the arrow keys, to move the crane and the hook.">
-            <span class="joystick__base"></span>
-            <span class="joystick__face"></span>
-            <svg class="joystick__arrows" viewBox="0 0 250 250" aria-hidden="true">
-              <polygon class="joystick__arrow joystick__arrow--up" points="125,36 150,66 100,66"/>
-              <polygon class="joystick__arrow joystick__arrow--right" points="214,125 184,150 184,100"/>
-              <polygon class="joystick__arrow joystick__arrow--down" points="125,214 100,184 150,184"/>
-              <polygon class="joystick__arrow joystick__arrow--left" points="36,125 66,100 66,150"/>
-            </svg>
-            <span class="joystick__socket"></span>
-            <span class="joystick__stem"></span>
-            <span class="joystick__knob"></span>
+        <div class="dpad-dock">
+          <div id="dpad" class="dpad" role="group" aria-label="Move the crane and pick">
+            <img class="dpad__plate" src="assets/images/kit/dpad-plate.png" alt="" draggable="false">
+            <button class="dpad__key dpad__key--up" type="button" tabindex="-1" data-direction="up" aria-label="Raise the hook"><img src="assets/images/kit/key-up.png" alt="" draggable="false"></button>
+            <button class="dpad__key dpad__key--right" type="button" tabindex="-1" data-direction="right" aria-label="Move the crane right"><img src="assets/images/kit/key-right.png" alt="" draggable="false"></button>
+            <button class="dpad__key dpad__key--down" type="button" tabindex="-1" data-direction="down" aria-label="Lower the hook"><img src="assets/images/kit/key-down.png" alt="" draggable="false"></button>
+            <button class="dpad__key dpad__key--left" type="button" tabindex="-1" data-direction="left" aria-label="Move the crane left"><img src="assets/images/kit/key-left.png" alt="" draggable="false"></button>
+            <button id="pick-button" class="pick-button" type="button" aria-label="Pick the triangle" disabled><img class="pick-button__art" src="assets/images/kit/btn-pick.png" alt="" draggable="false"><span class="pick-button__sheen" aria-hidden="true"></span></button>
           </div>
         </div>
         <div class="action-dock">
-          <button id="action-button" class="action-button" type="button" data-mode="pick" aria-label="Pick the triangle" disabled>
-            <span class="action-button__halo"></span>
-            <span class="action-button__face action-button__face--pick"><img class="action-button__art" src="assets/images/kit/btn-pick.png" alt="" draggable="false"></span>
-            <span class="action-button__face action-button__face--drop"><img class="action-button__art" src="assets/images/kit/btn-drop.png" alt="" draggable="false"></span>
-          </button>
+          <button id="drop-button" class="drop-button" type="button" aria-label="Drop: carry the triangle to the bridge" disabled><img class="drop-button__art" src="assets/images/kit/btn-drop.png" alt="" draggable="false"></button>
         </div>
       </section>
 

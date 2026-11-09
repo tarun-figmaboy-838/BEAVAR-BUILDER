@@ -145,25 +145,16 @@
 }
 .howto-step.is-done .howto-step__check { animation: check-pop 420ms var(--ease-back) forwards; }
 /* The step's control chip: the same look as the real controls */
-.howto-chip { position: relative; flex: none; width: 66px; height: 66px; border-radius: 50%; display: grid; place-items: center; transition: transform 160ms var(--ease-out); }
+.howto-chip { position: relative; flex: none; width: 66px; height: 66px; display: grid; place-items: center; transition: transform 160ms var(--ease-out); }
 .howto-chip.is-pressed { animation: chip-press 380ms var(--ease-out) 1; }
-.howto-chip img { height: 38px; width: auto; filter: brightness(0) invert(1) drop-shadow(0 3px 0 rgba(0, 0, 0, 0.35)); }
-.howto-chip--pick { background: radial-gradient(circle at 38% 28%, #b6f59a 0%, #4fcf48 34%, #22962c 72%, #146b1d 100%); border: 5px solid #fff7d6; box-shadow: 0 6px 0 #0f4f16; }
-.howto-chip--drop { background: radial-gradient(circle at 38% 28%, #ffd59a 0%, #ff9a2e 34%, #f0631c 72%, #b8380d 100%); border: 5px solid #fff7d6; box-shadow: 0 6px 0 #7e2408; }
-.howto-chip__arrow { position: absolute; left: 50%; bottom: 7px; margin-left: -8px; border: 8px solid transparent; border-top: 10px solid #fff; border-bottom: 0; }
-.howto-joy__ring { position: absolute; inset: 0; border-radius: 50%; background: linear-gradient(165deg, #ffd34a 0%, #ffb21a 45%, #f59200 100%); box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.6), 0 5px 0 #a45c00; }
-.howto-joy__face { position: absolute; inset: 7px; border-radius: 50%; background: radial-gradient(circle at 50% 30%, #4c516b, #30334a); }
-.howto-joy__arrows { position: absolute; inset: 0; width: 100%; height: 100%; }
-.howto-joy__arrow { fill: #f3f5fa; transition: fill 120ms; }
-.howto-chip--move[data-dir="left"] .howto-joy__arrow--left, .howto-chip--move[data-dir="right"] .howto-joy__arrow--right { fill: #ffd34a; }
-.howto-joy__knob {
-  position: absolute; left: 50%; top: 50%; width: 30px; height: 30px; margin: -15px 0 0 -15px; border-radius: 50%;
-  background: radial-gradient(circle at 38% 32%, #8fe3ff 0%, #3cb4ff 25%, #1a84f5 55%, #0a44ad 100%);
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.45);
-  transition: transform 200ms var(--ease-out);
-}
-.howto-chip--move[data-dir="left"] .howto-joy__knob { transform: translateX(-9px); }
-.howto-chip--move[data-dir="right"] .howto-joy__knob { transform: translateX(9px); }
+/* PICK / DROP chips: the real button art, small. */
+.howto-chip__art { position: relative; display: block; width: 112%; max-width: none; margin: -6% -6% -12% -6%; height: auto; filter: drop-shadow(0 4px 3px rgba(6, 24, 48, 0.3)); }
+/* Move chip: the real arrow pad, small; the key the demo is using lights up. */
+.howto-pad__plate { position: absolute; inset: 0; width: 100%; height: 100%; }
+.howto-pad__key { position: absolute; top: 23px; width: 20px; height: 20px; transition: scale 90ms, filter 90ms; }
+.howto-pad__key--left { left: 3px; }
+.howto-pad__key--right { right: 3px; }
+.howto-chip--move[data-dir="left"] .howto-pad__key--left, .howto-chip--move[data-dir="right"] .howto-pad__key--right { scale: 0.9; filter: brightness(1.15); }
 .howto-card__footer {
   margin: 16px 0 0; padding: 9px 16px 11px; border-radius: 16px;
   background: linear-gradient(#ffe066, #f2b400); color: #2a1a05; text-align: center;
@@ -246,128 +237,92 @@
 }
 
 
-/* ---------- Controls: arcade joystick (left): orange rim, slate face, white arrows, glossy blue ball ---------- */
-.joystick-dock {
-  position: absolute;
-  left: 36px;
-  bottom: 30px;
-}
-.controls.is-entering .joystick-dock { animation: dock-enter-left 620ms var(--ease-out) both; }
+/* ---------- Controls: the arrow pad (left) with PICK as its centre button, DROP (right) ----------
+   A dark steel cross panel (art 720 px, shown at 318 px: its visible cross is 300 px wide and ends at x 303,
+   clear of the yard platform at x 310) with bright yellow keys and a green PICK on it: strong contrast against
+   the panel and the sky. Its arms are 110 px wide; each key (90 px of key) sits in its arm, its face centred on
+   the arm's axis 96 px from the middle; PICK (92 px) sits in the round centre socket. Positions are measured
+   so every face (not the 3D lip under it) is on the cross's axes, so the side keys and PICK line up.
+   Every state change is on the element's own picture (scale / translate / filter), so pressing one key never
+   moves another key, the panel, or PICK. */
+.dpad-dock { position: absolute; left: -6px; bottom: 6px; }
+.controls.is-entering .dpad-dock { animation: dock-enter-left 620ms var(--ease-out) both; }
 .controls.is-entering .action-dock { animation: dock-enter-right 620ms var(--ease-out) both; }
-.joystick {
-  position: relative;
-  width: 250px;
-  height: 250px;
-  border-radius: 50%;
-  touch-action: none;
-  cursor: grab;
-  filter: drop-shadow(0 14px 16px rgba(0, 0, 0, 0.38));
-  transition: transform var(--t-fast) var(--ease-out);
+.dpad { position: relative; width: 318px; height: 318px; touch-action: none; }
+.dpad__plate { position: absolute; inset: 0; width: 100%; height: 100%; display: block; filter: drop-shadow(0 10px 10px rgba(6, 24, 48, 0.35)); pointer-events: none; }
+.dpad__key {
+  position: absolute; padding: 0; margin: 0;
+  border: 0; background: none; border-radius: 24px; cursor: pointer; touch-action: none;
+  -webkit-user-select: none; user-select: none;
 }
-.joystick:focus-visible { outline-offset: 6px; }
-.joystick.is-dragging { cursor: grabbing; }
-.joystick[aria-disabled="true"] { cursor: default; }
-.joystick__base {
-  position: absolute; inset: 0; border-radius: 50%;
-  background: linear-gradient(165deg, #ffd34a 0%, #ffb21a 45%, #f59200 100%);
-  box-shadow: inset 0 5px 0 rgba(255, 255, 255, 0.6), inset 0 -7px 0 rgba(170, 85, 0, 0.45), 0 9px 0 #a45c00;
+.dpad__key--up { left: 109px; top: 12.5px; width: 99.5px; height: 105.8px; }
+.dpad__key--down { left: 109.3px; top: 204.5px; width: 99.6px; height: 106.9px; }
+.dpad__key--left { left: 13px; top: 107.4px; width: 99.7px; height: 107.7px; }
+.dpad__key--right { left: 205.6px; top: 108px; width: 99.2px; height: 105.8px; }
+.dpad__key img {
+  display: block; width: 100%; height: 100%; pointer-events: none;
+  filter: drop-shadow(0 5px 3px rgba(6, 24, 48, 0.38));
+  transition: scale 90ms var(--ease-out), translate 90ms var(--ease-out), filter 90ms;
 }
-.joystick__face {
-  position: absolute; inset: 20px; border-radius: 50%;
-  background: radial-gradient(circle at 50% 30%, #4c516b 0%, #3c4058 55%, #30334a 100%);
-  box-shadow: inset 0 6px 10px rgba(0, 0, 0, 0.45), inset 0 -3px 0 rgba(255, 255, 255, 0.08), 0 0 0 3px rgba(150, 70, 0, 0.4);
+/* Pressed: that key alone compresses, its shadow tightens, its face brightens; it springs back on release. */
+.dpad__key.is-pressed img { scale: 0.94; translate: 0 3px; filter: brightness(1.1) saturate(1.08) drop-shadow(0 1px 1px rgba(6, 24, 48, 0.42)); transition-duration: 50ms; }
+@media (hover: hover) {
+  .dpad__key:hover:not(.is-pressed) img { filter: brightness(1.05) drop-shadow(0 5px 3px rgba(6, 24, 48, 0.38)); }
 }
-.joystick__arrows { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.35)); }
-.joystick__arrow {
-  fill: #f3f5fa; stroke: #f3f5fa; stroke-width: 12; stroke-linejoin: round;
-  transform-box: fill-box; transform-origin: center;
-  transition: fill 120ms, stroke 120ms, transform 120ms var(--ease-out);
-}
-.joystick[data-dir~="up"] .joystick__arrow--up,
-.joystick[data-dir~="down"] .joystick__arrow--down,
-.joystick[data-dir~="left"] .joystick__arrow--left,
-.joystick[data-dir~="right"] .joystick__arrow--right { fill: #ffd34a; stroke: #ffd34a; transform: scale(1.12); }
-.joystick__socket {
-  position: absolute; left: 77px; top: 77px; width: 96px; height: 96px; border-radius: 50%;
-  background: radial-gradient(circle at 50% 50%, #0f1119 0 52%, #24273a 56%, #2c3045 100%);
-  box-shadow: inset 0 6px 10px rgba(0, 0, 0, 0.7), 0 2px 0 rgba(255, 255, 255, 0.08);
-}
-.joystick__stem {
-  position: absolute; left: 114px; top: 125px; width: 22px; height: 40px;
-  border-radius: 11px;
-  background: linear-gradient(90deg, #1c1e22, #5a5f68 45%, #22252a);
-  transform-origin: 11px 0;
-  opacity: 0;
-}
-.joystick__knob {
-  position: absolute; left: 81px; top: 81px; width: 88px; height: 88px; border-radius: 50%;
-  background: radial-gradient(circle at 38% 32%, #8fe3ff 0%, #3cb4ff 22%, #1a84f5 50%, #0c5ad9 78%, #0a44ad 100%);
-  box-shadow: 0 12px 16px rgba(0, 0, 0, 0.45), inset 0 -10px 14px rgba(0, 25, 90, 0.45);
-  transition: transform 240ms var(--ease-back);
-  will-change: transform;
-}
-.joystick__knob::before {
-  content: ""; position: absolute; left: 24px; top: 13px; width: 38px; height: 17px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.9);
-  transform: rotate(-24deg);
-}
-.joystick__knob::after {
-  content: ""; position: absolute; left: 15px; top: 33px; width: 9px; height: 9px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.85);
-}
-.joystick.is-dragging .joystick__knob, .joystick.is-keyboard .joystick__knob { transition: transform 60ms linear; }
-.joystick.is-nudging { animation: joystick-invite 1.6s ease-in-out infinite; }
-.joystick.is-nudging .joystick__arrow--left, .joystick.is-nudging .joystick__arrow--right { animation: arrow-invite 1.6s ease-in-out infinite; }
+.dpad__key:focus-visible { outline: 3px solid #fff3b0; outline-offset: 2px; }
+.dpad.is-locked .dpad__key { cursor: default; }
+.dpad.is-locked .dpad__key:not(.is-pressed) img { filter: saturate(0.55) brightness(0.9) drop-shadow(0 5px 3px rgba(6, 24, 48, 0.3)); }
+/* An idle invitation: the side keys bob once in a while until one is pressed (never the whole pad). */
+.dpad.is-inviting .dpad__key--left { animation: key-invite-left 2.2s ease-in-out infinite; }
+.dpad.is-inviting .dpad__key--right { animation: key-invite-right 2.2s ease-in-out infinite; }
 
-/* ---------- Controls: one arcade action button (right); PICK flips to DROP while carrying ---------- */
-.action-dock {
-  position: absolute;
-  right: 36px;
-  bottom: 43px;
+/* PICK: the pad's centre button, the strongest control on the pad.
+   Disabled: muted (still faintly green, so it reads as a button). Ready: full colour, a faint warm rim and a
+   slow sheen that sweeps across it (no big glow, no bounce). Pressed: compresses, shadow tightens, a click. */
+.pick-button {
+  position: absolute; left: 113.1px; top: 110.4px; width: 92px; height: 95.4px; padding: 0;
+  border: 0; border-radius: 50%; background: none; cursor: pointer; touch-action: manipulation;
 }
-.action-button {
-  position: relative;
-  width: 224px;
-  height: 224px;
-  border-radius: 50%;
-  perspective: 900px;
-  transition: transform var(--t-micro) var(--ease-out);
+.pick-button::before {
+  content: ""; position: absolute; inset: -8px; border-radius: 50%;
+  background: radial-gradient(circle closest-side, rgba(205, 255, 150, 0.6) 76%, rgba(205, 255, 150, 0) 100%);
+  opacity: 0; transition: opacity 220ms;
 }
-.action-button__halo {
-  /* A soft glow behind the button (no ring): bright at the button's rim, fading out, coloured like the face. */
-  position: absolute; inset: -64px; border-radius: 50%;
-  --glow: 196, 255, 120;
-  background: radial-gradient(circle closest-side, rgba(var(--glow), 0.95) 58%, rgba(var(--glow), 0.62) 70%, rgba(var(--glow), 0.26) 84%, rgba(var(--glow), 0) 100%);
-  opacity: 0; transition: opacity 200ms; pointer-events: none;
+.pick-button:not(:disabled)::before { opacity: 1; }
+.pick-button__sheen {
+  position: absolute; inset: 9%; border-radius: 50%; overflow: hidden; pointer-events: none; opacity: 0;
 }
-.action-button[data-mode="drop"] .action-button__halo { --glow: 255, 196, 100; }
-.action-button:not(:disabled) .action-button__halo { opacity: 1; animation: glow-pulse 1.3s ease-in-out infinite; }
-/* ...and the button itself breathes with it (scale property: never fights the flip or the press). */
-.action-button:not(:disabled) .action-button__art { animation: button-pulse 1.3s ease-in-out infinite; }
-.action-button__face {
-  position: absolute; inset: 0;
-  display: grid; place-items: center;
-  backface-visibility: hidden; -webkit-backface-visibility: hidden;
-  transition: transform 460ms var(--ease-back), visibility 0s linear 100ms;
+.pick-button__sheen::after {
+  content: ""; position: absolute; top: -20%; bottom: -20%; left: -60%; width: 38%;
+  background: linear-gradient(100deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.55) 50%, rgba(255, 255, 255, 0) 100%);
+  transform: skewX(-18deg);
 }
-/* The painted PICK / DROP buttons (generated for this game); the face flips between them. */
-.action-button__art { width: 112%; max-width: none; margin: -6% -6% -12% -6%; height: auto; display: block; filter: drop-shadow(0 12px 12px rgba(6, 24, 48, 0.35)); }
-.action-button__face--drop { transform: rotateY(180deg); }
-.action-button[data-mode="drop"] .action-button__face--pick { transform: rotateY(-180deg); }
-.action-button[data-mode="drop"] .action-button__face--drop { transform: rotateY(0deg); }
-.action-button[data-mode="pick"] .action-button__face--drop,
-.action-button[data-mode="drop"] .action-button__face--pick { visibility: hidden; }
-.action-button:disabled { cursor: default; }
-/* Greyed on the picture itself, chained with its shadow: a filter on the flipping face is clipped to the
-   face's square box (3D layer), which cut the shadow off in straight lines. */
-.action-button:disabled .action-button__art { filter: saturate(0.2) brightness(0.85) drop-shadow(0 12px 12px rgba(6, 24, 48, 0.35)); }
-.action-button.is-ready:not(:disabled) { animation: button-ready 760ms var(--ease-out) 1; }
-.action-button.is-pressed:not(:disabled) .action-button__art,
-.action-button:active:not(:disabled) .action-button__art { filter: drop-shadow(0 4px 5px rgba(6, 24, 48, 0.35)); }
-.action-button.is-pressed:not(:disabled), .action-button:active:not(:disabled) { transform: translateY(9px); }
-.action-button.is-denied { animation: button-denied 320ms var(--ease-out) 1; }
+.pick-button:not(:disabled) .pick-button__sheen { opacity: 1; }
+.pick-button:not(:disabled) .pick-button__sheen::after { animation: button-sheen 2.6s ease-in-out 0.4s infinite; }
+.pick-button__art, .drop-button__art {
+  /* The painted art carries a clear margin (6 % sides and top, 12 % below): enlarged by it and pulled back. */
+  position: relative; display: block; width: 112%; max-width: none; margin: -6% -6% -12% -6%; height: auto;
+  pointer-events: none;
+  filter: drop-shadow(0 7px 6px rgba(6, 24, 48, 0.36));
+  transition: scale 90ms var(--ease-out), translate 90ms var(--ease-out), filter 160ms;
+}
+.pick-button:disabled, .drop-button:disabled { cursor: default; }
+.pick-button:disabled .pick-button__art { filter: saturate(0.45) brightness(0.82) drop-shadow(0 7px 6px rgba(6, 24, 48, 0.3)); }
+.pick-button.is-pressed:not(:disabled) .pick-button__art,
+.pick-button.is-pressed:not(:disabled) .pick-button__sheen { scale: 0.92; translate: 0 4px; }
+.pick-button.is-pressed:not(:disabled) .pick-button__art { filter: brightness(1.08) drop-shadow(0 2px 2px rgba(6, 24, 48, 0.42)); transition-duration: 50ms; }
+.pick-button.is-ready .pick-button__art, .drop-button.is-ready .drop-button__art { animation: button-ready 420ms var(--ease-out) 1; }
+.pick-button:focus-visible, .drop-button:focus-visible { outline: 3px solid #fff3b0; outline-offset: 4px; }
+
+/* DROP: bottom-right, disabled until a frame is on the hook; one small pop when it becomes usable (no loop). */
+.action-dock { position: absolute; right: 40px; bottom: 34px; }
+.drop-button {
+  position: relative; display: block; width: 210px; height: 210px; padding: 0;
+  border: 0; border-radius: 50%; background: none; cursor: pointer; touch-action: manipulation;
+}
+.drop-button__art { filter: drop-shadow(0 12px 10px rgba(6, 24, 48, 0.35)); }
+.drop-button:disabled .drop-button__art { filter: saturate(0.2) brightness(0.85) drop-shadow(0 12px 10px rgba(6, 24, 48, 0.3)); }
+.drop-button.is-pressed:not(:disabled) .drop-button__art { scale: 0.94; translate: 0 7px; filter: brightness(1.05) drop-shadow(0 4px 4px rgba(6, 24, 48, 0.4)); transition-duration: 50ms; }
 
 /* ---------- Title: the painted play button, breathing gently, a soft pulse rippling out behind it ---------- */
 .start-button {

@@ -16,7 +16,7 @@ export function createTriangleController({ platformEl, placedLayerEl }) {
 
   const options = new Map();
   const pile = [];
-  // Frames are not tappable: the crane is driven only with the joystick and the PICK / DROP button.
+  // Frames are not tappable: the crane is driven only with the arrow pad, PICK and DROP.
 
   /** A frame element plus its geometry: size, corner positions, and the top corner the claw grabs. */
   function buildTriangleElement(definition, scale, { interactive }) {
@@ -128,13 +128,22 @@ export function createTriangleController({ platformEl, placedLayerEl }) {
     },
     returnToSlot(option) {
       option.element.style.transform = '';
+      option.placedScale = 1;
+      option.element.style.width = `${option.width}px`;
+      option.element.style.height = `${option.height}px`;
+      option.element.classList.remove('is-scaled');
       placeAtHome(option);
       insertInSlotOrder(option);
       return playClassAnimation(option.element, 'is-returning', 500);
     },
-    placeInWorld(option, left, top) {
+    /** The frame now stands in the world at the scale its depth gave it (0.6 on the bridge). */
+    placeInWorld(option, left, top, scale = 1) {
+      option.placedScale = scale;
       option.element.style.left = `${left}px`;
       option.element.style.top = `${top}px`;
+      option.element.style.width = `${option.width * scale}px`;
+      option.element.style.height = `${option.height * scale}px`;
+      option.element.classList.toggle('is-scaled', scale !== 1);
       placedLayerEl.appendChild(option.element);
     },
     seat: (option) => playClassAnimation(option.element, 'is-seated', 600),
@@ -169,9 +178,13 @@ export function createTriangleController({ platformEl, placedLayerEl }) {
     hidePlatform() {
       platformEl.classList.add('is-away');
     },
+    /** The load heads into the scene: the foreground yard slides out of the bottom of the frame. */
+    recedePlatform() {
+      platformEl.classList.add('is-receding');
+    },
     showPlatform() {
-      if (!platformEl.classList.contains('is-away')) return Promise.resolve();
-      platformEl.classList.remove('is-away');
+      if (!platformEl.classList.contains('is-away') && !platformEl.classList.contains('is-receding')) return Promise.resolve();
+      platformEl.classList.remove('is-away', 'is-receding');
       return new Promise((resolve) => setTimeout(resolve, prefersReducedMotion() ? 0 : 460));
     },
     enterPlatform: () => playClassAnimation(platformEl, 'is-entering', 800),

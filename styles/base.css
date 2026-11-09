@@ -17,7 +17,7 @@ html, body {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* The game never scrolls or zooms: one thumb on the joystick and one on PICK / DROP must not read as a pinch. */
+/* The game never scrolls or zooms: one thumb on the arrow pad and one on DROP must not read as a pinch. */
 .viewport { touch-action: none; }
 
 [hidden] { display: none !important; }

@@ -1,41 +1,59 @@
 import { LEVELS, LEVEL_COUNT, OPTION_GROUPS } from '../data/levels.js';
 import { COPY } from '../data/copy.js';
 import { CRANE_LAYOUT } from '../data/layout.js';
-import { BRIDGE_GEOMETRY } from '../data/bridge-geometry.js';
 import { CRANE_STATES } from './crane-controller.js';
 import { createSequenceScope, wait, isAbortError } from '../core/motion.js';
 import { debugLog } from '../core/debug-overlay.js';
 
-const NUDGE_AFTER_MS = 3500;
+const INVITE_AFTER_MS = 3500;
 
-/** One engine runs all six levels from data: question → pick → carry → drop → consequence. */
+/**
+ * One engine runs all six levels from data:
+ *   question → position the claw over a frame (arrow pad) → PICK (grab, lift off the yard)
+ *   → DROP (lift, travel into depth to the bridge, align, lower, place, release) → consequence.
+ * PICK (the pad's centre) is live only with the claw over a frame and the hook empty; DROP only once a
+ * frame is on the hook.
+ */
 export function createLevelEngine({ gameState, crane, claw, triangles, bridge, placement, feedback, camera, input, audio, voice, builder, onComplete }) {
   const scope = createSequenceScope();
   let currentLevelIndex = 0;
   let currentGroup = null;
   let busy = false;
   let active = false;
-  let nudgeTimer = 0;
+  let inviteTimer = 0;
+  let homeTrip = Promise.resolve();       // the empty hook's flight back to the yard after a placement
 
   const currentLevel = () => LEVELS[currentLevelIndex];
   const inputLocked = () => gameState.get().isInputLocked;
 
+  /* ---- Camera shots (the world layer moves; the page never scrolls) ---- */
+  const cameraShots = {
+    /** PICK: a very small lean toward the frame being grabbed. */
+    focusTrianglePlatform(grab) {
+      return camera.focus({ x: grab.x, y: grab.y + 120, scale: 1.1, pull: 0.3, duration: 620, signal: scope.signal });
+    },
+    /** DROP, lift: frame the load leaving the yard. */
+    focusCarryingTriangle() {
+      return camera.focus({ x: crane.position.x, y: 560, scale: 1.04, pull: 0.25, duration: 560, signal: scope.signal });
+    },
+    /** DROP, into depth: follow the load toward the spot on the bridge. */
+    focusBridgeTarget(socket, { closer = false, duration = 1500 } = {}) {
+      return camera.focus({ x: socket.x, y: closer ? 600 : 570, scale: closer ? 1.16 : 1.1, pull: closer ? 0.4 : 0.32, duration, signal: scope.signal });
+    },
+    resetCamera(duration = 700) {
+      return camera.reset(duration, scope.signal);
+    },
+  };
+  const fireAndForget = (promise) => promise.catch(() => {});
+
   function lockInput() {
     gameState.update({ isInputLocked: true });
     input.setEnabled(false);
-    input.setActionState({ mode: crane.carried ? 'drop' : 'pick', enabled: false });
-    input.nudgeJoystick(false);
-    clearTimeout(nudgeTimer);
+    input.setPickEnabled(false);
+    input.setDropEnabled(false);
+    input.invite(false);
+    clearTimeout(inviteTimer);
     crane.lock();
-  }
-
-  /** If the learner has not touched the crane a few seconds into a task, the joystick invites them. */
-  function scheduleNudge() {
-    clearTimeout(nudgeTimer);
-    nudgeTimer = setTimeout(() => {
-      const state = gameState.get();
-      if (active && !state.isInputLocked && !crane.carried && !state.hoveredOptionId) input.nudgeJoystick(true);
-    }, NUDGE_AFTER_MS);
   }
 
   function unlockInput() {
@@ -45,16 +63,23 @@ export function createLevelEngine({ gameState, crane, claw, triangles, bridge, p
     syncUi();
   }
 
+  /** If the learner has not touched the crane a few seconds into a task, the side keys invite them. */
+  function scheduleInvite() {
+    clearTimeout(inviteTimer);
+    inviteTimer = setTimeout(() => {
+      const state = gameState.get();
+      if (active && !state.isInputLocked && !crane.carried && !state.hoveredOptionId) input.invite(true);
+    }, INVITE_AFTER_MS);
+  }
+
+  /** PICK / DROP availability always follows the crane's state; nothing else enables them. */
   function syncUi() {
     const state = gameState.get();
     const carried = crane.carried;
-    const hover = active ? placement.resolveHover(state.craneX, carried) : {};
     const canAct = active && !busy && !state.isInputLocked && !crane.isBusy;
-    const pickReady = canAct && !carried && state.craneState === CRANE_STATES.HOVERING_OPTION;
-    const dropReady = canAct && Boolean(carried) && state.craneState === CRANE_STATES.HOVERING_TARGET;
-    input.setActionState({ mode: carried ? 'drop' : 'pick', enabled: pickReady || dropReady });
+    input.setPickEnabled(canAct && !carried && state.craneState === CRANE_STATES.ALIGNED_WITH_TRIANGLE);
+    input.setDropEnabled(canAct && Boolean(carried) && state.craneState === CRANE_STATES.CARRYING);
     if (triangles.setHovered(carried ? null : state.hoveredOptionId)) audio.play('bloop');
-    bridge.setSocketAligned(Boolean(carried) && Boolean(hover.overSocket));
     bridge.setSocketArmed(Boolean(carried));
   }
 
@@ -66,16 +91,12 @@ export function createLevelEngine({ gameState, crane, claw, triangles, bridge, p
     if (inputLocked()) return;
     crane.setAxis(axis);
     if (axis.x || axis.y) {
-      input.nudgeJoystick(false);
-      clearTimeout(nudgeTimer);
+      input.invite(false);
+      clearTimeout(inviteTimer);
     }
   });
-  input.on('pick', () => handlePick());
-  input.on('drop', () => handleDrop());
-  input.on('primary', () => {
-    if (input.isActionAvailable('pick')) handlePick();
-    else if (input.isActionAvailable('drop')) handleDrop();
-  });
+  input.on('pick', () => beginPickupSequence());
+  input.on('drop', () => transportTriangleToBridge());
 
   async function startLevel(index, { firstEntry = false } = {}) {
     const level = LEVELS[index];
@@ -85,87 +106,95 @@ export function createLevelEngine({ gameState, crane, claw, triangles, bridge, p
     if (!placement.activeStage) console.error(`[level] task ${level.id}: unknown bridge stage "${level.bridgeStage}"`);
     const groupChanged = currentGroup !== level.optionGroup;
     currentGroup = level.optionGroup;
-    camera.reset(900, scope.signal).catch(() => {});
+    fireAndForget(cameraShots.resetCamera(900));
     await triangles.showPlatform();
     feedback.setInstruction(level.instruction, { swap: !firstEntry, focus: level.focus });
     feedback.pushInstruction();
     await triangles.showOptions(OPTION_GROUPS[level.optionGroup], { refreshAll: groupChanged });
     bridge.showSocket(level.bridgeStage);
+    await homeTrip;                                       // the hook is back over the yard before play resumes
     gameState.update({ transition: null });
     unlockInput();
-    scheduleNudge();
+    scheduleInvite();
     debugLog('level', `task ${level.id} started; correct = ${level.correctTriangleId}`);
   }
 
-  async function handlePick() {
-    if (!active || busy || inputLocked() || crane.isBusy || crane.carried || crane.state !== CRANE_STATES.HOVERING_OPTION) return;
+  /** PICK: lock the controls, lower, grab, lift the frame clear of the yard; DROP becomes live. */
+  async function beginPickupSequence() {
+    if (!active || busy || inputLocked() || crane.isBusy || crane.carried || crane.state !== CRANE_STATES.ALIGNED_WITH_TRIANGLE) return;
     const { option } = placement.resolveHover(crane.position.x, null);
     if (!option) return;
     busy = true;
-    input.setActionState({ mode: 'pick', enabled: false });
-    input.nudgeJoystick(false);
-    clearTimeout(nudgeTimer);
+    input.setEnabled(false);                              // arrows rest while the claw works
+    input.setPickEnabled(false);
+    input.invite(false);
+    clearTimeout(inviteTimer);
     try {
       const grab = triangles.grabPointOf(option);
       triangles.lift(option);
       triangles.nudgePlatform();
       triangles.focusOn(option);
-      camera.focus({ x: grab.x, y: grab.y + 90, scale: 1.3, pull: 0.65, duration: 650, signal: scope.signal }).catch(() => {});
+      fireAndForget(cameraShots.focusTrianglePlatform(grab));
       try {
         await crane.pickUp({ ...option, grabStageX: grab.x, grabStageY: grab.y }, { signal: scope.signal });
       } finally {
         triangles.clearFocus();
       }
-      triangles.hidePlatform();
-      camera.focus({ x: 960, y: 400, scale: 1.1, pull: 0.6, duration: 1100, signal: scope.signal }).catch(() => {});
+      builder.nod();
+      fireAndForget(cameraShots.resetCamera(800));
     } catch (error) {
-      if (!isAbortError(error)) throw error;
+      if (!isAbortError(error)) await recover(error);
     } finally {
       busy = false;
+      if (active && !inputLocked()) input.setEnabled(true);
     }
     syncUi();
   }
 
-  async function handleDrop() {
+  /** DROP: the crane carries the frame into the scene and sets it on the bridge, then the result plays. */
+  async function transportTriangleToBridge() {
     const carried = crane.carried;
-    if (!active || busy || inputLocked() || crane.isBusy || !carried || crane.state !== CRANE_STATES.HOVERING_TARGET) return;
-    const hover = placement.resolveHover(crane.position.x, carried);
+    if (!active || busy || inputLocked() || crane.isBusy || !carried || crane.state !== CRANE_STATES.CARRYING) return;
     busy = true;
-    input.setActionState({ mode: 'drop', enabled: false });
+    lockInput();
     try {
-      if (hover.overSocket) await placeOnBridge(carried);
+      await placeOnBridge(carried);
     } catch (error) {
-      if (!isAbortError(error)) throw error;
+      if (!isAbortError(error)) await recover(error);
     } finally {
       busy = false;
     }
     syncUi();
-  }
-
-  /** Lower the frame until its base stands on the road, inside the hotspot. */
-  function dropGripY(option) {
-    return BRIDGE_GEOMETRY.deckY - (option.baseOffset - option.grabY);
   }
 
   async function placeOnBridge(option) {
-    lockInput();
     const level = currentLevel();
     const socket = placement.activeStage.socket;
-    // Gentle push toward the drop spot, framed so the claw at rest stays below the task panel and the
-    // bridge stays above the joystick and the action button.
-    camera.focus({ x: 960 + (socket.x - 960) * 0.2, y: 480, scale: 1.12, duration: 900, signal: scope.signal }).catch(() => {});
-    const released = await crane.lowerAndRelease(
-      { craneX: placement.craneXForSocket(option), gripY: dropGripY(option) },
-      { signal: scope.signal }
-    );
-    triangles.placeInWorld(option, released.left, released.top);
+    const released = await crane.transportToBridge((scale) => placement.bridgeTarget(option, scale), {
+      signal: scope.signal,
+      onPhase(phase) {
+        if (phase === 'lift') fireAndForget(cameraShots.focusCarryingTriangle());
+        if (phase === 'depth') {
+          triangles.recedePlatform();
+          fireAndForget(cameraShots.focusBridgeTarget(socket));
+        }
+        if (phase === 'align') bridge.setSocketAligned(true);
+        if (phase === 'lower') {
+          bridge.setSocketLanding(true);
+          fireAndForget(cameraShots.focusBridgeTarget(socket, { closer: true, duration: 900 }));
+        }
+        if (phase === 'place') audio.play('bolt');
+      },
+    });
+    if (!released) throw new Error('the crane could not carry the frame to the bridge');
+    triangles.placeInWorld(option, released.left, released.top, released.scale);
     bridge.hideSocket();
     await triangles.seat(option);
     if (placement.isCorrect(option.id, level)) await handleCorrect(option, level);
     else await handleIncorrect(option);
   }
 
-  /** Lock → release → focus → crew builds → settle → next task. */
+  /** Correct: relief → the hook flies home → the crew builds → settle → next task. */
   async function handleCorrect(option, level) {
     gameState.update({ transition: 'level:construct' });
     audio.play('correct');
@@ -173,7 +202,7 @@ export function createLevelEngine({ gameState, crane, claw, triangles, bridge, p
     voice.say(COPY.feedback.correct, { speaker: 'narrator' });
     claw.relief();
     await crane.liftAway({ signal: scope.signal });
-    crane.parkAway({ signal: scope.signal }).catch(() => {});
+    homeTrip = crane.returnHome({ signal: scope.signal }).catch(() => {});
     await camera.focus({ x: 960, y: 540, scale: 1.1, pull: 0.55, duration: 800, signal: scope.signal });
     triangles.release(option);
     await bridge.absorbFrame(option, level.bridgeStage, scope.signal);
@@ -183,11 +212,12 @@ export function createLevelEngine({ gameState, crane, claw, triangles, bridge, p
     await wait(380, scope.signal);
     if (currentLevelIndex === LEVEL_COUNT - 1) {
       active = false;
+      await homeTrip;
       gameState.update({ transition: null, completed: true });
       await onComplete();
       return;
     }
-    await camera.reset(600, scope.signal);
+    await cameraShots.resetCamera(600);
     await startLevel(currentLevelIndex + 1);
   }
 
@@ -203,15 +233,33 @@ export function createLevelEngine({ gameState, crane, claw, triangles, bridge, p
     camera.shake(7, 340);
     await claw.react();
     await crane.liftAway({ signal: scope.signal });
-    crane.parkAway({ signal: scope.signal }).catch(() => {});
+    homeTrip = crane.returnHome({ signal: scope.signal }).catch(() => {});
     await camera.focus({ x: 960, y: 540, scale: 1, duration: 520, signal: scope.signal });
     const falling = wait(bridge.builtCount ? 1900 : 300, scope.signal).then(() => triangles.dropIntoWater(option));
     await bridge.collapse({ signal: scope.signal });
     await falling;
     crane.alarm(false);
     gameState.update({ bridgeProgress: 0 });
-    await camera.reset(500, scope.signal);
+    await cameraShots.resetCamera(500);
     await startLevel(0);
+  }
+
+  /** An unexpected failure must never leave the learner stuck: clear the hook and restart this task. */
+  async function recover(error) {
+    console.error('[level] recovering from an unexpected error:', error);
+    try {
+      lockInput();
+      crane.discardCargo();
+      crane.teleport(CRANE_LAYOUT.homeX);
+      triangles.clearFocus();
+      bridge.setSocketAligned(false);
+      currentGroup = null;                                 // rebuild the yard's frames
+      homeTrip = Promise.resolve();
+      busy = false;
+      await startLevel(currentLevelIndex);
+    } catch (again) {
+      console.error('[level] recovery failed:', again);
+    }
   }
 
   return {
@@ -237,6 +285,7 @@ export function createLevelEngine({ gameState, crane, claw, triangles, bridge, p
       lockInput();
       crane.discardCargo();
       crane.teleport(CRANE_LAYOUT.homeX);
+      homeTrip = Promise.resolve();
       triangles.clearFocus();
       await triangles.clearOptions();
       await triangles.showPlatform();      // back for the next build (the ending rolls it away)
@@ -247,3 +296,4 @@ export function createLevelEngine({ gameState, crane, claw, triangles, bridge, p
     },
   };
 }
+

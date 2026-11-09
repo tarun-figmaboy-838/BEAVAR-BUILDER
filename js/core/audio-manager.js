@@ -154,6 +154,48 @@ const SOUNDS = {
       tone({ t0, type: 'sine', freq: 170, freqEnd: 120, duration: 0.07, gain: 0.12 });
     },
   },
+  /** An arrow key: a short plastic click, pitched per direction so the four keys sound distinct. */
+  keyTap: {
+    minInterval: 0.05,
+    play: ({ tone, noise, t0, options }) => {
+      const pitch = [1.12, 1, 0.9, 1.04][options?.variant ?? 1];
+      noise({ t0, duration: 0.03, gain: 0.12, filter: 'bandpass', freq: 2600 * pitch, q: 1.2 });
+      tone({ t0, type: 'triangle', freq: 260 * pitch, freqEnd: 190 * pitch, duration: 0.05, gain: 0.07 });
+    },
+  },
+  /** PICK: a firmer tactile chunk, then a little mechanical tick. */
+  pickPress: {
+    minInterval: 0.15,
+    play: ({ tone, noise, t0 }) => {
+      noise({ t0, duration: 0.045, gain: 0.2, freq: 1100 });
+      tone({ t0, type: 'sine', freq: 190, freqEnd: 120, duration: 0.09, gain: 0.16 });
+      tone({ t0: t0 + 0.07, type: 'square', freq: 1500, duration: 0.025, gain: 0.03 });
+    },
+  },
+  /** DROP: a heavier lever: thunk plus a rising motor start. */
+  dropPress: {
+    minInterval: 0.2,
+    play: ({ tone, noise, t0 }) => {
+      noise({ t0, duration: 0.06, gain: 0.2, freq: 800 });
+      tone({ t0, type: 'sine', freq: 150, freqEnd: 95, duration: 0.12, gain: 0.18 });
+      tone({ t0: t0 + 0.06, type: 'sawtooth', freq: 70, freqEnd: 110, duration: 0.22, gain: 0.03 });
+    },
+  },
+  /** The winch taking the cable in (rising) or paying it out (falling), with a ratchet tick. */
+  winchUp: {
+    minInterval: 0.25,
+    play: ({ tone, noise, t0 }) => {
+      tone({ t0, type: 'sawtooth', freq: 95, freqEnd: 150, duration: 0.42, gain: 0.035, release: 0.2 });
+      for (let i = 0; i < 4; i += 1) noise({ t0: t0 + i * 0.09, duration: 0.02, gain: 0.05, filter: 'highpass', freq: 3800 });
+    },
+  },
+  winchDown: {
+    minInterval: 0.25,
+    play: ({ tone, noise, t0 }) => {
+      tone({ t0, type: 'sawtooth', freq: 150, freqEnd: 92, duration: 0.42, gain: 0.032, release: 0.2 });
+      for (let i = 0; i < 4; i += 1) noise({ t0: t0 + i * 0.1, duration: 0.02, gain: 0.045, filter: 'highpass', freq: 3400 });
+    },
+  },
   clawOpen: {
     minInterval: 0.12,
     play: ({ tone, noise, t0 }) => {
@@ -315,6 +357,38 @@ const LOOPS = {
             oscillators.forEach((oscillator) => oscillator.stop());
             wobble.stop();
           }, 300);
+        },
+      };
+    },
+  },
+  /** The hoist winch while the player raises or lowers the claw: a higher whirr than the trolley motor. */
+  winch: {
+    start({ context, out }) {
+      const master = context.createGain();
+      master.gain.setValueAtTime(0.0001, context.currentTime);
+      master.gain.linearRampToValueAtTime(0.03, context.currentTime + 0.08);
+      const filter = context.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.value = 700;
+      filter.Q.value = 1.4;
+      filter.connect(master).connect(out);
+      const oscillator = context.createOscillator();
+      oscillator.type = 'sawtooth';
+      oscillator.frequency.value = 118;
+      oscillator.connect(filter);
+      oscillator.start();
+      const flutter = context.createOscillator();
+      flutter.frequency.value = 22;
+      const flutterGain = context.createGain();
+      flutterGain.gain.value = 0.008;
+      flutter.connect(flutterGain).connect(master.gain);
+      flutter.start();
+      return {
+        stop() {
+          const now = context.currentTime;
+          master.gain.cancelScheduledValues(now);
+          master.gain.setTargetAtTime(0.0001, now, 0.04);
+          setTimeout(() => { oscillator.stop(); flutter.stop(); }, 250);
         },
       };
     },

@@ -133,9 +133,10 @@ export function createBuilderCharacter({ hostEl }) {
     setPose,
     setGameState(state) {
       completed = state.completed;
-      machinePose = ['lowering', 'grabbing'].includes(state.craneState) ? 'pick'
-        : ['carrying', 'hoveringTarget'].includes(state.craneState) ? 'carry'
-        : ['dropping', 'placing', 'returning'].includes(state.craneState) ? 'drop' : 'idle';
+      // Operating poses follow the crane: focused while picking, watching the load in transit, easing it down.
+      machinePose = ['loweringToPick', 'grabbing'].includes(state.craneState) ? 'pick'
+        : ['liftingTriangle', 'carrying', 'transportingDepth', 'aligningWithBridge'].includes(state.craneState) ? 'carry'
+        : ['loweringToPlace', 'releasing', 'returning'].includes(state.craneState) ? 'drop' : 'idle';
       if (!REACTIONS.has(pose) && restingPose() !== pose) setPose(restingPose());
     },
     setAxis(next) {
@@ -155,6 +156,13 @@ export function createBuilderCharacter({ hostEl }) {
     cheer() { setPose('cheer', { thenIdleAfter: 2300 }); },
     worry() { setPose('worry', { thenIdleAfter: 2100 }); },
     point() { setPose('point', { thenIdleAfter: 1600 }); },
+    /** A small satisfied nod in the seat (a good grab): no pose change, just the body. */
+    nod() {
+      root.classList.remove('is-nodding');
+      void root.offsetWidth;
+      root.classList.add('is-nodding');
+      setTimeout(() => root.classList.remove('is-nodding'), 700);
+    },
     get element() { return root; },
   };
 }

@@ -50,12 +50,12 @@ export const CRANE_LAYOUT = Object.freeze({
   parkX: 1660,
   restY: 236,         // claw top when fully raised: below the task sign, so the claw is never hidden behind it
   maxY: 760,           // claw top when fully lowered: reaches the apex of the flattest frame
-  maxSpeed: 560,       // px per second along the jib
-  hoistSpeed: 520,     // px per second up/down
+  maxSpeed: 500,       // px per second along the jib (empty hook)
+  carrySpeed: 400,     // px per second with a frame on the hook: it feels heavier
+  hoistSpeed: 460,     // px per second up/down
   gripOffsetY: 176,    // distance from claw top to the point held between the jaws
   clawHeight: 198,
   optionTolerance: 72, // horizontal forgiveness when picking
-  socketTolerance: 56, // horizontal forgiveness when dropping on the bridge
   homeTolerance: 72,   // horizontal forgiveness when returning a frame to its slot
 });
 
@@ -74,9 +74,14 @@ export const PLATFORM_LAYOUT = Object.freeze({
   pileScale: 0.72,
 });
 
+/**
+ * The control pad (bottom-left): four arrow keys on a cross plate, PICK in its centre socket.
+ * 280 px keeps the pad clear of the yard platform's left end cap (x 310). DROP sits bottom-right.
+ * A tap holds its direction at least `tapMs`, so a quick tap is a small, controlled nudge.
+ */
 export const CONTROLS_LAYOUT = Object.freeze({
-  joystickSize: 250,
-  knobTravel: 52,
+  padSize: 280,
+  tapMs: 120,
 });
 
 export const WATER_LINE_Y = 745;   // where the backdrop's quay blocks meet the water

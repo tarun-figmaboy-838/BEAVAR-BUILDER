@@ -1,9 +1,16 @@
 import { CONTROLS_LAYOUT } from '../data/layout.js';
 
 /**
- * Crane controls: an analog joystick (pointer drag, arrow keys, WASD) and one contextual action
- * button that reads PICK until a frame is lifted and flips to DROP while one is carried.
- * Emits intent only; the level engine decides whether an action is legal.
+ * Crane controls.
+ *   Pad (bottom-left): four arrow keys. LEFT / RIGHT move the trolley along the jib, UP / DOWN raise and
+ *   lower the claw. Each key is its own button with its own pressed state: pressing one never animates
+ *   another key, the plate, or PICK. Tap = a small nudge (the direction is held at least `tapMs`),
+ *   hold = continuous travel, release = the crane brakes smoothly (its own inertia).
+ *   PICK (the pad's centre button): usable only with the claw over a frame and the hook empty.
+ *   DROP (bottom-right): usable only once a frame is on the hook; it starts the whole transport.
+ *   PICK and DROP are real buttons, `disabled` whenever their action is not possible.
+ * Keyboard: arrows / WASD press the matching key; Space (or Enter) presses PICK, or DROP while carrying.
+ * Emits intent only ('axis', 'pick', 'drop'); the level engine decides what is legal.
  */
 const KEY_TO_DIRECTION = {
   ArrowLeft: 'left', KeyA: 'left',
@@ -11,22 +18,19 @@ const KEY_TO_DIRECTION = {
   ArrowUp: 'up', KeyW: 'up',
   ArrowDown: 'down', KeyS: 'down',
 };
-const DEAD_ZONE = 0.18;
-const ACTION_LABELS = { pick: 'Pick the triangle', drop: 'Drop the triangle' };
+const DIRECTIONS = ['up', 'right', 'down', 'left'];
 
 export function createInputManager({ controlsEl, audio }) {
-  const joystickEl = controlsEl.querySelector('#joystick');
-  const knobEl = joystickEl.querySelector('.joystick__knob');
-  const stemEl = joystickEl.querySelector('.joystick__stem');
-  const actionButton = controlsEl.querySelector('#action-button');
-  const keysHeld = { left: false, right: false, up: false, down: false };
+  const padEl = controlsEl.querySelector('#dpad');
+  const keyEls = Object.fromEntries(DIRECTIONS.map((direction) => [direction, padEl.querySelector(`.dpad__key[data-direction="${direction}"]`)]));
+  const buttons = { pick: controlsEl.querySelector('#pick-button'), drop: controlsEl.querySelector('#drop-button') };
+  const sounds = { pick: 'pickPress', drop: 'dropPress' };
+  const usable = { pick: false, drop: false };
+  const held = Object.fromEntries(DIRECTIONS.map((direction) => [direction, null]));   // per key: { since, source } while held
+  const releaseTimers = {};
   const listeners = new Map();
-  let pointerAxis = null;
-  let activePointerId = null;
   let lastAxis = { x: 0, y: 0 };
   let enabled = false;
-  let actionMode = 'pick';
-  let actionEnabled = false;
   let demoAxis = null;
 
   function emit(event, payload) {
@@ -39,153 +43,126 @@ export function createInputManager({ controlsEl, audio }) {
     return () => listeners.get(event).delete(listener);
   }
 
-  function keyboardAxis() {
-    return { x: (keysHeld.right ? 1 : 0) - (keysHeld.left ? 1 : 0), y: (keysHeld.down ? 1 : 0) - (keysHeld.up ? 1 : 0) };
-  }
-
-  function renderKnob(axis) {
-    const travel = CONTROLS_LAYOUT.knobTravel;
-    const dx = axis.x * travel;
-    const dy = axis.y * travel;
-    knobEl.style.transform = `translate(${dx.toFixed(1)}px, ${dy.toFixed(1)}px)`;
-    const length = Math.hypot(dx, dy);
-    const angle = (Math.atan2(dy, dx) * 180) / Math.PI - 90;
-    stemEl.style.transform = `rotate(${angle.toFixed(1)}deg) scaleY(${(length / 40).toFixed(3)})`;
-    stemEl.style.opacity = length > 2 ? '1' : '0';
-    if (length > 2) joystickEl.classList.remove('is-nudging');
-    const directions = [];
-    if (axis.y < -0.3) directions.push('up');
-    if (axis.y > 0.3) directions.push('down');
-    if (axis.x < -0.3) directions.push('left');
-    if (axis.x > 0.3) directions.push('right');
-    joystickEl.dataset.dir = directions.join(' ');
-  }
-
-  function currentAxis() {
-    if (demoAxis) return demoAxis;
-    if (pointerAxis) return pointerAxis;
-    return keyboardAxis();
+  function heldAxis() {
+    return { x: (held.right ? 1 : 0) - (held.left ? 1 : 0), y: (held.down ? 1 : 0) - (held.up ? 1 : 0) };
   }
 
   function publishAxis() {
-    const axis = currentAxis();
-    renderKnob(axis);
-    const live = enabled && !demoAxis ? axis : { x: 0, y: 0 };
-    if (live.x === lastAxis.x && live.y === lastAxis.y) return;
-    lastAxis = live;
-    emit('axis', live);
+    const axis = enabled && !demoAxis ? heldAxis() : { x: 0, y: 0 };
+    if (axis.x === lastAxis.x && axis.y === lastAxis.y) return;
+    lastAxis = axis;
+    emit('axis', axis);
   }
 
-  function axisFromPointer(event) {
-    const rect = joystickEl.getBoundingClientRect();
-    const travelScreen = CONTROLS_LAYOUT.knobTravel * (rect.width / CONTROLS_LAYOUT.joystickSize);
-    let x = (event.clientX - (rect.left + rect.width / 2)) / travelScreen;
-    let y = (event.clientY - (rect.top + rect.height / 2)) / travelScreen;
-    const magnitude = Math.hypot(x, y);
-    if (magnitude > 1) {
-      x /= magnitude;
-      y /= magnitude;
-    }
-    const filter = (value) => (Math.abs(value) < DEAD_ZONE ? 0 : Math.round(value * 100) / 100);
-    return { x: filter(x), y: filter(y) };
-  }
-
-  function endDrag() {
-    if (activePointerId === null) return;
-    activePointerId = null;
-    pointerAxis = null;
-    joystickEl.classList.remove('is-dragging');
-    publishAxis();
-  }
-
-  joystickEl.addEventListener('pointerdown', (event) => {
+  /** One key goes down: only that key compresses; the crane starts that way. */
+  function pressDirection(direction, source) {
     if (!enabled || demoAxis) return;
-    event.preventDefault();
-    joystickEl.setPointerCapture?.(event.pointerId);
-    activePointerId = event.pointerId;
-    joystickEl.classList.add('is-dragging');
-    audio.play('controlPress');
-    pointerAxis = axisFromPointer(event);
+    clearTimeout(releaseTimers[direction]);
+    if (!held[direction]) audio.play('keyTap', { variant: DIRECTIONS.indexOf(direction) });
+    held[direction] = { since: performance.now(), source };
+    keyEls[direction].classList.add('is-pressed');
+    padEl.classList.remove('is-inviting');
     publishAxis();
-  });
-  joystickEl.addEventListener('pointermove', (event) => {
-    if (event.pointerId !== activePointerId) return;
-    pointerAxis = axisFromPointer(event);
-    publishAxis();
-  });
-  for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) {
-    joystickEl.addEventListener(type, (event) => {
-      if (event.pointerId === activePointerId) endDrag();
-    });
   }
-  joystickEl.addEventListener('contextmenu', (event) => event.preventDefault());
 
-  function setKey(direction, value) {
-    if (keysHeld[direction] === value) return;
-    if (value && !enabled) return;
-    keysHeld[direction] = value;
-    joystickEl.classList.toggle('is-keyboard', Object.values(keysHeld).some(Boolean));
-    if (value) audio.play('controlPress');
-    publishAxis();
+  /** The key springs back at once; the direction is held a little longer if it was only a tap. */
+  function releaseDirection(direction, source) {
+    const press = held[direction];
+    if (!press || (source && press.source !== source)) return;
+    keyEls[direction].classList.remove('is-pressed');
+    const remaining = CONTROLS_LAYOUT.tapMs - (performance.now() - press.since);
+    const finish = () => {
+      if (held[direction] !== press) return;
+      held[direction] = null;
+      publishAxis();
+    };
+    if (remaining > 0) releaseTimers[direction] = setTimeout(finish, remaining);
+    else finish();
   }
 
   function releaseAll() {
-    for (const direction of Object.keys(keysHeld)) keysHeld[direction] = false;
-    joystickEl.classList.remove('is-keyboard');
-    endDrag();
+    for (const direction of DIRECTIONS) {
+      clearTimeout(releaseTimers[direction]);
+      held[direction] = null;
+      keyEls[direction].classList.remove('is-pressed');
+    }
     publishAxis();
   }
 
-  function pulse(element, className) {
-    element.classList.remove(className);
-    void element.offsetWidth;
-    element.classList.add(className);
-    setTimeout(() => element.classList.remove(className), 800);
+  for (const direction of DIRECTIONS) {
+    const keyEl = keyEls[direction];
+    keyEl.addEventListener('pointerdown', (event) => {
+      event.preventDefault();
+      if (!enabled || demoAxis) return;
+      keyEl.setPointerCapture?.(event.pointerId);
+      pressDirection(direction, `pointer:${event.pointerId}`);
+    });
+    for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) {
+      keyEl.addEventListener(type, (event) => releaseDirection(direction, `pointer:${event.pointerId}`));
+    }
+    keyEl.addEventListener('contextmenu', (event) => event.preventDefault());
+    keyEl.addEventListener('click', (event) => event.preventDefault());    // movement is press-and-hold, never a click
   }
 
-  actionButton.addEventListener('pointerdown', () => actionButton.classList.add('is-pressed'));
-  for (const type of ['pointerup', 'pointercancel', 'pointerleave']) {
-    actionButton.addEventListener(type, () => actionButton.classList.remove('is-pressed'));
+  function fire(action) {
+    audio.play(sounds[action]);
+    emit(action);
   }
-  actionButton.addEventListener('click', () => {
-    if (!enabled) return;
-    if (!actionEnabled) {
-      pulse(actionButton, 'is-denied');
-      return;
+
+  for (const [action, button] of Object.entries(buttons)) {
+    button.addEventListener('pointerdown', () => { if (!button.disabled) button.classList.add('is-pressed'); });
+    for (const type of ['pointerup', 'pointercancel', 'pointerleave']) {
+      button.addEventListener(type, () => button.classList.remove('is-pressed'));
     }
-    audio.play('controlPress');
-    emit(actionMode);
-  });
+    button.addEventListener('click', () => {
+      if (enabled && !button.disabled) fire(action);
+    });
+  }
 
   window.addEventListener('keydown', (event) => {
-    if (event.repeat || event.target.closest?.('input, textarea')) return;
+    if (event.target.closest?.('input, textarea')) return;
     const direction = KEY_TO_DIRECTION[event.code];
     if (direction) {
       if (enabled) event.preventDefault();
-      setKey(direction, true);
+      if (!event.repeat) pressDirection(direction, 'keyboard');
       return;
     }
     if (event.code === 'Space' || event.code === 'Enter') {
+      if (event.repeat) return;
       const focusedButton = event.target.closest?.('button, a');
-      // Enter keeps native activation of a focused control; Space is always PICK/DROP during play,
+      // Enter keeps native activation of a focused control; Space is always the action during play,
       // except on the screen-advancing buttons.
       if (focusedButton && (event.code === 'Enter' || focusedButton.classList.contains('cta-button'))) return;
       if (!enabled) return;
       event.preventDefault();
-      if (actionEnabled) {
-        actionButton.classList.add('is-pressed');
-        setTimeout(() => actionButton.classList.remove('is-pressed'), 140);
-        emit('primary');
-      }
+      const action = usable.pick ? 'pick' : usable.drop ? 'drop' : null;
+      if (!action) return;
+      buttons[action].classList.add('is-pressed');
+      setTimeout(() => buttons[action].classList.remove('is-pressed'), 150);
+      fire(action);
     }
   });
   window.addEventListener('keyup', (event) => {
     const direction = KEY_TO_DIRECTION[event.code];
-    if (direction) setKey(direction, false);
-    // Space on a focused frame/spot button would otherwise "click" it on release.
+    if (direction) releaseDirection(direction, 'keyboard');
     if (event.code === 'Space' && enabled && !event.target.closest?.('.cta-button')) event.preventDefault();
   });
   window.addEventListener('blur', releaseAll);
+
+  /** Enables or disables a real button; one small activation pop when it becomes usable, never a loop. */
+  function setUsable(action, value) {
+    const button = buttons[action];
+    const became = value && button.disabled;
+    usable[action] = Boolean(value);
+    button.disabled = !usable[action];
+    if (!usable[action]) button.classList.remove('is-pressed');
+    if (became) {
+      button.classList.remove('is-ready');
+      void button.offsetWidth;
+      button.classList.add('is-ready');
+      setTimeout(() => button.classList.remove('is-ready'), 600);
+    }
+  }
 
   return {
     on,
@@ -195,40 +172,38 @@ export function createInputManager({ controlsEl, audio }) {
     },
     setEnabled(value) {
       enabled = Boolean(value);
-      joystickEl.setAttribute('aria-disabled', String(!enabled));
+      padEl.classList.toggle('is-locked', !enabled);
+      for (const keyEl of Object.values(keyEls)) keyEl.setAttribute('aria-disabled', String(!enabled));
       if (!enabled) releaseAll();
     },
-    /** mode: 'pick' | 'drop'. The face flips when the mode changes; it pulses when it becomes usable. */
-    setActionState({ mode, enabled: usable }) {
-      if (mode && mode !== actionMode) {
-        actionMode = mode;
-        actionButton.dataset.mode = mode;
-        actionButton.setAttribute('aria-label', ACTION_LABELS[mode]);
-      }
-      const becameUsable = usable && !actionEnabled;
-      actionEnabled = Boolean(usable);
-      actionButton.disabled = !actionEnabled;
-      if (becameUsable) pulse(actionButton, 'is-ready');
+    setPickEnabled(value) {
+      setUsable('pick', value);
     },
-    /** Invite the player to move: the joystick glows and bobs until it is used. */
-    nudgeJoystick(on) {
-      joystickEl.classList.toggle('is-nudging', Boolean(on));
+    setDropEnabled(value) {
+      setUsable('drop', value);
     },
     isActionAvailable(action) {
-      return actionEnabled && actionMode === action;
+      return Boolean(usable[action]);
     },
-    /** How-to-play demonstrations drive the real controls while the player's input is gated. */
+    /** Invite the player to move: the side keys bob gently until one is pressed. */
+    invite(on) {
+      padEl.classList.toggle('is-inviting', Boolean(on));
+    },
+    /** How-to-play demonstrations show the real keys while the player's input is gated. */
     showDemoAxis(axis) {
-      demoAxis = axis ? { x: axis.x, y: axis.y } : null;
-      joystickEl.classList.toggle('is-keyboard', Boolean(demoAxis));
+      demoAxis = axis && (axis.x || axis.y) ? { x: axis.x, y: axis.y } : null;
+      const pressed = demoAxis ? { left: demoAxis.x < 0, right: demoAxis.x > 0, up: demoAxis.y < 0, down: demoAxis.y > 0 } : {};
+      for (const direction of DIRECTIONS) keyEls[direction].classList.toggle('is-pressed', Boolean(pressed[direction]));
       emit('demo-axis', demoAxis ?? { x: 0, y: 0 });
       publishAxis();
     },
-    async demoPress(mode) {
-      this.setActionState({ mode, enabled: true });
-      actionButton.classList.add('is-pressed');
+    async demoPress(action) {
+      setUsable(action, true);
+      buttons[action].classList.add('is-pressed');
+      audio.play(sounds[action]);
       await new Promise((resolve) => setTimeout(resolve, 180));
-      actionButton.classList.remove('is-pressed');
+      buttons[action].classList.remove('is-pressed');
+      setUsable(action, false);
     },
   };
 }

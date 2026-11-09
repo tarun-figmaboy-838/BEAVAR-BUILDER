@@ -1,22 +1,19 @@
 import { COPY } from '../data/copy.js';
 import { createSequenceScope, wait, playClassAnimation, isAbortError, prefersReducedMotion } from '../core/motion.js';
-import { BRIDGE_GEOMETRY } from '../data/bridge-geometry.js';
+import { bridgeSeatTarget } from '../gameplay/placement-controller.js';
 
 const DEMO_PILE_INDEX = 3;              // the tall frame in the yard
 const DEMO_TARGET = { x: 960 }; // the middle hotspot (PDF p6 marks spots on the deck)
 
-/** Each step shows the real control it teaches: the joystick, the green PICK button, the orange DROP button. */
+/** Each step shows the real control it teaches: the arrow pad, the green PICK button, the orange DROP button. */
 const STEP_CHIPS = [
   `<span class="howto-chip howto-chip--move">
-     <span class="howto-joy__ring"></span><span class="howto-joy__face"></span>
-     <svg class="howto-joy__arrows" viewBox="0 0 100 100" aria-hidden="true">
-       <polygon class="howto-joy__arrow howto-joy__arrow--left" points="12,50 30,37 30,63"/>
-       <polygon class="howto-joy__arrow howto-joy__arrow--right" points="88,50 70,37 70,63"/>
-     </svg>
-     <span class="howto-joy__knob"></span>
+     <img class="howto-pad__plate" src="assets/images/kit/dpad-plate.png" alt="" draggable="false">
+     <img class="howto-pad__key howto-pad__key--left" src="assets/images/kit/key-left.png" alt="" draggable="false">
+     <img class="howto-pad__key howto-pad__key--right" src="assets/images/kit/key-right.png" alt="" draggable="false">
    </span>`,
-  `<span class="howto-chip howto-chip--pick"><img src="assets/images/crane-kit/claw-open.png" alt="" draggable="false"></span>`,
-  `<span class="howto-chip howto-chip--drop"><img src="assets/images/crane-kit/claw-closed.png" alt="" draggable="false"><span class="howto-chip__arrow"></span></span>`,
+  `<span class="howto-chip howto-chip--pick"><img class="howto-chip__art" src="assets/images/kit/btn-pick.png" alt="" draggable="false"></span>`,
+  `<span class="howto-chip howto-chip--drop"><img class="howto-chip__art" src="assets/images/kit/btn-drop.png" alt="" draggable="false"></span>`,
 ];
 
 /** G0.3 How to Play: each instruction is demonstrated with the real crane and the real controls, input gated. */
@@ -75,7 +72,8 @@ export function createHowToPlayScreen({ els, voice, camera, crane, triangles, br
   function revealControls() {
     if (!els.controls.hidden) return;
     input.setEnabled(false);
-    input.setActionState({ mode: 'pick', enabled: false });
+    input.setPickEnabled(false);
+    input.setDropEnabled(false);
     els.controls.hidden = false;
     playClassAnimation(els.controls, 'is-entering', 700);
   }
@@ -100,26 +98,21 @@ export function createHowToPlayScreen({ els, voice, camera, crane, triangles, br
     cardPress('pick');
     await input.demoPress('pick');
     await crane.pickUp({ ...item, id: 'demo', grabStageX: grab.x, grabStageY: grab.y }, { signal: scope.signal });
-    input.setActionState({ mode: 'drop', enabled: false });
     await wait(200, scope.signal);
     await sayStep(2);
-    demoAxis(DEMO_TARGET.x < crane.position.x ? -1 : 1);
-    await crane.glideTo(DEMO_TARGET.x, { signal: scope.signal });
-    demoAxis(0);
+    // DROP: the same transport the player gets: lift, into depth, align over the middle spot, lower, release.
     cardPress('drop');
     await input.demoPress('drop');
-    const released = await crane.lowerAndRelease(
-      { craneX: DEMO_TARGET.x, gripY: BRIDGE_GEOMETRY.deckY - item.baseOffset + item.grabY },
-      { signal: scope.signal }
-    );
-    input.setActionState({ mode: 'pick', enabled: false });
-    triangles.placeInWorld(item, released.left, released.top);
+    const released = await crane.transportToBridge((scale) => bridgeSeatTarget(item, DEMO_TARGET.x, scale), { signal: scope.signal });
+    if (!released) return;
+    triangles.placeInWorld(item, released.left, released.top, released.scale);
     await triangles.seat(item);
     await crane.liftAway({ signal: scope.signal });
+    const homeTrip = crane.returnHome({ signal: scope.signal, x: 1100 });   // parks clear of the how-to card
     await wait(prefersReducedMotion() ? 0 : 500, scope.signal);
     await playClassAnimation(item.element, 'is-demo-ghost', 600);
     await triangles.returnToSlot(item);
-    await crane.glideTo(1100, { signal: scope.signal });   // parks clear of the how-to card
+    await homeTrip;
   }
 
   return {
@@ -139,7 +132,8 @@ export function createHowToPlayScreen({ els, voice, camera, crane, triangles, br
         if (!isAbortError(error)) throw error;
       } finally {
         demoAxis(0);
-        input.setActionState({ mode: 'pick', enabled: false });
+        input.setPickEnabled(false);
+        input.setDropEnabled(false);
       }
       highlightStep(copy.steps.length);
       // PDF p6: the card closes with this line; the builder says it and the practice round begins.

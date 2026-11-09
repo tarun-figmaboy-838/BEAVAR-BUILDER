@@ -106,6 +106,9 @@
 .platform.is-focusing .triangle--option:not(.is-focused) { filter: brightness(0.4) saturate(0.5); }
 .platform { transition: transform 560ms var(--ease-mech), opacity 420ms; }
 .platform.is-away { transform: translateY(360px); opacity: 0; }
+/* Depth transport: the yard is the foreground, so as the load travels away from the camera the yard
+   slides out of the bottom of the frame faster than anything else moves (parallax). */
+.platform.is-receding { transform: translateY(380px); opacity: 0; transition: transform 1500ms cubic-bezier(0.45, 0, 0.2, 1), opacity 900ms ease 500ms; }
 .platform.is-entering .platform__deck { animation: platform-enter 700ms var(--ease-out) both; }
 .claw-shadow {
   position: absolute; left: 0; top: 0;
@@ -124,7 +127,7 @@
 .frame__tick { stroke-width: 4; }
 .frame__arc, .frame__square { stroke-width: 3.5; }
 
-.triangle--option { pointer-events: none; transition: transform 260ms var(--ease-out); } /* not tappable: joystick + button only */
+.triangle--option { pointer-events: none; transition: transform 260ms var(--ease-out); } /* not tappable: the crane is driven only with the pad, PICK and DROP */
 .triangle--option .frame { transition: filter 200ms; }
 /* Hook over a frame: the beams glow (no fill), and the frame lifts a little. */
 .triangle--option.is-hovered { transform: translateY(-10px) scale(1.04); }
@@ -142,6 +145,7 @@
 .triangle.is-carried { transition: none; cursor: default; pointer-events: none; transform-origin: var(--grab-x, 50%) 0; }
 .triangle.is-carried .frame { filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.95)) drop-shadow(0 0 10px rgba(255, 230, 120, 0.8)) drop-shadow(0 12px 8px rgba(0, 0, 0, 0.35)); }
 .placed-layer .triangle { pointer-events: none; }
+.triangle.is-scaled .frame { width: 100%; height: 100%; }   /* a frame placed in depth: drawn at the bridge's scale */
 .triangle.is-seated { animation: triangle-seat 520ms var(--ease-out) 1; }
 .triangle.is-dissolving { animation: triangle-dissolve 640ms var(--ease-in) forwards; }
 .triangle.is-rejected { animation: triangle-reject 640ms var(--ease-out) 1; }
@@ -221,6 +225,10 @@
 .hotspot.is-armed { opacity: 1; transform: scale(1); }
 .hotspot.is-aligned { --spot: 70, 226, 110; --spot-hi: 214, 255, 222; transform: scale(1.06); }
 .socket { pointer-events: none; border: 0; background: none; padding: 0; }
+/* The frame is coming down onto the spot: the beam and chevrons have done their job and fade, so the frame
+   never passes through them; the ring on the road stays as the landing mark. */
+.hotspot__column, .hotspot__chevrons, .hotspot__sparks { transition: opacity 260ms ease-out; }
+.hotspot.is-landing .hotspot__column, .hotspot.is-landing .hotspot__chevrons, .hotspot.is-landing .hotspot__sparks { opacity: 0; }
 /* A glowing ring of light on the road, and a bright beam with lit edges rising out of it:
    clearly visible, but light (it fades out at the top and into the road), never a flat block. */
 .hotspot__pad {
@@ -315,6 +323,8 @@
   will-change: transform;
 }
 .hoist { position: absolute; left: 0; top: 0; width: 0; height: 0; will-change: transform; }
+/* The claw and its cargo scale together with depth, about the point where the cable holds the claw. */
+.hoist__load { position: absolute; left: 0; top: 0; width: 0; height: 0; transform-origin: 0 0; }
 .cable {
   position: absolute;
   left: -7px; top: -1600px; width: 14px; height: 1606px;
@@ -332,6 +342,7 @@
 .crane-cabin { filter: drop-shadow(0 7px 4px #17364b30); }
 .builder { position: absolute; overflow: visible; pointer-events: none; isolation: isolate; }   /* never clip the sprite; its layers stay under the cab's glass */
 .builder__body { position: absolute; left: 0; top: 0; width: 144px; height: 144px; transform-origin: 50% 92%; transition: transform 240ms var(--ease-out); animation: operator-breathe 3.4s ease-in-out infinite; }
+.builder.is-nodding .builder__body { animation: operator-nod 620ms var(--ease-out) 1; }
 .builder__frame { position: absolute; inset: 0; background-image: url("../assets/images/characters/operator/beaver-idle-atlas.png"); background-size: 200% 200%; background-repeat: no-repeat; opacity: 0; transform-origin: 0 0; }
 .builder__frame.is-on { opacity: 1; }
 /* Each pose has its own gentle motion on top of the frames. */

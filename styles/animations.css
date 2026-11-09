@@ -62,17 +62,13 @@
   100% { opacity: 1; transform: scale(1) translateY(0); }
 }
 @keyframes button-ready {
-  0% { transform: scale(1); }
-  35% { transform: scale(1.1); }
-  65% { transform: scale(0.97); }
-  100% { transform: scale(1); }
+  0% { scale: 1; }
+  40% { scale: 1.08; }
+  70% { scale: 0.98; }
+  100% { scale: 1; }
 }
-@keyframes button-denied {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-6px); }
-  50% { transform: translateX(6px); }
-  75% { transform: translateX(-3px); }
-}
+@keyframes key-invite-left { 0%, 70%, 100% { transform: translateX(0); } 80% { transform: translateX(-5px); } 90% { transform: translateX(1px); } }
+@keyframes key-invite-right { 0%, 70%, 100% { transform: translateX(0); } 80% { transform: translateX(5px); } 90% { transform: translateX(-1px); } }
 @keyframes star-pop {
   0% { opacity: 0; transform: scale(0.3) rotate(-20deg); }
   70% { opacity: 1; transform: scale(1.15) rotate(6deg); }
@@ -263,10 +259,6 @@
 /* ----- Kit crane, hotspot, builder ----- */
 @keyframes beacon-flash { 0% { opacity: 1; } 100% { opacity: 0.15; } }
 @keyframes beacon-glow { 0% { opacity: 0.15; transform: scale(0.85); } 100% { opacity: 1; transform: scale(1.08); } }
-@keyframes joystick-invite {
-  0%, 100% { transform: translateY(0) scale(1); }
-  50% { transform: translateY(-6px) scale(1.04); }
-}
 @keyframes glow-blink { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
 @keyframes builder-hop {
   0%, 100% { transform: translateY(0) scale(1, 1); }
@@ -303,10 +295,6 @@
 @keyframes glow-pulse {
   0%, 100% { transform: scale(0.9); opacity: 0.55; }
   50% { transform: scale(1.08); opacity: 1; }
-}
-@keyframes button-pulse {
-  0%, 100% { scale: 1; }
-  50% { scale: 1.045; }
 }
 
 @keyframes card-leave-right {
@@ -352,10 +340,6 @@
   100% { fill-opacity: 1; }
 }
 
-@keyframes arrow-invite {
-  0%, 100% { fill: #f3f5fa; stroke: #f3f5fa; }
-  50% { fill: #ffd34a; stroke: #ffd34a; }
-}
 
 @keyframes puff-burst {
   0% { opacity: 0.95; transform: translate(0, 0) scale(0.3); }
@@ -468,3 +452,16 @@
 @keyframes frame-wiggle { 0%, 100% { rotate: 0deg; } 25% { rotate: -3deg; } 60% { rotate: 2.5deg; } }
 @keyframes frame-lift { 0% { scale: 1 1; } 30% { scale: 0.92 1.1; } 65% { scale: 1.05 0.96; } 100% { scale: 1 1; } }
 
+
+/* The operator's small satisfied nod after a clean grab (body only, stays in the seat). */
+@keyframes operator-nod {
+  0%, 100% { transform: translateY(0) rotate(0); }
+  30% { transform: translateY(3px) rotate(2deg); }
+  60% { transform: translateY(-1px) rotate(-1deg); }
+}
+
+/* PICK's sheen: a soft light sweeps across the ready button, then rests. */
+@keyframes button-sheen {
+  0% { left: -60%; }
+  45%, 100% { left: 125%; }
+}

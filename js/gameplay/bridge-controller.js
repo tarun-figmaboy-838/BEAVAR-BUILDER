@@ -219,7 +219,7 @@ export function createBridgeController({ bridgeEl, fxEl, fx, audio }) {
     return spot;
   }
 
-  // The drop spot only marks the place: it is not tappable (joystick + PICK / DROP only).
+  // The drop spot only marks the place: it is not tappable (arrow pad, PICK and DROP only).
   const socket = document.createElement('div');
   socket.className = 'hotspot socket';
   socket.setAttribute('aria-hidden', 'true');
@@ -349,7 +349,8 @@ export function createBridgeController({ bridgeEl, fxEl, fx, audio }) {
     const panels = panelEls.get(stageId) ?? [];
     const left = parseFloat(option.element.style.left) || 0;
     const top = parseFloat(option.element.style.top) || 0;
-    const dropped = option.localVertices.map(([x, y]) => [left + x, top + y]);
+    const scale = option.placedScale ?? 1;                 // frames placed in depth stand at the bridge's scale
+    const dropped = option.localVertices.map(([x, y]) => [left + x * scale, top + y * scale]);
     option.element.remove();
     if (reduced() || !panels.length) {
       panels.forEach((panel) => installPanel(panel));
@@ -492,11 +493,15 @@ export function createBridgeController({ bridgeEl, fxEl, fx, audio }) {
       if (!point) return;
       socket.style.left = `${point.x}px`;
       socket.style.top = `${BRIDGE_GEOMETRY.deckY}px`;
-      socket.classList.remove('is-aligned');
+      socket.classList.remove('is-aligned', 'is-landing');
       socket.classList.add('is-visible');
     },
     hideSocket() {
-      socket.classList.remove('is-visible', 'is-aligned', 'is-armed');
+      socket.classList.remove('is-visible', 'is-aligned', 'is-armed', 'is-landing');
+    },
+    /** The frame is being lowered onto the spot: keep only the landing ring. */
+    setSocketLanding(landing) {
+      socket.classList.toggle('is-landing', Boolean(landing));
     },
     setSocketAligned(aligned) {
       socket.classList.toggle('is-aligned', Boolean(aligned));

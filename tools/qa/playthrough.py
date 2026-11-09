@@ -39,9 +39,9 @@ STATE_JS = """(() => {
     hovered: document.querySelector('.triangle--option.is-hovered')?.dataset.triangleId ?? null,
     socketVisible: !!document.querySelector('.socket.is-visible'),
     socketAligned: !!document.querySelector('.socket.is-aligned'),
-    actionMode: document.getElementById('action-button')?.dataset.mode ?? null,
-    pickEnabled: document.getElementById('action-button')?.dataset.mode === 'pick' && !document.getElementById('action-button').disabled,
-    dropEnabled: document.getElementById('action-button')?.dataset.mode === 'drop' && !document.getElementById('action-button').disabled,
+    pickEnabled: !document.getElementById('pick-button')?.disabled,
+    dropEnabled: !document.getElementById('drop-button')?.disabled,
+    pressedKeys: [...document.querySelectorAll('.dpad__key.is-pressed')].map((k) => k.dataset.direction),
     stageInView: (() => { const r = document.getElementById('stage').getBoundingClientRect(); return r.left >= -1 && r.top >= -1 && r.right <= innerWidth + 1 && r.bottom <= innerHeight + 1; })(),
     builtMembers: document.querySelectorAll('#bridge .member.is-built').length,
     cta: [...document.querySelectorAll('.cta-button')].map((b) => b.textContent.trim()).pop() ?? null,
@@ -49,7 +49,7 @@ STATE_JS = """(() => {
     completion: !!document.querySelector('.completion'),
     bubble: text('.speech-bubble__text .visually-hidden'),
     builderInCab: !!document.querySelector('#crane .builder:not([hidden])'),
-    platformAway: document.getElementById('platform').classList.contains('is-away'),
+    platformAway: ['is-away', 'is-receding'].some((c) => document.getElementById('platform').classList.contains(c)),
     start: !!document.querySelector('.start-button'),
     hotspotVisible: !!document.querySelector('.socket.is-visible'),
     litPanels: document.querySelectorAll('.panel.is-lit').length,
@@ -61,7 +61,6 @@ STATE_JS = """(() => {
 
 failures = []
 OPTION_OFFSET_JS = '(() => { const c = document.querySelector(\'.claw\').getBoundingClientRect(); const o = document.querySelector(\'.triangle--option[data-triangle-id="%s"]\'); const top = [...o.querySelectorAll(\'.frame__plate\')].map((p) => p.getBoundingClientRect()).sort((a, b) => a.top - b.top)[0]; return (top.left + top.width / 2) - (c.left + c.width / 2); })()'
-SOCKET_OFFSET_JS = "(() => { const s = document.querySelector('.socket').getBoundingClientRect(); const t = document.querySelector('.claw-cargo .triangle').getBoundingClientRect(); return (s.left + s.width / 2) - (t.left + t.width / 2); })()"
 
 
 def check(condition, message):
@@ -109,21 +108,21 @@ class Game:
         raise TimeoutError(f"{label}; last state: {json.dumps(self.state())}")
 
     def hover(self, triangle_id):
-        return self.steer(lambda s: s["crane"] == "hoveringOption" and s["pickEnabled"] and s["hovered"] == triangle_id,
+        return self.steer(lambda s: s["crane"] == "alignedWithTriangle" and s["pickEnabled"] and s["hovered"] == triangle_id,
                           OPTION_OFFSET_JS % triangle_id, 15, f"hover over {triangle_id}")
 
     def pick(self, triangle_id):
         self.hover(triangle_id)
-        self.click("#action-button")
-        return self.wait(lambda s: s["carried"] == triangle_id and s["crane"] in ("carrying", "hoveringTarget"), 12, f"carrying {triangle_id}")
+        self.click("#pick-button")
+        return self.wait(lambda s: s["carried"] == triangle_id and s["crane"] == "carrying", 12, f"carrying {triangle_id}")
+
 
     def carry_to_socket(self):
-        self.wait(lambda s: s["crane"] in ("carrying", "hoveringTarget"), 12, "carrying")
-        return self.steer(lambda s: s["crane"] == "hoveringTarget" and s["dropEnabled"] and s["socketAligned"],
-                          SOCKET_OFFSET_JS, 15, "aligned over the socket")
+        """DROP does the carrying now (lift, into depth, align, lower): wait until it is live."""
+        return self.wait(lambda s: s["crane"] == "carrying" and s["dropEnabled"], 12, "DROP live")
 
     def drop(self):
-        self.click("#action-button")
+        self.click("#drop-button")
 
 
 def open_game(profile):
@@ -183,7 +182,7 @@ def run():
         check(not page.evaluate("[...document.querySelectorAll('.cta-button')].some(b => b.textContent.includes('practice'))", await_promise=False), "no practice-round button")
 
         # ---- Gameplay: task 1 (starts on its own after the line) ----
-        state = game.wait(lambda s: s["controlsVisible"] and s["instruction"] == INSTRUCTIONS[0] and s["crane"] in ("idle", "moving", "hoveringOption") and len(s["options"]) == 3, 40, "task 1 ready")
+        state = game.wait(lambda s: s["controlsVisible"] and s["instruction"] == INSTRUCTIONS[0] and s["crane"] in ("idle", "moving", "alignedWithTriangle") and len(s["options"]) == 3, 40, "task 1 ready")
         game.shot("task1-ready")
         check(state["options"] == GROUPS["sides"], f"task 1 options: {state['options']}")
         check(state["socketVisible"], "drop socket visible at task 1")
@@ -193,45 +192,46 @@ def run():
         # Input safety: hold the pad, drop disabled while not aligned, pick spam.
         check(game.state()["stageInView"], "whole 16:9 stage is inside the window")
         before = game.state()["craneX"]
-        page.drag_hold("#joystick", -70, 0, 0.5)
+        page.drag_hold(".dpad__key--left", 0, 0, 0.5)
         page.pump(0.4)
         after = game.state()["craneX"]
-        check(after < before, f"dragging the joystick left moves the crane ({before} -> {after})")
-        check(game.state()["actionMode"] == "pick", "action button reads PICK while the claw is empty")
+        check(after < before, f"holding the LEFT key moves the crane ({before} -> {after})")
+        check(not game.state()["dropEnabled"], "DROP disabled while the claw is empty (no DROP before a pickup)")
         page.key("ArrowRight", "ArrowRight", hold=0.4)
         page.pump(0.4)
         check(game.state()["craneX"] > after, "keyboard arrow moves the crane")
 
         # Wrong answer at task 1 (nothing built yet): collapse path with an empty bridge.
-        check(page.evaluate("getComputedStyle(document.querySelector('.triangle--option')).pointerEvents === 'none' && document.querySelector('.socket').tagName !== 'BUTTON'", await_promise=False), "frames and the drop spot are not tappable (joystick + button only)")
+        check(page.evaluate("getComputedStyle(document.querySelector('.triangle--option')).pointerEvents === 'none' && document.querySelector('.socket').tagName !== 'BUTTON'", await_promise=False), "frames and the drop spot are not tappable (arrow pad, PICK and DROP only)")
         game.hover("equilateral")
         for _ in range(4):
-            game.click("#action-button")
-        state = game.wait(lambda s: s["carried"] == "equilateral" and s["crane"] in ("carrying", "hoveringTarget"), 12, "carrying equilateral")
+            game.click("#pick-button")
+        state = game.wait(lambda s: s["carried"] == "equilateral" and s["crane"] == "carrying", 12, "carrying equilateral")
         page.pump(0.3)
-        check(game.state()["carried"] == "equilateral", "action spam during the pick sequence is ignored")
-        check(game.state()["actionMode"] == "drop", "action button flips to DROP while carrying")
+        check(game.state()["carried"] == "equilateral", "PICK spam during the pick sequence is ignored")
+        check(game.state()["dropEnabled"] and not game.state()["pickEnabled"], "DROP live and PICK disabled while a frame is on the hook")
         page.pump(0.7)
-        check(game.state()["platformAway"], "the option platform slides away once a frame is lifted")
+        check(not game.state()["platformAway"], "the yard stays in view while the frame hangs over it (it recedes on DROP)")
         game.shot("task1-carrying-wrong")
         game.carry_to_socket()
         game.drop()
         page.pump(1.6)
         game.shot("task1-wrong-reaction")
-        state = game.wait(lambda s: s["instruction"] == INSTRUCTIONS[0] and s["crane"] in ("idle", "moving", "hoveringOption") and len(s["options"]) == 3 and s["placed"] == 0 and not s["platformAway"], 40, "task 1 restarts after the wrong frame")
+        state = game.wait(lambda s: s["instruction"] == INSTRUCTIONS[0] and s["crane"] in ("idle", "moving", "alignedWithTriangle") and len(s["options"]) == 3 and s["placed"] == 0 and not s["platformAway"], 40, "task 1 restarts after the wrong frame")
         check(state["builtMembers"] == 0, "nothing built after a wrong answer")
         check(state["carried"] is None, "claw is empty after the reset")
 
-        # Drop is refused away from the hotspot (task 1's frame starts on the left; moving further left goes away from it).
+        # Carrying: the pad still moves the crane (the load swings), DROP stays live, PICK does nothing.
         game.wait(lambda s: not s["platformAway"] and len(s["options"]) == 3, 15, "platform back after the reset")
         game.pick("isosceles")
-        page.drag_hold("#joystick", -70, 0, 0.55)
+        before = game.state()["craneX"]
+        page.drag_hold(".dpad__key--left", 0, 0, 0.55)
         page.pump(0.5)
         state = game.state()
-        check(not state["dropEnabled"] and state["carried"] == "isosceles", "DROP disabled while carrying away from the socket")
-        game.click("#action-button")
+        check(state["craneX"] < before and state["dropEnabled"] and state["carried"] == "isosceles", "carrying: the pad moves the crane and DROP stays live")
+        game.click("#pick-button")
         page.pump(0.6)
-        check(game.state()["carried"] == "isosceles", "a disabled DROP does nothing")
+        check(game.state()["carried"] == "isosceles", "a disabled PICK does nothing while carrying")
 
         # Correct answer at task 1.
         game.carry_to_socket()
@@ -239,7 +239,7 @@ def run():
         game.drop()
         page.pump(2.0)
         game.shot("task1-construction")
-        state = game.wait(lambda s: s["instruction"] == INSTRUCTIONS[1] and s["crane"] in ("idle", "moving", "hoveringOption"), 45, "task 2 ready")
+        state = game.wait(lambda s: s["instruction"] == INSTRUCTIONS[1] and s["crane"] in ("idle", "moving", "alignedWithTriangle"), 45, "task 2 ready")
         check(state["builtMembers"] == 3, f"PDF p12: outer frame built (3 members), got {state['builtMembers']}")
         game.shot("task2-ready")
 
@@ -248,7 +248,7 @@ def run():
             game.pick(CORRECT[index])
             game.carry_to_socket()
             game.drop()
-            state = game.wait(lambda s, i=index: s["instruction"] == INSTRUCTIONS[i + 1] and s["crane"] in ("idle", "moving", "hoveringOption"), 45, f"task {index + 2} ready")
+            state = game.wait(lambda s, i=index: s["instruction"] == INSTRUCTIONS[i + 1] and s["crane"] in ("idle", "moving", "alignedWithTriangle"), 45, f"task {index + 2} ready")
         check(state["builtMembers"] == 5, f"level 2 adds both apex diagonals (5 beams), got {state['builtMembers']}")
         check(state["bolts"] == 5, f"5 joints after level 2, got {state['bolts']}")
         game.shot("task3-ready")
@@ -259,7 +259,7 @@ def run():
         game.shot("task3-wrong-sway")
         page.pump(1.4)
         game.shot("task3-wrong-collapse")
-        state = game.wait(lambda s: s["instruction"] == INSTRUCTIONS[0] and s["builtMembers"] == 0 and s["crane"] in ("idle", "moving", "hoveringOption") and len(s["options"]) == 3, 45, "back to task 1 after the collapse")
+        state = game.wait(lambda s: s["instruction"] == INSTRUCTIONS[0] and s["builtMembers"] == 0 and s["crane"] in ("idle", "moving", "alignedWithTriangle") and len(s["options"]) == 3, 45, "back to task 1 after the collapse")
         check(state["instruction"] == INSTRUCTIONS[0], "task card back to task 1 after the collapse")
         game.shot("after-collapse-reset")
 
@@ -272,7 +272,7 @@ def run():
                 page.pump(1.5)
                 game.shot("task4-construction")
             if index < 5:
-                state = game.wait(lambda s, i=index: s["instruction"] == INSTRUCTIONS[i + 1] and s["crane"] in ("idle", "moving", "hoveringOption"), 45, f"task {index + 2} ready")
+                state = game.wait(lambda s, i=index: s["instruction"] == INSTRUCTIONS[i + 1] and s["crane"] in ("idle", "moving", "alignedWithTriangle"), 45, f"task {index + 2} ready")
                 if index == 2:
                     check(state["options"] == GROUPS["angles"], f"angle group appears at level 4: {state['options']}")
                     game.shot("task4-ready")
@@ -285,7 +285,7 @@ def run():
         check(page.evaluate("(() => { const b = document.querySelector('.completion__replay'); return !b.textContent.trim() && b.getAttribute('aria-label') === 'Build it again'; })()", await_promise=False), "replay is an icon button (no text)")
         game.shot("completion-final")
         game.click(".completion__replay")
-        state = game.wait(lambda s: s["instruction"] == INSTRUCTIONS[0] and s["crane"] in ("idle", "moving", "hoveringOption") and len(s["options"]) == 3 and s["builtMembers"] == 0, 45, "replay returns to task 1")
+        state = game.wait(lambda s: s["instruction"] == INSTRUCTIONS[0] and s["crane"] in ("idle", "moving", "alignedWithTriangle") and len(s["options"]) == 3 and s["builtMembers"] == 0, 45, "replay returns to task 1")
         check(not state["completion"], "completion overlay removed on replay")
         game.shot("replay-task1")
 

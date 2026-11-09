@@ -1,5 +1,21 @@
 /** Promise-based motion helpers: easing, tweens, waits and cancellable sequence scopes. */
 
+/** CSS-style cubic-bezier(x1, y1, x2, y2) as an easing function (Newton steps on x, then y). */
+export function cubicBezier(x1, y1, x2, y2) {
+  const bez = (t, a, b) => 3 * a * t * (1 - t) * (1 - t) + 3 * b * t * t * (1 - t) + t * t * t;
+  const slope = (t, a, b) => 3 * a * (1 - t) * (1 - t) + 6 * (b - a) * t * (1 - t) + 3 * (1 - b) * t * t;
+  return (x) => {
+    if (x <= 0 || x >= 1) return Math.min(1, Math.max(0, x));
+    let t = x;
+    for (let i = 0; i < 6; i += 1) {
+      const d = slope(t, x1, x2);
+      if (Math.abs(d) < 1e-6) break;
+      t -= (bez(t, x1, x2) - x) / d;
+    }
+    return bez(Math.min(1, Math.max(0, t)), y1, y2);
+  };
+}
+
 export const easings = Object.freeze({
   linear: (t) => t,
   outQuad: (t) => 1 - (1 - t) * (1 - t),
@@ -15,6 +31,8 @@ export const easings = Object.freeze({
     const overshoot = 0.9;
     return 1 + (overshoot + 1) * Math.pow(t - 1, 3) + overshoot * Math.pow(t - 1, 2);
   },
+  /** A heavy load: a slow start, a steady middle, a long gentle approach (never an abrupt stop). */
+  travel: cubicBezier(0.45, 0, 0.18, 1),
 });
 
 let reducedMotionQuery = null;

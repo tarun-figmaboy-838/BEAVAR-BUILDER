@@ -10,6 +10,8 @@ import { RULES, classifyBySides, classifyByAngles, angles } from '../js/data/tri
 import { BRIDGE_GEOMETRY, stageById } from '../js/data/bridge-geometry.js';
 import { PLATFORM_LAYOUT, CRANE_LAYOUT } from '../js/data/layout.js';
 import { FRAME_PAD } from '../js/gameplay/frame-shapes.js';
+import { depthScale, groundY } from '../js/gameplay/depth-projection.js';
+import { bridgeSeatTarget } from '../js/gameplay/placement-controller.js';
 
 const PDF_INSTRUCTIONS = [
   'Choose a triangle with exactly 2 equal sides.',
@@ -41,20 +43,27 @@ test('option groups follow the deck (sides for levels 1-3, angles for levels 4-6
   assert.deepEqual([...OPTION_GROUPS.angles].sort(), ['acute', 'obtuse', 'right']);
 });
 
-test('every task makes the learner carry the correct frame across: it never starts under its drop spot', () => {
-  const SLOTS = PLATFORM_LAYOUT.slotXs;
+test('DROP can seat every correct frame on its spot: the crane reaches it at bridge depth (no clamping)', () => {
+  const scale = depthScale(1);
+  assert.ok(Math.abs(groundY(1) - BRIDGE_GEOMETRY.deckY) < 0.01 && Math.abs(groundY(0) - PLATFORM_LAYOUT.baseY) < 0.01, 'depth projection lands on the yard (z 0) and the deck (z 1)');
   for (const level of LEVELS) {
-    const slot = SLOTS[OPTION_GROUPS[level.optionGroup].indexOf(level.correctTriangleId)];
     const vertices = TRIANGLES[level.correctTriangleId].vertices;
     const xs = vertices.map((v) => v[0]);
+    const ys = vertices.map((v) => v[1]);
     const minX = Math.min(...xs);
+    const minY = Math.min(...ys);
     const width = Math.max(...xs) - minX + 2 * FRAME_PAD;
     const top = vertices.reduce((best, v) => (v[1] < best[1] || (v[1] === best[1] && v[0] < best[0]) ? v : best));
-    const grab = top[0] - minX + FRAME_PAD;
-    const centre = xs.reduce((sum, x) => sum + x, 0) / 3 - minX + FRAME_PAD;
-    const pickX = slot - width / 2 + grab;
-    const dropX = stageById(level.bridgeStage).socket.x - (centre - grab);
-    assert.ok(Math.abs(pickX - dropX) > CRANE_LAYOUT.socketTolerance + 20, `task ${level.id}: hook travels only ${Math.abs(pickX - dropX).toFixed(0)} px`);
+    const frame = {
+      width,
+      grabX: (top[0] - minX + FRAME_PAD) / width,
+      grabY: top[1] - minY + FRAME_PAD,
+      baseOffset: Math.max(...ys) - minY + FRAME_PAD,
+      centroid: [xs.reduce((sum, x) => sum + x, 0) / 3 - minX + FRAME_PAD, 0],
+    };
+    const target = bridgeSeatTarget(frame, stageById(level.bridgeStage).socket.x, scale);
+    assert.ok(target.x >= CRANE_LAYOUT.minX && target.x <= CRANE_LAYOUT.maxX, `task ${level.id}: trolley x ${target.x.toFixed(0)} outside the jib`);
+    assert.ok(target.y >= CRANE_LAYOUT.restY && target.y <= CRANE_LAYOUT.maxY, `task ${level.id}: claw y ${target.y.toFixed(0)} outside the hoist range`);
   }
 });
 
