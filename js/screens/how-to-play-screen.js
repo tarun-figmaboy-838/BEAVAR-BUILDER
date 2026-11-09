@@ -1,6 +1,7 @@
 import { COPY } from '../data/copy.js';
 import { createSequenceScope, wait, playClassAnimation, isAbortError, prefersReducedMotion } from '../core/motion.js';
 import { bridgeSeatTarget } from '../gameplay/placement-controller.js';
+import { padPlateSvg } from '../core/pad-plate.js';
 
 const DEMO_PILE_INDEX = 3;              // the tall frame in the yard
 const DEMO_TARGET = { x: 960 }; // the middle hotspot (PDF p6 marks spots on the deck)
@@ -8,7 +9,7 @@ const DEMO_TARGET = { x: 960 }; // the middle hotspot (PDF p6 marks spots on the
 /** Each step shows the real control it teaches: the arrow pad, the green PICK button, the orange DROP button. */
 const STEP_CHIPS = [
   `<span class="howto-chip howto-chip--move">
-     <img class="howto-pad__plate" src="assets/images/kit/dpad-plate.png" alt="" draggable="false">
+     <span class="howto-pad__plate">${padPlateSvg('chip')}</span>
      <img class="howto-pad__key howto-pad__key--left" src="assets/images/kit/key-left.png" alt="" draggable="false">
      <img class="howto-pad__key howto-pad__key--right" src="assets/images/kit/key-right.png" alt="" draggable="false">
    </span>`,

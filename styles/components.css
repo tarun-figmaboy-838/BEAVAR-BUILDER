@@ -150,10 +150,10 @@
 /* PICK / DROP chips: the real button art, small. */
 .howto-chip__art { position: relative; display: block; width: 112%; max-width: none; margin: -6% -6% -12% -6%; height: auto; filter: drop-shadow(0 4px 3px rgba(6, 24, 48, 0.3)); }
 /* Move chip: the real arrow pad, small; the key the demo is using lights up. */
-.howto-pad__plate { position: absolute; inset: 0; width: 100%; height: 100%; }
-.howto-pad__key { position: absolute; top: 24.5px; width: 16px; height: 17px; transition: scale 90ms, filter 90ms; }
-.howto-pad__key--left { left: 3.7px; }
-.howto-pad__key--right { right: 3.6px; }
+.howto-pad__plate { position: absolute; inset: 0; }
+.howto-pad__key { position: absolute; top: 23.4px; width: 19px; height: 19.5px; transition: scale 90ms, filter 90ms; }
+.howto-pad__key--left { left: 1.8px; }
+.howto-pad__key--right { right: 1.8px; }
 .howto-chip--move[data-dir="left"] .howto-pad__key--left, .howto-chip--move[data-dir="right"] .howto-pad__key--right { scale: 0.9; filter: brightness(1.15); }
 .howto-card__footer {
   margin: 16px 0 0; padding: 9px 16px 11px; border-radius: 16px;
@@ -238,30 +238,30 @@
 
 
 /* ---------- Controls: the direction pad (left), the action button (right) ----------
-   A glossy navy cross dock with a cyan rim (art 720 px, shown at 345 px: it ends at x 331, clear of the yard
-   platform at x 340) with amber keys and navy arrows (strong contrast): each key (82 px) sits centred in its
-   arm's block with an even margin inside the rim, all four the same distance from the hub (104 px), and its
-   tap area is the whole 112 px arm, so it is easy to see and easy to hit. The centre is a
-   plain hub (not a button). Every state change is on the key's own
+   A glossy navy cross with a cyan rim, drawn as vector art (js/core/pad-plate.js) so it fits its keys
+   exactly: 360 px (ends at x 370, clear of the yard platform at x 380), 124 px arms. Each amber key with its
+   navy arrow is 104 px, centred in its arm 116 px from the middle with an even 10 px margin; its tap area is
+   the whole 124 px arm, so the keys are big, easy to see and easy to hit. The centre is a plain hub. Every state change is on the key's own
    picture (scale / translate / filter), so pressing one key never moves another key or the panel. */
-.dpad-dock { position: absolute; left: -3px; bottom: 2px; }
+.dpad-dock { position: absolute; left: 10px; bottom: 12px; }
 .controls.is-entering .dpad-dock { animation: dock-enter-left 620ms var(--ease-out) both; }
 .controls.is-entering .action-dock { animation: dock-enter-right 620ms var(--ease-out) both; }
-.dpad { position: relative; width: 345px; height: 345px; touch-action: none; }
-.dpad__plate { position: absolute; inset: 0; width: 100%; height: 100%; display: block; filter: drop-shadow(0 10px 10px rgba(6, 24, 48, 0.35)); pointer-events: none; }
+.dpad { position: relative; width: 360px; height: 360px; touch-action: none; }
+.dpad__plate { position: absolute; inset: 0; display: block; pointer-events: none; filter: drop-shadow(0 0 7px rgba(90, 220, 255, 0.55)) drop-shadow(0 10px 10px rgba(6, 24, 48, 0.35)); }
+.dpad__plate svg, .howto-pad__plate svg { display: block; width: 100%; height: 100%; }
 .dpad__key {
   position: absolute; padding: 0; margin: 0;
   border: 0; background: none; border-radius: 28px; cursor: pointer; touch-action: none;
   -webkit-user-select: none; user-select: none;
 }
-.dpad__key--up { left: 116.5px; top: 12.0px; width: 112px; height: 112px; }
-.dpad__key--up img { left: 10.4px; top: 9.2px; width: 91.2px; height: 93.4px; }
-.dpad__key--down { left: 116.5px; top: 221.0px; width: 112px; height: 112px; }
-.dpad__key--down img { left: 10.6px; top: 9.2px; width: 91.0px; height: 93.4px; }
-.dpad__key--left { left: 12.0px; top: 116.5px; width: 112px; height: 112px; }
-.dpad__key--left img { left: 10.6px; top: 9.3px; width: 91.0px; height: 93.1px; }
-.dpad__key--right { left: 221.0px; top: 116.5px; width: 112px; height: 112px; }
-.dpad__key--right img { left: 10.6px; top: 9.3px; width: 90.7px; height: 93.1px; }
+.dpad__key--up { left: 118.0px; top: 2.0px; width: 124px; height: 124px; }
+.dpad__key--up img { left: 4.4px; top: 2.9px; width: 115.1px; height: 117.9px; }
+.dpad__key--down { left: 118.0px; top: 234.0px; width: 124px; height: 124px; }
+.dpad__key--down img { left: 4.8px; top: 2.9px; width: 114.8px; height: 117.9px; }
+.dpad__key--left { left: 2.0px; top: 118.0px; width: 124px; height: 124px; }
+.dpad__key--left img { left: 4.8px; top: 3.1px; width: 114.8px; height: 117.5px; }
+.dpad__key--right { left: 234.0px; top: 118.0px; width: 124px; height: 124px; }
+.dpad__key--right img { left: 4.8px; top: 3.1px; width: 114.5px; height: 117.5px; }
 .dpad__key img {
   position: absolute; display: block; pointer-events: none;
   filter: drop-shadow(0 5px 3px rgba(6, 24, 48, 0.38));

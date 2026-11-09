@@ -60,7 +60,6 @@ const CRITICAL_IMAGES = [
   'assets/images/kit/play-button.png',
   'assets/images/kit/btn-pick.png',
   'assets/images/kit/btn-drop.png',
-  'assets/images/kit/dpad-plate.png',
   'assets/images/kit/key-up.png',
   'assets/images/kit/key-right.png',
   'assets/images/kit/key-down.png',

@@ -1,4 +1,5 @@
 import { CONTROLS_LAYOUT } from '../data/layout.js';
+import { padPlateSvg } from './pad-plate.js';
 
 /**
  * Crane controls.
@@ -24,6 +25,7 @@ const DIRECTIONS = ['up', 'right', 'down', 'left'];
 
 export function createInputManager({ controlsEl, audio }) {
   const padEl = controlsEl.querySelector('#dpad');
+  padEl.querySelector('.dpad__plate').innerHTML = padPlateSvg('pad');      // the panel, fitted to its keys
   const keyEls = Object.fromEntries(DIRECTIONS.map((direction) => [direction, padEl.querySelector(`.dpad__key[data-direction="${direction}"]`)]));
   const actionButton = controlsEl.querySelector('#action-button');
   const sounds = { pick: 'pickPress', drop: 'dropPress' };
