@@ -189,7 +189,6 @@
 }
 .fx-weld-glow--hot { background: radial-gradient(circle, rgba(255, 250, 210, 0.95) 0 20%, rgba(255, 210, 90, 0.7) 42%, rgba(255, 170, 0, 0) 70%); animation: weld-glow 650ms ease-out forwards; }
 .fx-weld-glow--warm { background: radial-gradient(circle, rgba(255, 150, 40, 0.85) 0 18%, rgba(240, 90, 10, 0.55) 42%, rgba(200, 50, 0, 0) 70%); animation: weld-cool 1250ms ease-out forwards; }
-.fx-weld-glow--wide { width: 160px; height: 90px; margin: -45px 0 0 -80px; }
 .fx-weld-glow--still { background: radial-gradient(circle, rgba(255, 190, 70, 0.7) 0 30%, rgba(255, 150, 0, 0) 70%); animation: weld-cool 550ms ease-out forwards; }
 .fx-spark-x { position: absolute; width: 0; height: 0; pointer-events: none; animation: spark-drift var(--ms, 700ms) linear forwards; }
 .fx-spark-dot {

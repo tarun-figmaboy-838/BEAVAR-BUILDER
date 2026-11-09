@@ -3742,7 +3742,6 @@ function createBridgeController({ bridgeEl, fxEl, fx, audio }) {
     audio.play('thud');
     await playClassAnimation(root, 'is-settling', 700);
     members.forEach(({ element }) => element.classList.remove('is-fresh'));
-    fx.ding(stage.socket.x, stage.socket.y - 80);
     audio.play('ding');
     builtStages.push(stageId);
   }
@@ -4402,11 +4401,6 @@ function createConstructionFx({ fxLayer }) {
       for (let i = 0; i < 7; i += 1) {
         spawn('fx-drop', x + random(-30, 30), y - 6, { lifetime: 800, vars: { '--dx': `${random(-34, 34)}px` } });
       }
-    },
-    /** The stage is complete: a soft warm glow where the frame went (no sparkle sticker). */
-    ding(x, y) {
-      if (prefersReducedMotion()) return;
-      spawn('fx-weld-glow fx-weld-glow--warm fx-weld-glow--wide', x, y + 80, { lifetime: 1300 });
     },
     confetti(count = 110) {
       if (prefersReducedMotion()) return;

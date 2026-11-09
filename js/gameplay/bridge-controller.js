@@ -420,7 +420,6 @@ export function createBridgeController({ bridgeEl, fxEl, fx, audio }) {
     audio.play('thud');
     await playClassAnimation(root, 'is-settling', 700);
     members.forEach(({ element }) => element.classList.remove('is-fresh'));
-    fx.ding(stage.socket.x, stage.socket.y - 80);
     audio.play('ding');
     builtStages.push(stageId);
   }
