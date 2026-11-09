@@ -151,9 +151,9 @@
 .howto-chip__art { position: relative; display: block; width: 112%; max-width: none; margin: -6% -6% -12% -6%; height: auto; filter: drop-shadow(0 4px 3px rgba(6, 24, 48, 0.3)); }
 /* Move chip: the real arrow pad, small; the key the demo is using lights up. */
 .howto-pad__plate { position: absolute; inset: 0; width: 100%; height: 100%; }
-.howto-pad__key { position: absolute; top: 23px; width: 20px; height: 20px; transition: scale 90ms, filter 90ms; }
-.howto-pad__key--left { left: 3px; }
-.howto-pad__key--right { right: 3px; }
+.howto-pad__key { position: absolute; top: 24.5px; width: 16px; height: 17px; transition: scale 90ms, filter 90ms; }
+.howto-pad__key--left { left: 3.7px; }
+.howto-pad__key--right { right: 3.6px; }
 .howto-chip--move[data-dir="left"] .howto-pad__key--left, .howto-chip--move[data-dir="right"] .howto-pad__key--right { scale: 0.9; filter: brightness(1.15); }
 .howto-card__footer {
   margin: 16px 0 0; padding: 9px 16px 11px; border-radius: 16px;
@@ -238,29 +238,33 @@
 
 
 /* ---------- Controls: the arrow pad (left) with PICK as its centre button, DROP (right) ----------
-   A dark steel cross panel (art 720 px, shown at 318 px: its visible cross is 300 px wide and ends at x 303,
-   clear of the yard platform at x 310) with bright yellow keys and a green PICK on it: strong contrast against
-   the panel and the sky. Its arms are 110 px wide; each key (90 px of key) sits in its arm, its face centred on
-   the arm's axis 96 px from the middle; PICK (92 px) sits in the round centre socket. Positions are measured
-   so every face (not the 3D lip under it) is on the cross's axes, so the side keys and PICK line up.
+   A dark steel cross panel (art 720 px, shown at 313 px: its visible cross is 300 px wide and ends at x 302,
+   clear of the yard platform at x 310) with bright yellow keys and a green PICK: strong contrast against the
+   panel and the sky. Each key (the same size in all four) sits centred inside its square socket (80 px) and PICK
+   inside the round centre socket (91 px); the sockets are symmetric about the cross's axes, so every key and
+   PICK line up. The button box is the socket, so the whole socket is the touch target.
    Every state change is on the element's own picture (scale / translate / filter), so pressing one key never
    moves another key, the panel, or PICK. */
-.dpad-dock { position: absolute; left: -6px; bottom: 6px; }
+.dpad-dock { position: absolute; left: -4px; bottom: 6px; }
 .controls.is-entering .dpad-dock { animation: dock-enter-left 620ms var(--ease-out) both; }
 .controls.is-entering .action-dock { animation: dock-enter-right 620ms var(--ease-out) both; }
-.dpad { position: relative; width: 318px; height: 318px; touch-action: none; }
+.dpad { position: relative; width: 313px; height: 313px; touch-action: none; }
 .dpad__plate { position: absolute; inset: 0; width: 100%; height: 100%; display: block; filter: drop-shadow(0 10px 10px rgba(6, 24, 48, 0.35)); pointer-events: none; }
 .dpad__key {
   position: absolute; padding: 0; margin: 0;
   border: 0; background: none; border-radius: 24px; cursor: pointer; touch-action: none;
   -webkit-user-select: none; user-select: none;
 }
-.dpad__key--up { left: 109px; top: 12.5px; width: 99.5px; height: 105.8px; }
-.dpad__key--down { left: 109.3px; top: 204.5px; width: 99.6px; height: 106.9px; }
-.dpad__key--left { left: 13px; top: 107.4px; width: 99.7px; height: 107.7px; }
-.dpad__key--right { left: 205.6px; top: 108px; width: 99.2px; height: 105.8px; }
+.dpad__key--up { left: 116.7px; top: 15.0px; width: 80px; height: 80px; }
+.dpad__key--up img { left: 0.7px; top: -1.6px; width: 78.3px; height: 83.2px; }
+.dpad__key--down { left: 116.7px; top: 215.4px; width: 80px; height: 80px; }
+.dpad__key--down img { left: 1.4px; top: -1.6px; width: 77.6px; height: 83.2px; }
+.dpad__key--left { left: 15.6px; top: 115.4px; width: 80px; height: 80px; }
+.dpad__key--left img { left: 1.6px; top: -1.6px; width: 77.0px; height: 83.2px; }
+.dpad__key--right { left: 217.8px; top: 115.4px; width: 80px; height: 80px; }
+.dpad__key--right img { left: 1.0px; top: -1.6px; width: 78.1px; height: 83.2px; }
 .dpad__key img {
-  display: block; width: 100%; height: 100%; pointer-events: none;
+  position: absolute; display: block; pointer-events: none;
   filter: drop-shadow(0 5px 3px rgba(6, 24, 48, 0.38));
   transition: scale 90ms var(--ease-out), translate 90ms var(--ease-out), filter 90ms;
 }
@@ -280,9 +284,10 @@
    Disabled: muted (still faintly green, so it reads as a button). Ready: full colour, a faint warm rim and a
    slow sheen that sweeps across it (no big glow, no bounce). Pressed: compresses, shadow tightens, a click. */
 .pick-button {
-  position: absolute; left: 113.1px; top: 110.4px; width: 92px; height: 95.4px; padding: 0;
+  position: absolute; padding: 0;
   border: 0; border-radius: 50%; background: none; cursor: pointer; touch-action: manipulation;
 }
+.pick-button { left: 115.0px; top: 111.9px; width: 83.5px; height: 86.6px; }
 .pick-button::before {
   content: ""; position: absolute; inset: -8px; border-radius: 50%;
   background: radial-gradient(circle closest-side, rgba(205, 255, 150, 0.6) 76%, rgba(205, 255, 150, 0) 100%);
