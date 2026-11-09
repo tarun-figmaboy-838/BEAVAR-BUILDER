@@ -38,20 +38,20 @@
       <!-- Screen overlays: title banner, builder bubble, how-to card, completion. -->
       <div id="overlays" class="overlays"></div>
 
-      <!-- Crane controls: the arrow pad on the left with PICK as its centre button; DROP on the right,
-           usable only once a frame is on the hook. -->
+      <!-- Crane controls: the four direction keys on the left; PICK and DROP together on the right
+           (DROP usable only once a frame is on the hook). -->
       <section id="controls" class="controls" aria-label="Crane controls" hidden>
         <div class="dpad-dock">
-          <div id="dpad" class="dpad" role="group" aria-label="Move the crane and pick">
+          <div id="dpad" class="dpad" role="group" aria-label="Move the crane">
             <img class="dpad__plate" src="assets/images/kit/dpad-plate.webp" alt="" draggable="false">
             <button class="dpad__key dpad__key--up" type="button" tabindex="-1" data-direction="up" aria-label="Raise the hook"><img src="assets/images/kit/key-up.webp" alt="" draggable="false"></button>
             <button class="dpad__key dpad__key--right" type="button" tabindex="-1" data-direction="right" aria-label="Move the crane right"><img src="assets/images/kit/key-right.webp" alt="" draggable="false"></button>
             <button class="dpad__key dpad__key--down" type="button" tabindex="-1" data-direction="down" aria-label="Lower the hook"><img src="assets/images/kit/key-down.webp" alt="" draggable="false"></button>
             <button class="dpad__key dpad__key--left" type="button" tabindex="-1" data-direction="left" aria-label="Move the crane left"><img src="assets/images/kit/key-left.webp" alt="" draggable="false"></button>
-            <button id="pick-button" class="pick-button" type="button" aria-label="Pick the triangle" disabled><img class="pick-button__art" src="assets/images/kit/btn-pick.webp" alt="" draggable="false"><span class="pick-button__sheen" aria-hidden="true"></span></button>
           </div>
         </div>
         <div class="action-dock">
+          <button id="pick-button" class="pick-button" type="button" aria-label="Pick the triangle" disabled><img class="pick-button__art" src="assets/images/kit/btn-pick.webp" alt="" draggable="false"><span class="pick-button__sheen" aria-hidden="true"></span></button>
           <button id="drop-button" class="drop-button" type="button" aria-label="Drop: carry the triangle to the bridge" disabled><img class="drop-button__art" src="assets/images/kit/btn-drop.webp" alt="" draggable="false"></button>
         </div>
       </section>
