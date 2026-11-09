@@ -9,10 +9,10 @@ const INVITE_AFTER_MS = 3500;
 
 /**
  * One engine runs all six levels from data:
- *   question → position the claw over a frame (arrow pad) → PICK (grab, lift off the yard)
+ *   question → position the hook over a frame (LEFT / RIGHT, UP / DOWN in depth) → PICK (grab, lift)
  *   → DROP (lift, travel into depth to the bridge, align, lower, place, release) → consequence.
- * PICK (the pad's centre) is live only with the claw over a frame and the hook empty; DROP only once a
- * frame is on the hook.
+ * The action button reads PICK (live only with the hook at the front over a frame, hook empty) and flips to
+ * DROP once a frame is on the hook (live only then).
  */
 export function createLevelEngine({ gameState, crane, claw, triangles, bridge, placement, feedback, camera, input, audio, voice, builder, onComplete }) {
   const scope = createSequenceScope();
@@ -49,8 +49,7 @@ export function createLevelEngine({ gameState, crane, claw, triangles, bridge, p
   function lockInput() {
     gameState.update({ isInputLocked: true });
     input.setEnabled(false);
-    input.setPickEnabled(false);
-    input.setDropEnabled(false);
+    input.setActionState({ mode: crane.carried ? 'drop' : 'pick', enabled: false });
     input.invite(false);
     clearTimeout(inviteTimer);
     crane.lock();
@@ -72,13 +71,14 @@ export function createLevelEngine({ gameState, crane, claw, triangles, bridge, p
     }, INVITE_AFTER_MS);
   }
 
-  /** PICK / DROP availability always follows the crane's state; nothing else enables them. */
+  /** The action button follows the crane: PICK (hook empty, at the front, over a frame), DROP (frame on the hook). */
   function syncUi() {
     const state = gameState.get();
     const carried = crane.carried;
     const canAct = active && !busy && !state.isInputLocked && !crane.isBusy;
-    input.setPickEnabled(canAct && !carried && state.craneState === CRANE_STATES.ALIGNED_WITH_TRIANGLE);
-    input.setDropEnabled(canAct && Boolean(carried) && state.craneState === CRANE_STATES.CARRYING);
+    const pickReady = canAct && !carried && state.craneState === CRANE_STATES.ALIGNED_WITH_TRIANGLE;
+    const dropReady = canAct && Boolean(carried) && state.craneState === CRANE_STATES.CARRYING;
+    input.setActionState({ mode: carried ? 'drop' : 'pick', enabled: pickReady || dropReady });
     if (triangles.setHovered(carried ? null : state.hoveredOptionId)) audio.play('bloop');
     bridge.setSocketArmed(Boolean(carried));
   }
@@ -86,7 +86,7 @@ export function createLevelEngine({ gameState, crane, claw, triangles, bridge, p
   gameState.subscribe((state, patch) => {
     if ('craneState' in patch || 'hoveredOptionId' in patch || 'craneX' in patch || 'craneBusy' in patch) syncUi();
   });
-  crane.setHoverResolver((x, carried) => placement.resolveHover(x, carried));
+  crane.setHoverResolver((x, carried, depth) => placement.resolveHover(x, carried, depth));
   input.on('axis', (axis) => {
     if (inputLocked()) return;
     crane.setAxis(axis);
@@ -126,7 +126,7 @@ export function createLevelEngine({ gameState, crane, claw, triangles, bridge, p
     if (!option) return;
     busy = true;
     input.setEnabled(false);                              // arrows rest while the claw works
-    input.setPickEnabled(false);
+    input.setActionState({ mode: 'pick', enabled: false });
     input.invite(false);
     clearTimeout(inviteTimer);
     try {

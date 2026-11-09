@@ -2,16 +2,18 @@ import { CONTROLS_LAYOUT } from '../data/layout.js';
 
 /**
  * Crane controls.
- *   Pad (bottom-left): four arrow keys. LEFT / RIGHT move the trolley along the jib, UP / DOWN raise and
- *   lower the claw. Each key is its own button with its own pressed state: pressing one never animates
- *   another key, the plate, or PICK. Tap = a small nudge (the direction is held at least `tapMs`),
- *   hold = continuous travel, release = the crane brakes smoothly (its own inertia).
- *   PICK (the pad's centre button): usable only with the claw over a frame and the hook empty.
- *   DROP (bottom-right): usable only once a frame is on the hook; it starts the whole transport.
- *   PICK and DROP are real buttons, `disabled` whenever their action is not possible.
- * Keyboard: arrows / WASD press the matching key; Space (or Enter) presses PICK, or DROP while carrying.
+ *   Pad (bottom-left): four direction keys. LEFT / RIGHT move the trolley along the jib; UP sends the hook
+ *   back into the scene (toward the bridge), DOWN brings it forward to the yard. Each key is its own button
+ *   with its own pressed state: pressing one never animates another key, the panel, or the action button.
+ *   Tap = a small nudge (the direction is held at least `tapMs`), hold = continuous travel, release = the
+ *   crane brakes smoothly (its own inertia).
+ *   Action button (bottom-right): reads PICK while the hook is empty (usable only with the hook at the front,
+ *   over a frame) and flips over to DROP once a frame is on the hook (DROP starts the whole transport).
+ *   It is a real `disabled` button whenever its action is not possible.
+ * Keyboard: arrows / WASD press the matching key; Space (or Enter) presses the action button.
  * Emits intent only ('axis', 'pick', 'drop'); the level engine decides what is legal.
  */
+const ACTION_LABELS = { pick: 'Pick the triangle', drop: 'Drop: carry the triangle to the bridge' };
 const KEY_TO_DIRECTION = {
   ArrowLeft: 'left', KeyA: 'left',
   ArrowRight: 'right', KeyD: 'right',
@@ -23,9 +25,10 @@ const DIRECTIONS = ['up', 'right', 'down', 'left'];
 export function createInputManager({ controlsEl, audio }) {
   const padEl = controlsEl.querySelector('#dpad');
   const keyEls = Object.fromEntries(DIRECTIONS.map((direction) => [direction, padEl.querySelector(`.dpad__key[data-direction="${direction}"]`)]));
-  const buttons = { pick: controlsEl.querySelector('#pick-button'), drop: controlsEl.querySelector('#drop-button') };
+  const actionButton = controlsEl.querySelector('#action-button');
   const sounds = { pick: 'pickPress', drop: 'dropPress' };
-  const usable = { pick: false, drop: false };
+  let actionMode = 'pick';
+  let actionEnabled = false;
   const held = Object.fromEntries(DIRECTIONS.map((direction) => [direction, null]));   // per key: { since, source } while held
   const releaseTimers = {};
   const listeners = new Map();
@@ -104,20 +107,18 @@ export function createInputManager({ controlsEl, audio }) {
     keyEl.addEventListener('click', (event) => event.preventDefault());    // movement is press-and-hold, never a click
   }
 
-  function fire(action) {
-    audio.play(sounds[action]);
-    emit(action);
+  function fireAction() {
+    audio.play(sounds[actionMode]);
+    emit(actionMode);
   }
 
-  for (const [action, button] of Object.entries(buttons)) {
-    button.addEventListener('pointerdown', () => { if (!button.disabled) button.classList.add('is-pressed'); });
-    for (const type of ['pointerup', 'pointercancel', 'pointerleave']) {
-      button.addEventListener(type, () => button.classList.remove('is-pressed'));
-    }
-    button.addEventListener('click', () => {
-      if (enabled && !button.disabled) fire(action);
-    });
+  actionButton.addEventListener('pointerdown', () => { if (!actionButton.disabled) actionButton.classList.add('is-pressed'); });
+  for (const type of ['pointerup', 'pointercancel', 'pointerleave']) {
+    actionButton.addEventListener(type, () => actionButton.classList.remove('is-pressed'));
   }
+  actionButton.addEventListener('click', () => {
+    if (enabled && !actionButton.disabled) fireAction();
+  });
 
   window.addEventListener('keydown', (event) => {
     if (event.target.closest?.('input, textarea')) return;
@@ -135,11 +136,10 @@ export function createInputManager({ controlsEl, audio }) {
       if (focusedButton && (event.code === 'Enter' || focusedButton.classList.contains('cta-button'))) return;
       if (!enabled) return;
       event.preventDefault();
-      const action = usable.pick ? 'pick' : usable.drop ? 'drop' : null;
-      if (!action) return;
-      buttons[action].classList.add('is-pressed');
-      setTimeout(() => buttons[action].classList.remove('is-pressed'), 150);
-      fire(action);
+      if (!actionEnabled) return;
+      actionButton.classList.add('is-pressed');
+      setTimeout(() => actionButton.classList.remove('is-pressed'), 150);
+      fireAction();
     }
   });
   window.addEventListener('keyup', (event) => {
@@ -149,18 +149,23 @@ export function createInputManager({ controlsEl, audio }) {
   });
   window.addEventListener('blur', releaseAll);
 
-  /** Enables or disables a real button; one small activation pop when it becomes usable, never a loop. */
-  function setUsable(action, value) {
-    const button = buttons[action];
-    const became = value && button.disabled;
-    usable[action] = Boolean(value);
-    button.disabled = !usable[action];
-    if (!usable[action]) button.classList.remove('is-pressed');
+  /** mode 'pick' | 'drop' (the button flips over when it changes); `usable` enables the real button, with one
+   *  small activation pop when it becomes usable (never a loop). */
+  function setAction(mode, usable) {
+    if (mode && mode !== actionMode) {
+      actionMode = mode;
+      actionButton.dataset.mode = mode;
+      actionButton.setAttribute('aria-label', ACTION_LABELS[mode]);
+    }
+    const became = usable && actionButton.disabled;
+    actionEnabled = Boolean(usable);
+    actionButton.disabled = !actionEnabled;
+    if (!actionEnabled) actionButton.classList.remove('is-pressed');
     if (became) {
-      button.classList.remove('is-ready');
-      void button.offsetWidth;
-      button.classList.add('is-ready');
-      setTimeout(() => button.classList.remove('is-ready'), 600);
+      actionButton.classList.remove('is-ready');
+      void actionButton.offsetWidth;
+      actionButton.classList.add('is-ready');
+      setTimeout(() => actionButton.classList.remove('is-ready'), 600);
     }
   }
 
@@ -176,14 +181,11 @@ export function createInputManager({ controlsEl, audio }) {
       for (const keyEl of Object.values(keyEls)) keyEl.setAttribute('aria-disabled', String(!enabled));
       if (!enabled) releaseAll();
     },
-    setPickEnabled(value) {
-      setUsable('pick', value);
-    },
-    setDropEnabled(value) {
-      setUsable('drop', value);
+    setActionState({ mode, enabled: usable }) {
+      setAction(mode, usable);
     },
     isActionAvailable(action) {
-      return Boolean(usable[action]);
+      return actionEnabled && actionMode === action;
     },
     /** Invite the player to move: the side keys bob gently until one is pressed. */
     invite(on) {
@@ -198,12 +200,12 @@ export function createInputManager({ controlsEl, audio }) {
       publishAxis();
     },
     async demoPress(action) {
-      setUsable(action, true);
-      buttons[action].classList.add('is-pressed');
+      setAction(action, true);
+      actionButton.classList.add('is-pressed');
       audio.play(sounds[action]);
       await new Promise((resolve) => setTimeout(resolve, 180));
-      buttons[action].classList.remove('is-pressed');
-      setUsable(action, false);
+      actionButton.classList.remove('is-pressed');
+      setAction(action, false);
     },
   };
 }

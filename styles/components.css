@@ -280,57 +280,49 @@
 .dpad.is-inviting .dpad__key--left { animation: key-invite-left 2.2s ease-in-out infinite; }
 .dpad.is-inviting .dpad__key--right { animation: key-invite-right 2.2s ease-in-out infinite; }
 
-/* PICK (bottom-right pair, lower-left): the first action of every task.
-   Disabled: muted (still faintly green, so it reads as a button). Ready: full colour, a faint warm rim and a
-   slow sheen that sweeps across it (no big glow, no bounce). Pressed: compresses, shadow tightens, a click. */
-.pick-button {
-  position: absolute; padding: 0;
+/* The action button (bottom-right, clear of the yard platform at x 1610): reads PICK while the hook is empty
+   and flips over to DROP once a frame is on the hook (and back after the drop). A real disabled button when its
+   action is not possible: muted, no glow. Ready: full colour, one small pop; PICK also gets a slow sheen.
+   Pressed: compresses with a tighter shadow, plus a click. Filters live on the art, not the flipping face, so
+   the shadow is never clipped square. */
+.action-dock { position: absolute; right: 40px; bottom: 30px; }
+.action-button {
+  position: relative; display: block; width: 214px; height: 221px; padding: 0;
   border: 0; border-radius: 50%; background: none; cursor: pointer; touch-action: manipulation;
+  perspective: 900px;
 }
-.pick-button::before {
-  content: ""; position: absolute; inset: -8px; border-radius: 50%;
-  background: radial-gradient(circle closest-side, rgba(205, 255, 150, 0.6) 76%, rgba(205, 255, 150, 0) 100%);
-  opacity: 0; transition: opacity 220ms;
+.action-button__face {
+  position: absolute; inset: 0; display: block;
+  backface-visibility: hidden; -webkit-backface-visibility: hidden;
+  transition: transform 520ms var(--ease-back), visibility 0s linear 120ms;
 }
-.pick-button:not(:disabled)::before { opacity: 1; }
-.pick-button__sheen {
-  position: absolute; inset: 9%; border-radius: 50%; overflow: hidden; pointer-events: none; opacity: 0;
-}
-.pick-button__sheen::after {
-  content: ""; position: absolute; top: -20%; bottom: -20%; left: -60%; width: 38%;
-  background: linear-gradient(100deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.55) 50%, rgba(255, 255, 255, 0) 100%);
-  transform: skewX(-18deg);
-}
-.pick-button:not(:disabled) .pick-button__sheen { opacity: 1; }
-.pick-button:not(:disabled) .pick-button__sheen::after { animation: button-sheen 2.6s ease-in-out 0.4s infinite; }
-.pick-button__art, .drop-button__art {
+.action-button__face--drop { transform: rotateY(180deg); }
+.action-button[data-mode="drop"] .action-button__face--pick { transform: rotateY(-180deg); }
+.action-button[data-mode="drop"] .action-button__face--drop { transform: rotateY(0deg); }
+.action-button[data-mode="pick"] .action-button__face--drop,
+.action-button[data-mode="drop"] .action-button__face--pick { visibility: hidden; }
+.action-button__art {
   /* The painted art carries a clear margin (6 % sides and top, 12 % below): enlarged by it and pulled back. */
   position: relative; display: block; width: 112%; max-width: none; margin: -6% -6% -12% -6%; height: auto;
   pointer-events: none;
-  filter: drop-shadow(0 7px 6px rgba(6, 24, 48, 0.36));
+  filter: drop-shadow(0 12px 10px rgba(6, 24, 48, 0.35));
   transition: scale 90ms var(--ease-out), translate 90ms var(--ease-out), filter 160ms;
 }
-.pick-button:disabled, .drop-button:disabled { cursor: default; }
-.pick-button:disabled .pick-button__art { filter: saturate(0.45) brightness(0.82) drop-shadow(0 7px 6px rgba(6, 24, 48, 0.3)); }
-.pick-button.is-pressed:not(:disabled) .pick-button__art,
-.pick-button.is-pressed:not(:disabled) .pick-button__sheen { scale: 0.92; translate: 0 4px; }
-.pick-button.is-pressed:not(:disabled) .pick-button__art { filter: brightness(1.08) drop-shadow(0 2px 2px rgba(6, 24, 48, 0.42)); transition-duration: 50ms; }
-.pick-button.is-ready .pick-button__art, .drop-button.is-ready .drop-button__art { animation: button-ready 420ms var(--ease-out) 1; }
-.pick-button:focus-visible, .drop-button:focus-visible { outline: 3px solid #fff3b0; outline-offset: 4px; }
-
-/* PICK and DROP share one dock in the bottom-right corner (clear of the yard platform, which ends at x 1610):
-   a game-style pair in the order they are used, PICK lower-left, DROP upper-right, both 150 px and 26 px apart.
-   DROP is disabled until a frame is on the hook; one small pop when it becomes usable (no loop). */
-.action-dock { position: absolute; right: 0; bottom: 0; width: 330px; height: 300px; pointer-events: none; }
-.action-dock > * { pointer-events: auto; }
-.pick-button { left: 32px; top: 123px; width: 150px; height: 155px; }
-.drop-button {
-  position: absolute; left: 165px; top: 7px; display: block; width: 150px; height: 155px; padding: 0;
-  border: 0; border-radius: 50%; background: none; cursor: pointer; touch-action: manipulation;
+.action-button__sheen { position: absolute; left: 8%; top: 6%; width: 84%; height: 80%; border-radius: 50%; overflow: hidden; pointer-events: none; opacity: 0; }
+.action-button__sheen::after {
+  content: ""; position: absolute; top: -20%; bottom: -20%; left: -60%; width: 38%;
+  background: linear-gradient(100deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.5) 50%, rgba(255, 255, 255, 0) 100%);
+  transform: skewX(-18deg);
 }
-.drop-button__art { filter: drop-shadow(0 12px 10px rgba(6, 24, 48, 0.35)); }
-.drop-button:disabled .drop-button__art { filter: saturate(0.2) brightness(0.85) drop-shadow(0 12px 10px rgba(6, 24, 48, 0.3)); }
-.drop-button.is-pressed:not(:disabled) .drop-button__art { scale: 0.94; translate: 0 7px; filter: brightness(1.05) drop-shadow(0 4px 4px rgba(6, 24, 48, 0.4)); transition-duration: 50ms; }
+.action-button[data-mode="pick"]:not(:disabled) .action-button__sheen { opacity: 1; }
+.action-button[data-mode="pick"]:not(:disabled) .action-button__sheen::after { animation: button-sheen 2.6s ease-in-out 0.4s infinite; }
+.action-button:disabled { cursor: default; }
+.action-button:disabled .action-button__art { filter: saturate(0.25) brightness(0.85) drop-shadow(0 12px 10px rgba(6, 24, 48, 0.3)); }
+.action-button.is-pressed:not(:disabled) .action-button__art,
+.action-button.is-pressed:not(:disabled) .action-button__sheen { scale: 0.93; translate: 0 7px; }
+.action-button.is-pressed:not(:disabled) .action-button__art { filter: brightness(1.06) drop-shadow(0 4px 4px rgba(6, 24, 48, 0.4)); transition-duration: 50ms; }
+.action-button.is-ready .action-button__art { animation: button-ready 420ms var(--ease-out) 1; }
+.action-button:focus-visible { outline: 3px solid #fff3b0; outline-offset: 4px; }
 
 /* ---------- Title: the painted play button, breathing gently, a soft pulse rippling out behind it ---------- */
 .start-button {

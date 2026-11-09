@@ -39,8 +39,9 @@ STATE_JS = """(() => {
     hovered: document.querySelector('.triangle--option.is-hovered')?.dataset.triangleId ?? null,
     socketVisible: !!document.querySelector('.socket.is-visible'),
     socketAligned: !!document.querySelector('.socket.is-aligned'),
-    pickEnabled: !document.getElementById('pick-button')?.disabled,
-    dropEnabled: !document.getElementById('drop-button')?.disabled,
+    actionMode: document.getElementById('action-button')?.dataset.mode ?? null,
+    pickEnabled: document.getElementById('action-button')?.dataset.mode === 'pick' && !document.getElementById('action-button').disabled,
+    dropEnabled: document.getElementById('action-button')?.dataset.mode === 'drop' && !document.getElementById('action-button').disabled,
     pressedKeys: [...document.querySelectorAll('.dpad__key.is-pressed')].map((k) => k.dataset.direction),
     stageInView: (() => { const r = document.getElementById('stage').getBoundingClientRect(); return r.left >= -1 && r.top >= -1 && r.right <= innerWidth + 1 && r.bottom <= innerHeight + 1; })(),
     builtMembers: document.querySelectorAll('#bridge .member.is-built').length,
@@ -113,7 +114,7 @@ class Game:
 
     def pick(self, triangle_id):
         self.hover(triangle_id)
-        self.click("#pick-button")
+        self.click("#action-button")
         return self.wait(lambda s: s["carried"] == triangle_id and s["crane"] == "carrying", 12, f"carrying {triangle_id}")
 
 
@@ -122,7 +123,7 @@ class Game:
         return self.wait(lambda s: s["crane"] == "carrying" and s["dropEnabled"], 12, "DROP live")
 
     def drop(self):
-        self.click("#drop-button")
+        self.click("#action-button")
 
 
 def open_game(profile):
@@ -196,7 +197,7 @@ def run():
         page.pump(0.4)
         after = game.state()["craneX"]
         check(after < before, f"holding the LEFT key moves the crane ({before} -> {after})")
-        check(not game.state()["dropEnabled"], "DROP disabled while the claw is empty (no DROP before a pickup)")
+        check(game.state()["actionMode"] == "pick" and not game.state()["dropEnabled"], "the action button reads PICK while the hook is empty (no DROP before a pickup)")
         page.key("ArrowRight", "ArrowRight", hold=0.4)
         page.pump(0.4)
         check(game.state()["craneX"] > after, "keyboard arrow moves the crane")
@@ -205,11 +206,11 @@ def run():
         check(page.evaluate("getComputedStyle(document.querySelector('.triangle--option')).pointerEvents === 'none' && document.querySelector('.socket').tagName !== 'BUTTON'", await_promise=False), "frames and the drop spot are not tappable (arrow pad, PICK and DROP only)")
         game.hover("equilateral")
         for _ in range(4):
-            game.click("#pick-button")
+            game.click("#action-button")
         state = game.wait(lambda s: s["carried"] == "equilateral" and s["crane"] == "carrying", 12, "carrying equilateral")
         page.pump(0.3)
         check(game.state()["carried"] == "equilateral", "PICK spam during the pick sequence is ignored")
-        check(game.state()["dropEnabled"] and not game.state()["pickEnabled"], "DROP live and PICK disabled while a frame is on the hook")
+        check(game.state()["actionMode"] == "drop" and game.state()["dropEnabled"], "the button flips to DROP (live) once a frame is on the hook")
         page.pump(0.7)
         check(not game.state()["platformAway"], "the yard stays in view while the frame hangs over it (it recedes on DROP)")
         game.shot("task1-carrying-wrong")
@@ -229,9 +230,7 @@ def run():
         page.pump(0.5)
         state = game.state()
         check(state["craneX"] < before and state["dropEnabled"] and state["carried"] == "isosceles", "carrying: the pad moves the crane and DROP stays live")
-        game.click("#pick-button")
-        page.pump(0.6)
-        check(game.state()["carried"] == "isosceles", "a disabled PICK does nothing while carrying")
+
 
         # Correct answer at task 1.
         game.carry_to_socket()

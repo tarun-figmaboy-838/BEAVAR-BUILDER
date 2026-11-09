@@ -83,7 +83,9 @@ const CRANE_LAYOUT = Object.freeze({
   maxY: 760,           // claw top when fully lowered: reaches the apex of the flattest frame
   maxSpeed: 500,       // px per second along the jib (empty hook)
   carrySpeed: 400,     // px per second with a frame on the hook: it feels heavier
-  hoistSpeed: 460,     // px per second up/down
+  hoistSpeed: 460,     // px per second up/down (scripted: the claw's height is automatic)
+  depthSpeed: 0.55,    // depth units per second with UP / DOWN (0 = over the yard, 1 = over the bridge deck)
+  pickDepthReach: 0.08,  // the claw can only pick while it is this close to the yard's plane
   gripOffsetY: 176,    // distance from claw top to the point held between the jaws
   clawHeight: 198,
   optionTolerance: 72, // horizontal forgiveness when picking
@@ -1597,16 +1599,18 @@ __define('js/core/input-manager.js', function () {
 const { CONTROLS_LAYOUT } = __require('js/data/layout.js');
 /**
  * Crane controls.
- *   Pad (bottom-left): four arrow keys. LEFT / RIGHT move the trolley along the jib, UP / DOWN raise and
- *   lower the claw. Each key is its own button with its own pressed state: pressing one never animates
- *   another key, the plate, or PICK. Tap = a small nudge (the direction is held at least `tapMs`),
- *   hold = continuous travel, release = the crane brakes smoothly (its own inertia).
- *   PICK (the pad's centre button): usable only with the claw over a frame and the hook empty.
- *   DROP (bottom-right): usable only once a frame is on the hook; it starts the whole transport.
- *   PICK and DROP are real buttons, `disabled` whenever their action is not possible.
- * Keyboard: arrows / WASD press the matching key; Space (or Enter) presses PICK, or DROP while carrying.
+ *   Pad (bottom-left): four direction keys. LEFT / RIGHT move the trolley along the jib; UP sends the hook
+ *   back into the scene (toward the bridge), DOWN brings it forward to the yard. Each key is its own button
+ *   with its own pressed state: pressing one never animates another key, the panel, or the action button.
+ *   Tap = a small nudge (the direction is held at least `tapMs`), hold = continuous travel, release = the
+ *   crane brakes smoothly (its own inertia).
+ *   Action button (bottom-right): reads PICK while the hook is empty (usable only with the hook at the front,
+ *   over a frame) and flips over to DROP once a frame is on the hook (DROP starts the whole transport).
+ *   It is a real `disabled` button whenever its action is not possible.
+ * Keyboard: arrows / WASD press the matching key; Space (or Enter) presses the action button.
  * Emits intent only ('axis', 'pick', 'drop'); the level engine decides what is legal.
  */
+const ACTION_LABELS = { pick: 'Pick the triangle', drop: 'Drop: carry the triangle to the bridge' };
 const KEY_TO_DIRECTION = {
   ArrowLeft: 'left', KeyA: 'left',
   ArrowRight: 'right', KeyD: 'right',
@@ -1618,9 +1622,10 @@ const DIRECTIONS = ['up', 'right', 'down', 'left'];
 function createInputManager({ controlsEl, audio }) {
   const padEl = controlsEl.querySelector('#dpad');
   const keyEls = Object.fromEntries(DIRECTIONS.map((direction) => [direction, padEl.querySelector(`.dpad__key[data-direction="${direction}"]`)]));
-  const buttons = { pick: controlsEl.querySelector('#pick-button'), drop: controlsEl.querySelector('#drop-button') };
+  const actionButton = controlsEl.querySelector('#action-button');
   const sounds = { pick: 'pickPress', drop: 'dropPress' };
-  const usable = { pick: false, drop: false };
+  let actionMode = 'pick';
+  let actionEnabled = false;
   const held = Object.fromEntries(DIRECTIONS.map((direction) => [direction, null]));   // per key: { since, source } while held
   const releaseTimers = {};
   const listeners = new Map();
@@ -1699,20 +1704,18 @@ function createInputManager({ controlsEl, audio }) {
     keyEl.addEventListener('click', (event) => event.preventDefault());    // movement is press-and-hold, never a click
   }
 
-  function fire(action) {
-    audio.play(sounds[action]);
-    emit(action);
+  function fireAction() {
+    audio.play(sounds[actionMode]);
+    emit(actionMode);
   }
 
-  for (const [action, button] of Object.entries(buttons)) {
-    button.addEventListener('pointerdown', () => { if (!button.disabled) button.classList.add('is-pressed'); });
-    for (const type of ['pointerup', 'pointercancel', 'pointerleave']) {
-      button.addEventListener(type, () => button.classList.remove('is-pressed'));
-    }
-    button.addEventListener('click', () => {
-      if (enabled && !button.disabled) fire(action);
-    });
+  actionButton.addEventListener('pointerdown', () => { if (!actionButton.disabled) actionButton.classList.add('is-pressed'); });
+  for (const type of ['pointerup', 'pointercancel', 'pointerleave']) {
+    actionButton.addEventListener(type, () => actionButton.classList.remove('is-pressed'));
   }
+  actionButton.addEventListener('click', () => {
+    if (enabled && !actionButton.disabled) fireAction();
+  });
 
   window.addEventListener('keydown', (event) => {
     if (event.target.closest?.('input, textarea')) return;
@@ -1730,11 +1733,10 @@ function createInputManager({ controlsEl, audio }) {
       if (focusedButton && (event.code === 'Enter' || focusedButton.classList.contains('cta-button'))) return;
       if (!enabled) return;
       event.preventDefault();
-      const action = usable.pick ? 'pick' : usable.drop ? 'drop' : null;
-      if (!action) return;
-      buttons[action].classList.add('is-pressed');
-      setTimeout(() => buttons[action].classList.remove('is-pressed'), 150);
-      fire(action);
+      if (!actionEnabled) return;
+      actionButton.classList.add('is-pressed');
+      setTimeout(() => actionButton.classList.remove('is-pressed'), 150);
+      fireAction();
     }
   });
   window.addEventListener('keyup', (event) => {
@@ -1744,18 +1746,23 @@ function createInputManager({ controlsEl, audio }) {
   });
   window.addEventListener('blur', releaseAll);
 
-  /** Enables or disables a real button; one small activation pop when it becomes usable, never a loop. */
-  function setUsable(action, value) {
-    const button = buttons[action];
-    const became = value && button.disabled;
-    usable[action] = Boolean(value);
-    button.disabled = !usable[action];
-    if (!usable[action]) button.classList.remove('is-pressed');
+  /** mode 'pick' | 'drop' (the button flips over when it changes); `usable` enables the real button, with one
+   *  small activation pop when it becomes usable (never a loop). */
+  function setAction(mode, usable) {
+    if (mode && mode !== actionMode) {
+      actionMode = mode;
+      actionButton.dataset.mode = mode;
+      actionButton.setAttribute('aria-label', ACTION_LABELS[mode]);
+    }
+    const became = usable && actionButton.disabled;
+    actionEnabled = Boolean(usable);
+    actionButton.disabled = !actionEnabled;
+    if (!actionEnabled) actionButton.classList.remove('is-pressed');
     if (became) {
-      button.classList.remove('is-ready');
-      void button.offsetWidth;
-      button.classList.add('is-ready');
-      setTimeout(() => button.classList.remove('is-ready'), 600);
+      actionButton.classList.remove('is-ready');
+      void actionButton.offsetWidth;
+      actionButton.classList.add('is-ready');
+      setTimeout(() => actionButton.classList.remove('is-ready'), 600);
     }
   }
 
@@ -1771,14 +1778,11 @@ function createInputManager({ controlsEl, audio }) {
       for (const keyEl of Object.values(keyEls)) keyEl.setAttribute('aria-disabled', String(!enabled));
       if (!enabled) releaseAll();
     },
-    setPickEnabled(value) {
-      setUsable('pick', value);
-    },
-    setDropEnabled(value) {
-      setUsable('drop', value);
+    setActionState({ mode, enabled: usable }) {
+      setAction(mode, usable);
     },
     isActionAvailable(action) {
-      return Boolean(usable[action]);
+      return actionEnabled && actionMode === action;
     },
     /** Invite the player to move: the side keys bob gently until one is pressed. */
     invite(on) {
@@ -1793,12 +1797,12 @@ function createInputManager({ controlsEl, audio }) {
       publishAxis();
     },
     async demoPress(action) {
-      setUsable(action, true);
-      buttons[action].classList.add('is-pressed');
+      setAction(action, true);
+      actionButton.classList.add('is-pressed');
       audio.play(sounds[action]);
       await new Promise((resolve) => setTimeout(resolve, 180));
-      buttons[action].classList.remove('is-pressed');
-      setUsable(action, false);
+      actionButton.classList.remove('is-pressed');
+      setAction(action, false);
     },
   };
 }
@@ -2260,9 +2264,11 @@ function buildCraneDom(craneEl, platformEl) {
 }
 
 /**
- * The crane in three axes: x along the jib, y the claw's height (screen y of the claw top), and depth
- * (0 = over the yard, 1 = over the bridge deck). Player input drives x and y in the drivable states;
- * every scripted motion runs as an awaited sequence that cannot overlap another.
+ * The crane in three axes: x along the jib (LEFT / RIGHT), depth (UP sends the hook back into the scene,
+ * DOWN brings it forward; 0 = over the yard, 1 = over the bridge deck) and the claw's height, which is
+ * automatic (PICK lowers and lifts, DROP lifts, carries, lowers). Moving in depth keeps the load's height
+ * above the ground, so it shrinks and rises on screen exactly as the ground recedes. Every scripted motion
+ * runs as an awaited sequence that cannot overlap another.
  */
 function createCraneController({ craneEl, dom, claw, gameState, audio }) {
   const { rig, trolley, beacon, shadow, platformEl } = dom;
@@ -2272,7 +2278,7 @@ function createCraneController({ craneEl, dom, claw, gameState, audio }) {
   const loadEl = rig.querySelector('.hoist__load');
   const cargoEl = rig.querySelector('.claw-cargo');
 
-  const motion = { x: CRANE_LAYOUT.homeX, vx: 0, y: CRANE_LAYOUT.restY, vy: 0, depth: 0, sway: 0, swayVelocity: 0 };
+  const motion = { x: CRANE_LAYOUT.homeX, vx: 0, y: CRANE_LAYOUT.restY, vy: 0, depth: 0, vz: 0, sway: 0, swayVelocity: 0 };
   const axis = { x: 0, y: 0 };
   const rendered = { x: NaN, y: NaN, sway: NaN, scale: NaN };
   let lastX = motion.x;
@@ -2323,10 +2329,11 @@ function createCraneController({ craneEl, dom, claw, gameState, audio }) {
     const swayOffset = Math.sin((motion.sway * Math.PI) / 180) * (ropeLength() + 80 * scale);
     const overYard = motion.depth < 0.06 && !platformEl.classList.contains('is-away')
       && motion.x > PLATFORM_LAYOUT.deckLeft - 40 && motion.x < PLATFORM_LAYOUT.deckRight + 40;
+    const overScene = motion.depth >= 0.06;                            // the empty hook's shadow crosses the water too
     const centreX = carried ? motion.x + (carried.centroid[0] - carried.grabX * carried.width) * scale : motion.x;
     const width = carried ? (carried.width / 170) * 0.9 : 1;          // the shadow art is 170 px wide
     const opacity = carried ? 0.5 + closeness * 0.4 : 0.45 + closeness * 0.55;
-    shadow.style.opacity = carried || overYard ? opacity.toFixed(2) : '0';
+    shadow.style.opacity = carried || overYard || overScene ? opacity.toFixed(2) : '0';
     const spread = (1.15 - closeness * 0.35) * scale;
     shadow.style.transform = `translate(${(centreX + swayOffset).toFixed(1)}px, ${(ground + 4 * scale).toFixed(1)}px) scale(${(spread * width).toFixed(3)}, ${spread.toFixed(3)})`;
   }
@@ -2358,7 +2365,7 @@ function createCraneController({ craneEl, dom, claw, gameState, audio }) {
       setState(S.CARRYING);
       return;
     }
-    const hover = hoverResolver(motion.x, carried) ?? {};
+    const hover = hoverResolver(motion.x, carried, motion.depth) ?? {};
     const hoveredId = hover.option?.id ?? null;
     if (gameState.get().hoveredOptionId !== hoveredId) gameState.update({ hoveredOptionId: hoveredId });
     setState(hoveredId ? S.ALIGNED_WITH_TRIANGLE : isMoving ? S.MOVING : S.IDLE);
@@ -2386,18 +2393,22 @@ function createCraneController({ craneEl, dom, claw, gameState, audio }) {
     const drivable = scriptedMotions === 0 && !sequenceRunning && DRIVABLE_STATES.has(state);
     const maxSpeed = carried ? CRANE_LAYOUT.carrySpeed : CRANE_LAYOUT.maxSpeed;   // a load makes the crane heavier
     const targetVx = drivable ? axis.x * maxSpeed : 0;
-    const targetVy = drivable ? axis.y * CRANE_LAYOUT.hoistSpeed : 0;
+    const targetVz = drivable ? -axis.y * CRANE_LAYOUT.depthSpeed * (carried ? 0.85 : 1) : 0;   // UP = away from the camera
     // Accelerate gently (weight), brake a little faster (a tap is a small nudge, a release a smooth stop).
     motion.vx += (targetVx - motion.vx) * Math.min(1, dt * (targetVx ? (carried ? 3.6 : 4.6) : 7));
-    motion.vy += (targetVy - motion.vy) * Math.min(1, dt * (targetVy ? 6 : 8));
+    motion.vz += (targetVz - motion.vz) * Math.min(1, dt * (targetVz ? 4 : 7));
     if (!targetVx && Math.abs(motion.vx) < 2) motion.vx = 0;
-    if (!targetVy && Math.abs(motion.vy) < 2) motion.vy = 0;
+    if (!targetVz && Math.abs(motion.vz) < 0.004) motion.vz = 0;
     if (scriptedMotions === 0) {
-      const lowest = carried ? carryMaxY : CRANE_LAYOUT.maxY;
       motion.x = clamp(motion.x + motion.vx * dt, CRANE_LAYOUT.minX, CRANE_LAYOUT.maxX);
-      motion.y = clamp(motion.y + motion.vy * dt, CRANE_LAYOUT.restY, Math.max(CRANE_LAYOUT.restY, lowest));
       if (motion.x === CRANE_LAYOUT.minX || motion.x === CRANE_LAYOUT.maxX) motion.vx = 0;
-      if (motion.y === CRANE_LAYOUT.restY || motion.y === lowest) motion.vy = 0;
+      if (motion.vz) {
+        // Same height above the ground at the new depth: the hook rises on screen and shrinks as it recedes.
+        const height = (groundY(motion.depth) - motion.y) / depthScale(motion.depth);
+        motion.depth = clamp(motion.depth + motion.vz * dt, 0, 1);
+        motion.y = Math.max(CRANE_LAYOUT.restY, groundY(motion.depth) - height * depthScale(motion.depth));
+        if (motion.depth === 0 || motion.depth === 1) motion.vz = 0;
+      }
     }
 
     const measuredVx = (motion.x - lastX) / dt;
@@ -2406,9 +2417,9 @@ function createCraneController({ craneEl, dom, claw, gameState, audio }) {
     lastY = motion.y;
     updateSway(dt, measuredVx);
 
-    // Sound follows the player's motion: the trolley motor for travel, the winch for the cable. Scripted
-    // sequences (pick, transport, return) play their own cues, so these loops never double up with them.
-    const travelling = Math.abs(measuredVx) > 6;
+    // Sound follows the player's motion: the trolley motor for travel (along the jib or in depth), the winch
+    // for the cable. Scripted sequences play their own cues, so these loops never double up with them.
+    const travelling = Math.abs(measuredVx) > 6 || Math.abs(motion.vz) > 0.03;
     const winching = Math.abs(measuredVy) > 6;
     trolley.classList.toggle('is-running', travelling);
     if (!sequenceRunning) {
@@ -2573,6 +2584,7 @@ function createCraneController({ craneEl, dom, claw, gameState, audio }) {
       lastX = motion.x;
       lastY = motion.y;
       lastMeasuredVx = 0;
+      motion.vz = 0;
       motion.sway = 0;
       motion.swayVelocity = 0;
       render();
@@ -2584,6 +2596,15 @@ function createCraneController({ craneEl, dom, claw, gameState, audio }) {
         if (carried || !setState(S.LOWERING_TO_PICK)) return false;
         audio.play('clawOpen');
         await claw.open();
+        if (motion.depth > 0) {                                           // square up with the yard's plane first
+          const from = { depth: motion.depth, y: motion.y };
+          const height = (groundY(from.depth) - from.y) / depthScale(from.depth);
+          await runScripted({ duration: 200, ease: easings.outCubic, signal, apply: (t) => {
+            motion.depth = from.depth * (1 - t);
+            motion.y = Math.max(CRANE_LAYOUT.restY, groundY(motion.depth) - height * depthScale(motion.depth));
+          } });
+          motion.depth = 0;
+        }
         await glideTo(option.grabStageX, { signal, duration: 220 });
         await settleSway(signal);
         audio.play('winchDown');
@@ -3812,9 +3833,10 @@ function createPlacementController({ triangles }) {
     bridgeTarget(carried, scale) {
       return bridgeSeatTarget(carried, activeStage.socket.x, scale);
     },
-    /** With no frame on the hook: the yard frame whose grab corner is within reach of the claw. */
-    resolveHover(craneX, carried) {
-      if (carried) return {};
+    /** With no frame on the hook: the yard frame whose grab corner is within reach of the claw (the hook must
+     *  be back at the front, over the yard, to reach one). */
+    resolveHover(craneX, carried, depth = 0) {
+      if (carried || depth > CRANE_LAYOUT.pickDepthReach) return { option: null };
       let best = null;
       for (const option of triangles.allOptions()) {
         const distance = Math.abs(craneX - triangles.grabPointOf(option).x);
@@ -4409,10 +4431,10 @@ const INVITE_AFTER_MS = 3500;
 
 /**
  * One engine runs all six levels from data:
- *   question → position the claw over a frame (arrow pad) → PICK (grab, lift off the yard)
+ *   question → position the hook over a frame (LEFT / RIGHT, UP / DOWN in depth) → PICK (grab, lift)
  *   → DROP (lift, travel into depth to the bridge, align, lower, place, release) → consequence.
- * PICK (the pad's centre) is live only with the claw over a frame and the hook empty; DROP only once a
- * frame is on the hook.
+ * The action button reads PICK (live only with the hook at the front over a frame, hook empty) and flips to
+ * DROP once a frame is on the hook (live only then).
  */
 function createLevelEngine({ gameState, crane, claw, triangles, bridge, placement, feedback, camera, input, audio, voice, builder, onComplete }) {
   const scope = createSequenceScope();
@@ -4449,8 +4471,7 @@ function createLevelEngine({ gameState, crane, claw, triangles, bridge, placemen
   function lockInput() {
     gameState.update({ isInputLocked: true });
     input.setEnabled(false);
-    input.setPickEnabled(false);
-    input.setDropEnabled(false);
+    input.setActionState({ mode: crane.carried ? 'drop' : 'pick', enabled: false });
     input.invite(false);
     clearTimeout(inviteTimer);
     crane.lock();
@@ -4472,13 +4493,14 @@ function createLevelEngine({ gameState, crane, claw, triangles, bridge, placemen
     }, INVITE_AFTER_MS);
   }
 
-  /** PICK / DROP availability always follows the crane's state; nothing else enables them. */
+  /** The action button follows the crane: PICK (hook empty, at the front, over a frame), DROP (frame on the hook). */
   function syncUi() {
     const state = gameState.get();
     const carried = crane.carried;
     const canAct = active && !busy && !state.isInputLocked && !crane.isBusy;
-    input.setPickEnabled(canAct && !carried && state.craneState === CRANE_STATES.ALIGNED_WITH_TRIANGLE);
-    input.setDropEnabled(canAct && Boolean(carried) && state.craneState === CRANE_STATES.CARRYING);
+    const pickReady = canAct && !carried && state.craneState === CRANE_STATES.ALIGNED_WITH_TRIANGLE;
+    const dropReady = canAct && Boolean(carried) && state.craneState === CRANE_STATES.CARRYING;
+    input.setActionState({ mode: carried ? 'drop' : 'pick', enabled: pickReady || dropReady });
     if (triangles.setHovered(carried ? null : state.hoveredOptionId)) audio.play('bloop');
     bridge.setSocketArmed(Boolean(carried));
   }
@@ -4486,7 +4508,7 @@ function createLevelEngine({ gameState, crane, claw, triangles, bridge, placemen
   gameState.subscribe((state, patch) => {
     if ('craneState' in patch || 'hoveredOptionId' in patch || 'craneX' in patch || 'craneBusy' in patch) syncUi();
   });
-  crane.setHoverResolver((x, carried) => placement.resolveHover(x, carried));
+  crane.setHoverResolver((x, carried, depth) => placement.resolveHover(x, carried, depth));
   input.on('axis', (axis) => {
     if (inputLocked()) return;
     crane.setAxis(axis);
@@ -4526,7 +4548,7 @@ function createLevelEngine({ gameState, crane, claw, triangles, bridge, placemen
     if (!option) return;
     busy = true;
     input.setEnabled(false);                              // arrows rest while the claw works
-    input.setPickEnabled(false);
+    input.setActionState({ mode: 'pick', enabled: false });
     input.invite(false);
     clearTimeout(inviteTimer);
     try {
@@ -5867,8 +5889,7 @@ function createHowToPlayScreen({ els, voice, camera, crane, triangles, bridge, i
   function revealControls() {
     if (!els.controls.hidden) return;
     input.setEnabled(false);
-    input.setPickEnabled(false);
-    input.setDropEnabled(false);
+    input.setActionState({ mode: 'pick', enabled: false });
     els.controls.hidden = false;
     playClassAnimation(els.controls, 'is-entering', 700);
   }
@@ -5893,6 +5914,7 @@ function createHowToPlayScreen({ els, voice, camera, crane, triangles, bridge, i
     cardPress('pick');
     await input.demoPress('pick');
     await crane.pickUp({ ...item, id: 'demo', grabStageX: grab.x, grabStageY: grab.y }, { signal: scope.signal });
+    input.setActionState({ mode: 'drop', enabled: false });            // the button flips to DROP
     await wait(200, scope.signal);
     await sayStep(2);
     // DROP: the same transport the player gets: lift, into depth, align over the middle spot, lower, release.
@@ -5900,6 +5922,7 @@ function createHowToPlayScreen({ els, voice, camera, crane, triangles, bridge, i
     await input.demoPress('drop');
     const released = await crane.transportToBridge((scale) => bridgeSeatTarget(item, DEMO_TARGET.x, scale), { signal: scope.signal });
     if (!released) return;
+    input.setActionState({ mode: 'pick', enabled: false });            // and back to PICK
     triangles.placeInWorld(item, released.left, released.top, released.scale);
     await triangles.seat(item);
     await crane.liftAway({ signal: scope.signal });
@@ -5927,8 +5950,7 @@ function createHowToPlayScreen({ els, voice, camera, crane, triangles, bridge, i
         if (!isAbortError(error)) throw error;
       } finally {
         demoAxis(0);
-        input.setPickEnabled(false);
-        input.setDropEnabled(false);
+        input.setActionState({ mode: 'pick', enabled: false });
       }
       highlightStep(copy.steps.length);
       // PDF p6: the card closes with this line; the builder says it and the practice round begins.

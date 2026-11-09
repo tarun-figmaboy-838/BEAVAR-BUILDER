@@ -30,9 +30,10 @@ export function createPlacementController({ triangles }) {
     bridgeTarget(carried, scale) {
       return bridgeSeatTarget(carried, activeStage.socket.x, scale);
     },
-    /** With no frame on the hook: the yard frame whose grab corner is within reach of the claw. */
-    resolveHover(craneX, carried) {
-      if (carried) return {};
+    /** With no frame on the hook: the yard frame whose grab corner is within reach of the claw (the hook must
+     *  be back at the front, over the yard, to reach one). */
+    resolveHover(craneX, carried, depth = 0) {
+      if (carried || depth > CRANE_LAYOUT.pickDepthReach) return { option: null };
       let best = null;
       for (const option of triangles.allOptions()) {
         const distance = Math.abs(craneX - triangles.grabPointOf(option).x);

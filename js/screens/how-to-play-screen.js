@@ -72,8 +72,7 @@ export function createHowToPlayScreen({ els, voice, camera, crane, triangles, br
   function revealControls() {
     if (!els.controls.hidden) return;
     input.setEnabled(false);
-    input.setPickEnabled(false);
-    input.setDropEnabled(false);
+    input.setActionState({ mode: 'pick', enabled: false });
     els.controls.hidden = false;
     playClassAnimation(els.controls, 'is-entering', 700);
   }
@@ -98,6 +97,7 @@ export function createHowToPlayScreen({ els, voice, camera, crane, triangles, br
     cardPress('pick');
     await input.demoPress('pick');
     await crane.pickUp({ ...item, id: 'demo', grabStageX: grab.x, grabStageY: grab.y }, { signal: scope.signal });
+    input.setActionState({ mode: 'drop', enabled: false });            // the button flips to DROP
     await wait(200, scope.signal);
     await sayStep(2);
     // DROP: the same transport the player gets: lift, into depth, align over the middle spot, lower, release.
@@ -105,6 +105,7 @@ export function createHowToPlayScreen({ els, voice, camera, crane, triangles, br
     await input.demoPress('drop');
     const released = await crane.transportToBridge((scale) => bridgeSeatTarget(item, DEMO_TARGET.x, scale), { signal: scope.signal });
     if (!released) return;
+    input.setActionState({ mode: 'pick', enabled: false });            // and back to PICK
     triangles.placeInWorld(item, released.left, released.top, released.scale);
     await triangles.seat(item);
     await crane.liftAway({ signal: scope.signal });
@@ -132,8 +133,7 @@ export function createHowToPlayScreen({ els, voice, camera, crane, triangles, br
         if (!isAbortError(error)) throw error;
       } finally {
         demoAxis(0);
-        input.setPickEnabled(false);
-        input.setDropEnabled(false);
+        input.setActionState({ mode: 'pick', enabled: false });
       }
       highlightStep(copy.steps.length);
       // PDF p6: the card closes with this line; the builder says it and the practice round begins.

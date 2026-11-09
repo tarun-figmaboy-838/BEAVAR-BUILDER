@@ -45,8 +45,7 @@ LAYOUT_JS = """(() => {
     scale: getComputedStyle(stage).getPropertyValue('--stage-scale').trim(),
     stage: r(stage),
     scroll: [document.documentElement.scrollWidth, document.documentElement.scrollHeight],
-    action: r(document.getElementById('drop-button')),
-    pick: r(document.getElementById('pick-button')),
+    action: r(document.getElementById('action-button')),
     joystick: r(document.getElementById('dpad')),
     mute: r(document.getElementById('mute')),
     banner: r(document.getElementById('instruction')),
@@ -109,14 +108,14 @@ def run_device(pw, name, engine, width, height, dpr, touch):
         page.wait_for_timeout(1500)
         shot("task1")
         result["layout_task1"] = page.evaluate(LAYOUT_JS)
-        steer("document.querySelector('.triangle--option.is-hovered')?.dataset.triangleId === 'isosceles' && !document.getElementById('pick-button').disabled",
+        steer("document.querySelector('.triangle--option.is-hovered')?.dataset.triangleId === 'isosceles' && !document.getElementById('action-button').disabled",
               '(() => { const c = document.querySelector(\'.claw\').getBoundingClientRect(); const o = document.querySelector(\'.triangle--option[data-triangle-id="isosceles"]\'); const top = [...o.querySelectorAll(\'.frame__plate\')].map((p) => p.getBoundingClientRect()).sort((a, b) => a.top - b.top)[0]; return (top.left + top.width / 2) - (c.left + c.width / 2); })()')
         shot("hover-isosceles")
-        press("#pick-button")
-        page.wait_for_function("document.querySelector('.claw-cargo .triangle')?.dataset.triangleId === 'isosceles' && document.getElementById('crane').dataset.state === 'carrying' && !document.getElementById('drop-button').disabled", timeout=20000)
+        press("#action-button")
+        page.wait_for_function("document.querySelector('.claw-cargo .triangle')?.dataset.triangleId === 'isosceles' && document.getElementById('crane').dataset.state === 'carrying' && document.getElementById('action-button').dataset.mode === 'drop' && !document.getElementById('action-button').disabled", timeout=20000)
         page.wait_for_timeout(300)
         shot("carrying")
-        press("#drop-button")
+        press("#action-button")
         page.wait_for_function("document.getElementById('crane').dataset.state === 'transportingDepth'", timeout=10000)
         page.wait_for_timeout(900)
         shot("transport")

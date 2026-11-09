@@ -52,7 +52,9 @@ export const CRANE_LAYOUT = Object.freeze({
   maxY: 760,           // claw top when fully lowered: reaches the apex of the flattest frame
   maxSpeed: 500,       // px per second along the jib (empty hook)
   carrySpeed: 400,     // px per second with a frame on the hook: it feels heavier
-  hoistSpeed: 460,     // px per second up/down
+  hoistSpeed: 460,     // px per second up/down (scripted: the claw's height is automatic)
+  depthSpeed: 0.55,    // depth units per second with UP / DOWN (0 = over the yard, 1 = over the bridge deck)
+  pickDepthReach: 0.08,  // the claw can only pick while it is this close to the yard's plane
   gripOffsetY: 176,    // distance from claw top to the point held between the jaws
   clawHeight: 198,
   optionTolerance: 72, // horizontal forgiveness when picking
