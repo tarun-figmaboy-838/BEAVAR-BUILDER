@@ -240,7 +240,7 @@
 /* ---------- Controls: the direction pad (left), the action button (right) ----------
    A glossy navy cross dock with a cyan rim (art 720 px, shown at 345 px: it ends at x 331, clear of the yard
    platform at x 340) with big amber keys and navy arrows (strong contrast): each key is 100 px wide, centred
-   in its arm, and its tap area is the whole 112 px arm, so it is easy to see and easy to hit. The centre is a
+   in its arm and exactly 105 px from the hub, and its tap area is the whole 112 px arm, so it is easy to see and easy to hit. The centre is a
    plain hub (not a button). Every state change is on the key's own
    picture (scale / translate / filter), so pressing one key never moves another key or the panel. */
 .dpad-dock { position: absolute; left: -3px; bottom: 2px; }
@@ -253,13 +253,13 @@
   border: 0; background: none; border-radius: 28px; cursor: pointer; touch-action: none;
   -webkit-user-select: none; user-select: none;
 }
-.dpad__key--up { left: 116.7px; top: 9.6px; width: 112px; height: 112px; }
+.dpad__key--up { left: 116.5px; top: 11.1px; width: 112px; height: 112px; }
 .dpad__key--up img { left: 0.7px; top: -0.8px; width: 110.7px; height: 113.4px; }
-.dpad__key--down { left: 116.7px; top: 223.4px; width: 112px; height: 112px; }
+.dpad__key--down { left: 116.5px; top: 221.9px; width: 112px; height: 112px; }
 .dpad__key--down img { left: 1.0px; top: -0.8px; width: 110.4px; height: 113.4px; }
-.dpad__key--left { left: 11.6px; top: 114.6px; width: 112px; height: 112px; }
+.dpad__key--left { left: 11.1px; top: 116.5px; width: 112px; height: 112px; }
 .dpad__key--left img { left: 1.0px; top: -0.7px; width: 110.4px; height: 113.0px; }
-.dpad__key--right { left: 221.4px; top: 114.6px; width: 112px; height: 112px; }
+.dpad__key--right { left: 221.9px; top: 116.5px; width: 112px; height: 112px; }
 .dpad__key--right img { left: 1.0px; top: -0.7px; width: 110.1px; height: 113.0px; }
 .dpad__key img {
   position: absolute; display: block; pointer-events: none;

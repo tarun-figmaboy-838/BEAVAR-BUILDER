@@ -212,8 +212,8 @@
 .hotspot {
   /* 220 x 250: the pool of light lies on the road (the box's bottom edge is the road surface), sized to the
      frame that lands on it (frames stand 0.6 scale on the bridge, about 175 px wide). */
-  --glow: 255, 186, 20;
-  --glow-hi: 255, 236, 150;
+  --glow: 255, 168, 0;
+  --glow-hi: 255, 232, 120;
   position: absolute;
   width: 220px; height: 250px;
   margin: -250px 0 0 -110px;
@@ -225,21 +225,22 @@
 }
 .hotspot.is-visible { opacity: 0.92; transform: scale(0.95); }
 .hotspot.is-armed { opacity: 1; transform: scale(1); }
-.hotspot.is-aligned { --glow: 64, 222, 104; --glow-hi: 214, 255, 224; transform: scale(1.06); animation: spot-lock-on 380ms var(--ease-back) 1; }
+.hotspot.is-aligned { --glow: 24, 214, 84; --glow-hi: 186, 255, 200; transform: scale(1.06); animation: spot-lock-on 380ms var(--ease-back) 1; }
 .socket { pointer-events: none; border: 0; background: none; padding: 0; }
 /* The pool: a soft ellipse of light lying inside the road band (the road surface is the 20 px above the
    line frames stand on, y 652-672), never spilling onto the girder below; no outline. */
 .hotspot__pool {
   position: absolute; left: 22px; right: 22px; bottom: 2px; height: 17px; border-radius: 50%;
-  background: radial-gradient(ellipse at center, rgba(var(--glow-hi), 1) 0 16%, rgba(var(--glow), 0.9) 42%, rgba(var(--glow), 0.35) 64%, rgba(var(--glow), 0) 72%);
+  background: radial-gradient(ellipse at center, rgba(255, 255, 255, 1) 0 10%, rgba(var(--glow-hi), 1) 24%, rgba(var(--glow), 1) 46%, rgba(var(--glow), 0.45) 64%, rgba(var(--glow), 0) 72%);
 }
 /* The beam: crisp lit edges, filled with light that fades toward the top; a bright band flows up inside it. */
 .hotspot__column {
   position: absolute; left: 50%; width: 124px; margin-left: -62px; bottom: 10px; height: 200px; overflow: hidden;
   background:
-    linear-gradient(90deg, rgba(var(--glow-hi), 0.95) 0 2px, rgba(var(--glow-hi), 0) 12px, rgba(var(--glow-hi), 0) calc(100% - 12px), rgba(var(--glow-hi), 0.95) calc(100% - 2px)),
-    linear-gradient(to top, rgba(var(--glow), 0.72) 0%, rgba(var(--glow), 0.36) 45%, rgba(var(--glow), 0.08) 100%);
-  -webkit-mask-image: linear-gradient(to top, #000 0%, #000 50%, transparent 100%); mask-image: linear-gradient(to top, #000 0%, #000 50%, transparent 100%);
+    linear-gradient(90deg, rgba(var(--glow), 1) 0 1.5px, rgba(var(--glow-hi), 1) 1.5px 4px, rgba(var(--glow-hi), 0) 16px, rgba(var(--glow-hi), 0) calc(100% - 16px), rgba(var(--glow-hi), 1) calc(100% - 4px), rgba(var(--glow), 1) calc(100% - 1.5px)),
+    linear-gradient(90deg, rgba(255, 255, 255, 0) 28%, rgba(255, 255, 255, 0.4) 50%, rgba(255, 255, 255, 0) 72%),
+    linear-gradient(to top, rgba(var(--glow), 0.95) 0%, rgba(var(--glow), 0.6) 40%, rgba(var(--glow), 0.16) 100%);
+  -webkit-mask-image: linear-gradient(to top, #000 0%, #000 58%, transparent 100%); mask-image: linear-gradient(to top, #000 0%, #000 58%, transparent 100%);
   transform-origin: 50% 100%;
   animation: beam-breathe 1.8s ease-in-out infinite;
   transition: opacity 260ms ease-out, transform 360ms var(--ease-in);
@@ -250,16 +251,16 @@
   animation: beam-flow 1.5s linear infinite;
 }
 /* Two crisp chevrons at the top of the beam, bobbing down toward the spot. */
-.hotspot__chevrons { position: absolute; left: 50%; top: 18px; width: 0; height: 0; transition: opacity 260ms ease-out; }
+.hotspot__chevrons { position: absolute; left: 50%; top: 4px; width: 0; height: 0; transition: opacity 260ms ease-out; }
 .hotspot__chevrons i {
-  position: absolute; left: -15px; width: 30px; height: 30px;
-  border-right: 7px solid rgb(var(--glow-hi)); border-bottom: 7px solid rgb(var(--glow-hi)); border-radius: 0 0 5px 0;
-  filter: drop-shadow(0 0 5px rgba(var(--glow), 1)) drop-shadow(0 0 2px rgba(var(--glow), 1));
+  position: absolute; left: -18px; width: 36px; height: 36px;
+  border-right: 9px solid rgb(var(--glow-hi)); border-bottom: 9px solid rgb(var(--glow-hi)); border-radius: 0 0 6px 0;
+  filter: drop-shadow(0 0 1.5px rgba(var(--glow), 1)) drop-shadow(0 0 7px rgba(var(--glow), 1)) drop-shadow(0 1px 1px rgba(20, 30, 60, 0.5));
   transform: rotate(45deg);
   animation: chevron-bob 1.1s ease-in-out infinite;
 }
 .hotspot__chevrons i:nth-child(1) { top: 0; }
-.hotspot__chevrons i:nth-child(2) { top: 20px; animation-delay: 0.14s; }
+.hotspot__chevrons i:nth-child(2) { top: 24px; animation-delay: 0.14s; }
 .hotspot__pulse {
   position: absolute; left: 20px; right: 20px; bottom: 1px; height: 19px; border-radius: 50%; pointer-events: none;
   background: radial-gradient(ellipse at center, rgba(var(--glow), 0.7) 0%, rgba(var(--glow), 0.3) 45%, rgba(var(--glow), 0) 72%);
