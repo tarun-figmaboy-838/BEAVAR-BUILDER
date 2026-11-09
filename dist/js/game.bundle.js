@@ -3330,13 +3330,14 @@ const CHORD_WIDTH = 28;           // outer frame: chunky yellow box beams (built
 const FRAME_TUBE_WIDTH = 16;   // matches the frames on the yard (frame-shapes.js)
 const PANEL_INSET = 11;        // colour plates sit inside the beams, as on PDF p7
 const COVERED_FRACTION = 0.5;  // a plate mostly hidden behind later plates fades, so no leftover region reads as a triangle
-/** The spot is light (painted VFX on black, screened onto the scene): a gold beam while it waits, a green beam
- *  when the carried frame is right over it, a green burst when the frame touches down. */
-const HOTSPOT_MARKUP = '<img class="hotspot__beam hotspot__beam--gold" src="assets/images/fx/spot-light-gold.webp" alt="" draggable="false">'
-  + '<img class="hotspot__beam hotspot__beam--green" src="assets/images/fx/spot-light-green.webp" alt="" draggable="false">'
-  + '<span class="hotspot__pulse"></span><span class="hotspot__flow"></span>'
+/** The spot, drawn in CSS so it is crisp at any size: a pool of light on the road, a beam with lit edges and
+ *  light flowing up it, bobbing chevrons, rising motes, a pulse across the road; a shockwave and sparks at
+ *  touchdown. Gold while it waits, green when the carried frame is right over it. */
+const HOTSPOT_MARKUP = '<span class="hotspot__pulse"></span><span class="hotspot__pool"></span>'
+  + '<span class="hotspot__column"><span class="hotspot__flow"></span></span>'
+  + '<span class="hotspot__chevrons"><i></i><i></i></span>'
   + '<span class="hotspot__motes"><i></i><i></i><i></i><i></i><i></i><i></i></span>'
-  + '<img class="hotspot__burst" src="assets/images/fx/spot-light-burst.webp" alt="" draggable="false">';
+  + '<span class="hotspot__burst"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>';
 
 /* ---------- Piers: short brick piers standing in the canal under the deck ---------- */
 function buildPillar(x) {

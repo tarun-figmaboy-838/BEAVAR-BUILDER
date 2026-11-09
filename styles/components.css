@@ -238,12 +238,12 @@
 
 
 /* ---------- Controls: the direction pad (left), the action button (right) ----------
-   A dark steel cross panel (art 720 px, shown at 345 px: its visible cross ends at x 332, clear of the yard
-   platform, which starts at x 340) with big bright yellow keys: each key is 100 px tall and sits raised over
-   its socket, and its tap area is the whole 112 px arm, so it is easy to see and easy to hit. The sockets are
-   symmetric about the cross's axes; the centre is a plain steel hub. Every state change is on the key's own
+   A glossy navy cross dock with a cyan rim (art 720 px, shown at 345 px: it ends at x 331, clear of the yard
+   platform at x 340) with big amber keys and navy arrows (strong contrast): each key is 100 px wide, centred
+   in its arm, and its tap area is the whole 112 px arm, so it is easy to see and easy to hit. The centre is a
+   plain hub (not a button). Every state change is on the key's own
    picture (scale / translate / filter), so pressing one key never moves another key or the panel. */
-.dpad-dock { position: absolute; left: -6px; bottom: 2px; }
+.dpad-dock { position: absolute; left: -3px; bottom: 2px; }
 .controls.is-entering .dpad-dock { animation: dock-enter-left 620ms var(--ease-out) both; }
 .controls.is-entering .action-dock { animation: dock-enter-right 620ms var(--ease-out) both; }
 .dpad { position: relative; width: 345px; height: 345px; touch-action: none; }
@@ -253,14 +253,14 @@
   border: 0; background: none; border-radius: 28px; cursor: pointer; touch-action: none;
   -webkit-user-select: none; user-select: none;
 }
-.dpad__key--up { left: 117.0px; top: 9.2px; width: 112px; height: 112px; }
-.dpad__key--up img { left: 1.7px; top: -1.5px; width: 108.2px; height: 115.0px; }
-.dpad__key--down { left: 117.0px; top: 224.1px; width: 112px; height: 112px; }
-.dpad__key--down img { left: 2.6px; top: -1.5px; width: 107.1px; height: 115.0px; }
-.dpad__key--left { left: 9.6px; top: 116.3px; width: 112px; height: 112px; }
-.dpad__key--left img { left: 3.0px; top: -1.5px; width: 106.4px; height: 115.0px; }
-.dpad__key--right { left: 224.3px; top: 116.3px; width: 112px; height: 112px; }
-.dpad__key--right img { left: 2.1px; top: -1.5px; width: 107.9px; height: 115.0px; }
+.dpad__key--up { left: 116.7px; top: 9.6px; width: 112px; height: 112px; }
+.dpad__key--up img { left: 0.7px; top: -0.8px; width: 110.7px; height: 113.4px; }
+.dpad__key--down { left: 116.7px; top: 223.4px; width: 112px; height: 112px; }
+.dpad__key--down img { left: 1.0px; top: -0.8px; width: 110.4px; height: 113.4px; }
+.dpad__key--left { left: 11.6px; top: 114.6px; width: 112px; height: 112px; }
+.dpad__key--left img { left: 1.0px; top: -0.7px; width: 110.4px; height: 113.0px; }
+.dpad__key--right { left: 221.4px; top: 114.6px; width: 112px; height: 112px; }
+.dpad__key--right img { left: 1.0px; top: -0.7px; width: 110.1px; height: 113.0px; }
 .dpad__key img {
   position: absolute; display: block; pointer-events: none;
   filter: drop-shadow(0 5px 3px rgba(6, 24, 48, 0.38));
@@ -285,7 +285,7 @@
    the shadow is never clipped square. */
 .action-dock { position: absolute; right: 40px; bottom: 30px; }
 .action-button {
-  position: relative; display: block; width: 214px; height: 221px; padding: 0;
+  position: relative; display: block; width: 214px; height: 224px; padding: 0;
   border: 0; border-radius: 50%; background: none; cursor: pointer; touch-action: manipulation;
   perspective: 900px;
 }

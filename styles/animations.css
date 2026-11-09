@@ -467,16 +467,17 @@
 }
 
 /* The spot's light breathes gently; at touchdown a green burst flashes out under the frame. */
-@keyframes beam-breathe { 0%, 100% { filter: brightness(0.9); scale: 1 0.97; } 50% { filter: brightness(1.15); scale: 1 1.03; } }
+@keyframes beam-breathe { 0%, 100% { opacity: 0.85; scale: 1 0.97; } 50% { opacity: 1; scale: 1 1.03; } }
 @keyframes beam-flow { from { background-position: 0 0%; } to { background-position: 0 100%; } }
-@keyframes pool-pulse { 0% { opacity: 0.9; transform: scale(0.55); } 100% { opacity: 0; transform: scale(1.35); } }
+@keyframes pool-pulse { 0% { opacity: 0.9; transform: scale(0.55, 0.7); } 100% { opacity: 0; transform: scale(1.3, 1); } }
 @keyframes mote-rise {
   0% { opacity: 0; transform: translate(0, 0) scale(0.6); }
   15% { opacity: 1; }
   100% { opacity: 0; transform: translate(var(--drift, 4px), -190px) scale(1.1); }
 }
-@keyframes spot-burst {
-  0% { opacity: 0; transform: scale(0.55); }
-  25% { opacity: 1; transform: scale(1); }
-  100% { opacity: 0; transform: scale(1.18); }
-}
+
+@keyframes chevron-bob { 0%, 100% { translate: 0 0; opacity: 0.75; } 50% { translate: 0 8px; opacity: 1; } }
+@keyframes spot-lock-on { 0% { transform: scale(1); } 45% { transform: scale(1.14); } 100% { transform: scale(1.06); } }
+@keyframes spot-shockwave { 0% { opacity: 1; transform: scale(0.25, 0.4); } 100% { opacity: 0; transform: scale(1.2, 1); } }
+@keyframes spot-flash { 0% { opacity: 0; transform: scale(0.4); } 25% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.4); } }
+@keyframes spot-spark { 0% { opacity: 1; transform: translate(0, 0) scale(1); } 100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(0.4); } }
