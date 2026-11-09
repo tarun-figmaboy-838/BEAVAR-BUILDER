@@ -47,6 +47,7 @@ const CRITICAL_IMAGES = [
   CRANE_RIG.jibTip.src,
   ...BUILDER_FRAME_SOURCES,
   CRANE_RIG.trolley.src,
+  'assets/images/crane-kit/jib-underside.png',
   ...CRANE_RIG.claw.states.map((state) => state.src),
   'assets/images/crane-kit/cable-tile.png',
   'assets/images/crane/bolt.png',

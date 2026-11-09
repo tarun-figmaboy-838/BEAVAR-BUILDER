@@ -2,7 +2,7 @@ import { CRANE_LAYOUT, CRANE_RIG, PLATFORM_LAYOUT } from '../data/layout.js';
 import { tween, wait, easings } from '../core/motion.js';
 import { debugLog } from '../core/debug-overlay.js';
 import { buildClawFrames } from './claw-controller.js';
-import { depthScale, groundY } from './depth-projection.js';
+import { DEPTH, depthScale, groundY, frontToScreen, screenToFront } from './depth-projection.js';
 
 /**
  * The crane's states. Player input only moves the crane in the drivable ones; everything else is an
@@ -47,7 +47,9 @@ const DRIVABLE_STATES = new Set([S.IDLE, S.MOVING, S.ALIGNED_WITH_TRIANGLE, S.CA
 
 const MAX_SWAY_DEG = 7;
 const LIFT_CLEARANCE = 70;      // after a pick the frame hangs this far above the yard plate: clearly off it
-const DEPTH_TRAVEL_MS = 1700;   // the move from the yard (z 0) to the bridge (z 1)
+const DEPTH_TRAVEL_MS = 1900;   // the move from the yard (z 0) to the bridge (z 1)
+/** The jib slews about the top of the tower (the mast's centre line, the jib's centre line). */
+const SLEW_PIVOT = Object.freeze({ x: 29.4, y: 56.5 });
 const RETURN_MS = 1250;
 
 function clamp(value, min, max) {
@@ -78,36 +80,54 @@ function buildStructure() {
     position: 'absolute', left: '-127px', top: '70px', width: '312.8px', height: '530px',
     backgroundImage: `url("${tower.mastSrc}")`, backgroundSize: '312.8px 42.84px',
   });
-  const jib = document.createElement('div');
-  jib.className = 'crane-jib';
-  Object.assign(jib.style, {
-    left: '0px', top: '15.5px', width: '1806px', height: '82px',
-    backgroundImage: `url("${jibTile.src}")`, backgroundSize: '129px 82px',
-  });
+  /** One lattice side of the jib (the kit's tiled girder and its tip). */
+  const jibSide = (className) => {
+    const face = document.createElement('div');
+    face.className = `crane-arm__face ${className}`;
+    const girder = document.createElement('div');
+    girder.className = 'crane-jib';
+    Object.assign(girder.style, {
+      left: '0px', top: '15.5px', width: '1806px', height: '82px',
+      backgroundImage: `url("${jibTile.src}")`, backgroundSize: '129px 82px',
+    });
+    face.append(girder, sprite('crane-jib-tip', jibTip.src, { left: '1806px', top: '15.5px', width: '119px', height: '82px' }));
+    return face;
+  };
+  // The jib is a box truss (a lattice side in front, one behind, the underside between them), so it has
+  // real volume when it slews: the back lattice shows through the front one and the underside opens up.
+  // Jib, tip and trolley form one arm that turns about the tower top into the scene.
+  const arm = document.createElement('div');
+  arm.className = 'crane-arm';
+  arm.style.transformOrigin = `${SLEW_PIVOT.x}px ${SLEW_PIVOT.y}px`;
+  const underside = document.createElement('div');
+  underside.className = 'crane-arm__face crane-arm__face--under';
+  const { trolley } = CRANE_RIG;
+  const trolleyImage = sprite('trolley', trolley.src, { position: 'absolute', left: `${-trolley.width / 2}px`, top: `${trolley.top}px`, width: `${trolley.width}px`, height: `${trolley.height}px` });
+  arm.append(jibSide('crane-arm__face--back'), underside, jibSide('crane-arm__face--front'), trolleyImage);
   structure.append(mast,
     // The base holds the foot of the mast, so it shares the mast's scale and left edge exactly; the tower stands
     // just off-screen left and the base's plinth ends before the bridge's left end cap (x 168).
     sprite('crane-base', tower.baseSrc, { position: 'absolute', left: '-127px', top: '562.7px', width: '312.8px', height: '118.3px' }),
-    jib,
-    sprite('crane-jib-tip', jibTip.src, { left: '1806px', top: '15.5px', width: '119px', height: '82px' }),
+    arm,
     mount,
     sprite('crane-cabin', cabin.src, { position: 'absolute', left: `${cabin.left}px`, top: `${cabin.top}px`, width: `${cabin.width}px`, height: `${cabin.height}px` }),
   );
-  return structure;
+  return { structure, arm, trolley: trolleyImage };
 }
 
 /**
- * Builds the crane, the travelling trolley rig with its pendulum hoist, and the load's ground shadow.
- * The claw and its cargo share one `.hoist__load` group, so depth scales them together about the
- * point where the cable holds the claw; the cable itself only thins, so it never leaves the trolley.
+ * Builds the crane, the hoist rig (pendulum, cable, claw, cargo) and the load's ground shadow.
+ * The crane is drawn in real 3D (CSS perspective calibrated to the painted horizon, js/gameplay/
+ * depth-projection.js): the jib arm slews into the scene and the hoist hangs from the trolley at its true
+ * 3D position, always facing the camera, so the load shrinks and recedes with the whole machine.
  */
 export function buildCraneDom(craneEl, platformEl) {
-  craneEl.appendChild(buildStructure());
+  const { structure, arm, trolley: trolleyImage } = buildStructure();
+  craneEl.appendChild(structure);
   // The shadow lies on the ground under the load (yard plate, water, then the bridge deck), below the rig.
   const shadow = document.createElement('div');
   shadow.className = 'claw-shadow';
   craneEl.appendChild(shadow);
-  const { trolley } = CRANE_RIG;
   const rig = document.createElement('div');
   rig.className = 'trolley-rig';
   rig.innerHTML = `
@@ -120,8 +140,6 @@ export function buildCraneDom(craneEl, platformEl) {
         </div>
       </div>
     </div>`;
-  const trolleyImage = sprite('trolley', trolley.src, { left: `${-trolley.width / 2}px`, top: `${trolley.top}px`, width: `${trolley.width}px`, height: `${trolley.height}px` });
-  rig.append(trolleyImage);
   // The warning light lives on the cab roof (painted in the tower sprite); a lit copy flashes over it.
   const { cabBeacon } = CRANE_RIG;
   const beacon = document.createElement('span');
@@ -130,27 +148,26 @@ export function buildCraneDom(craneEl, platformEl) {
   beacon.innerHTML = '<span class="cab-beacon__light cab-beacon__light--orange"></span><span class="cab-beacon__light cab-beacon__light--red"></span>';
   craneEl.append(rig, beacon);
   buildClawFrames(rig.querySelector('.claw'));
-  return { rig, trolley: trolleyImage, beacon, shadow, platformEl };
+  return { rig, arm, trolley: trolleyImage, beacon, shadow, platformEl };
 }
 
 /**
- * The crane in three axes: x along the jib (LEFT / RIGHT), depth (UP sends the hook back into the scene,
- * DOWN brings it forward; 0 = over the yard, 1 = over the bridge deck) and the claw's height, which is
- * automatic (PICK lowers and lifts, DROP lifts, carries, lowers). Moving in depth keeps the load's height
- * above the ground, so it shrinks and rises on screen exactly as the ground recedes. Every scripted motion
- * runs as an awaited sequence that cannot overlap another.
+ * The crane in three axes, in world coordinates (x and the claw's y as seen on the front plane, depth
+ * 0 = over the yard, 1 = over the bridge deck): LEFT / RIGHT move the trolley across, UP / DOWN slew the
+ * jib so the trolley and hook travel into / out of the scene, and the claw's height is automatic (PICK
+ * lowers and lifts; DROP lifts, carries, lowers). Every scripted motion is an awaited sequence that cannot
+ * overlap another.
  */
 export function createCraneController({ craneEl, dom, claw, gameState, audio }) {
-  const { rig, trolley, beacon, shadow, platformEl } = dom;
+  const { rig, arm, trolley, beacon, shadow, platformEl } = dom;
   const pendulumEl = rig.querySelector('.pendulum');
   const hoistEl = rig.querySelector('.hoist');
-  const cableEl = rig.querySelector('.cable');
-  const loadEl = rig.querySelector('.hoist__load');
   const cargoEl = rig.querySelector('.claw-cargo');
+  const trolleyHalf = CRANE_RIG.trolley.width / 2;
 
   const motion = { x: CRANE_LAYOUT.homeX, vx: 0, y: CRANE_LAYOUT.restY, vy: 0, depth: 0, vz: 0, sway: 0, swayVelocity: 0 };
   const axis = { x: 0, y: 0 };
-  const rendered = { x: NaN, y: NaN, sway: NaN, scale: NaN };
+  const rendered = { x: NaN, y: NaN, sway: NaN, depth: NaN };
   let lastX = motion.x;
   let lastY = motion.y;
   let lastMeasuredVx = 0;
@@ -194,13 +211,14 @@ export function createCraneController({ craneEl, dom, claw, gameState, audio }) 
    */
   function renderShadow(scale) {
     const ground = groundY(motion.depth);
-    const heightAbove = (ground - motion.y) / scale;                 // claw-top height in world px
+    const heightAbove = PLATFORM_LAYOUT.baseY - motion.y;            // claw-top height above the ground (world px)
     const closeness = clamp(1 - (heightAbove - 260) / 560, 0, 1);
-    const swayOffset = Math.sin((motion.sway * Math.PI) / 180) * (ropeLength() + 80 * scale);
+    const swayOffset = Math.sin((motion.sway * Math.PI) / 180) * (ropeLength() + 80) * scale;
     const overYard = motion.depth < 0.06 && !platformEl.classList.contains('is-away')
       && motion.x > PLATFORM_LAYOUT.deckLeft - 40 && motion.x < PLATFORM_LAYOUT.deckRight + 40;
     const overScene = motion.depth >= 0.06;                            // the empty hook's shadow crosses the water too
-    const centreX = carried ? motion.x + (carried.centroid[0] - carried.grabX * carried.width) * scale : motion.x;
+    const worldX = carried ? motion.x + (carried.centroid[0] - carried.grabX * carried.width) : motion.x;
+    const centreX = frontToScreen({ x: worldX, y: 0, z: motion.depth }).x;
     const width = carried ? (carried.width / 170) * 0.9 : 1;          // the shadow art is 170 px wide
     const opacity = carried ? 0.5 + closeness * 0.4 : 0.45 + closeness * 0.55;
     shadow.style.opacity = carried || overYard || overScene ? opacity.toFixed(2) : '0';
@@ -208,20 +226,27 @@ export function createCraneController({ craneEl, dom, claw, gameState, audio }) 
     shadow.style.transform = `translate(${(centreX + swayOffset).toFixed(1)}px, ${(ground + 4 * scale).toFixed(1)}px) scale(${(spread * width).toFixed(3)}, ${spread.toFixed(3)})`;
   }
 
+  /**
+   * The jib slews about the tower top so that the trolley, `reach` out along it, sits over (x, depth): the
+   * whole arm turns into the scene in perspective and the trolley rides it. The hoist rig hangs from that
+   * same 3D point, facing the camera.
+   */
   function render() {
     const scale = depthScale(motion.depth);
-    if (motion.x !== rendered.x) {
-      rig.style.transform = `translateX(${motion.x.toFixed(2)}px)`;
+    if (motion.x !== rendered.x || motion.depth !== rendered.depth) {
+      const back = motion.depth * DEPTH.distancePx;
+      const across = motion.x - SLEW_PIVOT.x;
+      const slew = (Math.atan2(back, across) * 180) / Math.PI;
+      const reach = Math.hypot(across, back);
+      arm.style.transform = back > 0.01 ? `rotateY(${slew.toFixed(3)}deg)` : '';
+      trolley.style.left = `${(SLEW_PIVOT.x + reach - trolleyHalf).toFixed(2)}px`;
+      rig.style.transform = back > 0.01 ? `translate3d(${motion.x.toFixed(2)}px, 0, ${(-back).toFixed(2)}px)` : `translateX(${motion.x.toFixed(2)}px)`;
       rendered.x = motion.x;
+      rendered.depth = motion.depth;
     }
     if (motion.y !== rendered.y) {
       hoistEl.style.transform = `translateY(${ropeLength().toFixed(2)}px)`;
       rendered.y = motion.y;
-    }
-    if (scale !== rendered.scale) {
-      loadEl.style.transform = scale === 1 ? '' : `scale(${scale.toFixed(4)})`;
-      cableEl.style.transform = scale === 1 ? '' : `scaleX(${scale.toFixed(3)})`;
-      rendered.scale = scale;
     }
     if (Math.abs(motion.sway - rendered.sway) > 0.01) {
       pendulumEl.style.transform = `rotate(${motion.sway.toFixed(2)}deg)`;
@@ -273,10 +298,7 @@ export function createCraneController({ craneEl, dom, claw, gameState, audio }) 
       motion.x = clamp(motion.x + motion.vx * dt, CRANE_LAYOUT.minX, CRANE_LAYOUT.maxX);
       if (motion.x === CRANE_LAYOUT.minX || motion.x === CRANE_LAYOUT.maxX) motion.vx = 0;
       if (motion.vz) {
-        // Same height above the ground at the new depth: the hook rises on screen and shrinks as it recedes.
-        const height = (groundY(motion.depth) - motion.y) / depthScale(motion.depth);
-        motion.depth = clamp(motion.depth + motion.vz * dt, 0, 1);
-        motion.y = Math.max(CRANE_LAYOUT.restY, groundY(motion.depth) - height * depthScale(motion.depth));
+        motion.depth = clamp(motion.depth + motion.vz * dt, 0, 1);    // the jib slews; the hook keeps its height
         if (motion.depth === 0 || motion.depth === 1) motion.vz = 0;
       }
     }
@@ -377,11 +399,12 @@ export function createCraneController({ craneEl, dom, claw, gameState, audio }) 
   function release() {
     if (!carried) return null;
     const option = carried;
-    const scale = depthScale(motion.depth);
+    const claw = frontToScreen({ x: motion.x, y: motion.y, z: motion.depth });
+    const scale = claw.scale;
     carried = null;
     carryMaxY = CRANE_LAYOUT.maxY;
-    const left = motion.x - option.grabX * option.width * scale;
-    const top = motion.y + (CRANE_LAYOUT.gripOffsetY - option.grabY + 2) * scale;
+    const left = claw.x - option.grabX * option.width * scale;
+    const top = claw.y + (CRANE_LAYOUT.gripOffsetY - option.grabY + 2) * scale;
     option.element.classList.remove('is-carried');
     gameState.update({ carriedTriangleId: null });
     return { option, left, top, scale };
@@ -466,13 +489,9 @@ export function createCraneController({ craneEl, dom, claw, gameState, audio }) 
         if (carried || !setState(S.LOWERING_TO_PICK)) return false;
         audio.play('clawOpen');
         await claw.open();
-        if (motion.depth > 0) {                                           // square up with the yard's plane first
-          const from = { depth: motion.depth, y: motion.y };
-          const height = (groundY(from.depth) - from.y) / depthScale(from.depth);
-          await runScripted({ duration: 200, ease: easings.outCubic, signal, apply: (t) => {
-            motion.depth = from.depth * (1 - t);
-            motion.y = Math.max(CRANE_LAYOUT.restY, groundY(motion.depth) - height * depthScale(motion.depth));
-          } });
+        if (motion.depth > 0) {                                           // slew back over the yard first
+          const from = motion.depth;
+          await runScripted({ duration: 220, ease: easings.outCubic, signal, apply: (t) => { motion.depth = from * (1 - t); } });
           motion.depth = 0;
         }
         await glideTo(option.grabStageX, { signal, duration: 220 });
@@ -512,7 +531,8 @@ export function createCraneController({ craneEl, dom, claw, gameState, audio }) 
       return withSequence(async () => {
         if (!carried || !setState(S.TRANSPORTING_DEPTH)) return null;
         const farScale = depthScale(1);
-        const spot = target(farScale);
+        const seat = target(farScale);                                     // stage coordinates on the bridge
+        const spot = screenToFront({ x: seat.x, y: seat.y, z: 1 });        // the same point for the crane (world)
 
         // A. Lift: straight up, away from the yard. The cable tightens and the load gives a small sway.
         onPhase?.('lift');
@@ -521,11 +541,11 @@ export function createCraneController({ craneEl, dom, claw, gameState, audio }) 
         await hoistTo(CRANE_LAYOUT.restY, { signal, duration: 560, ease: easings.outCubic });
         await wait(80, signal);
 
-        // B + C. Into depth, then a long gentle approach. Height above the ground stays constant, so the
-        // load rises on screen and shrinks exactly as the ground it travels over recedes.
+        // B + C. Into depth, then a long gentle approach: the jib slews into the scene, the trolley runs out
+        // along it, and the load (same height above the ground) shrinks and recedes with it.
         onPhase?.('depth');
         audio.startLoop('craneMotor', { heavy: true });
-        const start = { x: motion.x, depth: motion.depth, height: groundY(motion.depth) - motion.y };
+        const start = { x: motion.x, depth: motion.depth };
         try {
           await runScripted({
             duration: DEPTH_TRAVEL_MS,
@@ -536,7 +556,6 @@ export function createCraneController({ craneEl, dom, claw, gameState, audio }) 
               const xT = easings.inOutCubic(Math.min(1, t * 1.08));
               motion.depth = start.depth + (1 - start.depth) * zT;
               motion.x = start.x + (spot.x - start.x) * xT;
-              motion.y = groundY(motion.depth) - start.height * depthScale(motion.depth);
             },
           });
         } finally {

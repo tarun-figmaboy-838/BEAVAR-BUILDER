@@ -19,7 +19,11 @@ export const DEPTH = (() => {
   const nearGroundY = PLATFORM_LAYOUT.baseY;   // z = 0: where the frames stand in the yard
   const farGroundY = BRIDGE_GEOMETRY.deckY;    // z = 1: where they stand on the bridge
   const farScale = (farGroundY - horizonY) / (nearGroundY - horizonY);
-  return Object.freeze({ horizonY, vanishX, nearGroundY, farGroundY, farScale, k: 1 / farScale - 1 });
+  const k = 1 / farScale - 1;
+  // The same perspective as a real 3D camera: CSS `perspective: perspectivePx` with its origin on
+  // (vanishX, horizonY) draws a point `distancePx` behind the front plane exactly at depth 1.
+  const perspectivePx = 1500;
+  return Object.freeze({ horizonY, vanishX, nearGroundY, farGroundY, farScale, k, perspectivePx, distancePx: k * perspectivePx });
 })();
 
 /** How large something at depth z is drawn, relative to the front plane. */
@@ -42,4 +46,16 @@ export function projectWorldToScreen({ x, height, z }) {
 export function screenToWorld({ x, y, z }) {
   const scale = depthScale(z);
   return { x: DEPTH.vanishX + (x - DEPTH.vanishX) / scale, height: (groundY(z) - y) / scale, z };
+}
+
+/** A point given in front-plane stage coordinates (x, y as if at depth 0) seen at depth z. */
+export function frontToScreen({ x, y, z }) {
+  const scale = depthScale(z);
+  return { x: DEPTH.vanishX + (x - DEPTH.vanishX) * scale, y: DEPTH.horizonY + (y - DEPTH.horizonY) * scale, scale };
+}
+
+/** The inverse: the front-plane coordinates of a stage point seen at depth z. */
+export function screenToFront({ x, y, z }) {
+  const scale = depthScale(z);
+  return { x: DEPTH.vanishX + (x - DEPTH.vanishX) / scale, y: DEPTH.horizonY + (y - DEPTH.horizonY) / scale };
 }

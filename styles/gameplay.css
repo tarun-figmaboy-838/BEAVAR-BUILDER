@@ -288,6 +288,23 @@
 
 /* ---------- Kit tower crane ---------- */
 .crane-structure { position: absolute; inset: 0; }
+/* The crane is drawn in real 3D: the same perspective as the painted scene (origin on the horizon and the
+   vanishing point, js/gameplay/depth-projection.js), so the jib that slews into the scene and the hook that
+   hangs from it recede exactly like the ground below them. */
+.crane, .crane-structure { perspective: 1500px; perspective-origin: 960px 255px; }
+.crane-arm { position: absolute; left: 0; top: 0; width: 0; height: 0; will-change: transform; transform-style: preserve-3d; }
+/* The jib as a 60 px deep box truss: front lattice side, back side (in shade), underside between them at the
+   girder's bottom chord (y 97.5). We look up at it (it is above the horizon), so the underside shows, more
+   as the jib turns. */
+.crane-arm__face { position: absolute; left: 0; top: 0; width: 1925px; height: 0; }
+.crane-arm__face--front { transform: translateZ(30px); }
+.crane-arm__face--back { transform: translateZ(-30px); filter: brightness(0.68) saturate(0.9); }
+.crane-arm__face--under {
+  top: 67.5px; height: 60px; transform: rotateX(90deg);
+  background: url("../assets/images/crane-kit/jib-underside.png") 0 0 / 113px 60px repeat-x;
+  filter: brightness(0.82);
+}
+.crane-arm .trolley { transform: translateZ(31px); }
 .crane-tower, .crane-jib-tip { position: absolute; }
 .crane-tower { display: flex; flex-direction: column; }
 .crane-tower__part { display: block; width: 100%; }
