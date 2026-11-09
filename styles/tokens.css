@@ -54,9 +54,9 @@
   --safe: 40px;
 
   /* Gameplay layout (stage space). Keep in sync with js/data/layout.js. */
-  --platform-left: 310px;
-  --platform-top: 890px;
-  --platform-width: 1300px;
+  --platform-left: 340px;
+  --platform-top: 893px;
+  --platform-width: 1240px;
   --controls-side: 40px;
   --controls-bottom: 36px;
   --action-size: 214px;

@@ -22,6 +22,7 @@ export function createLevelEngine({ gameState, crane, claw, triangles, bridge, p
   let active = false;
   let inviteTimer = 0;
   let homeTrip = Promise.resolve();       // the empty hook's flight back to the yard after a placement
+  let overSpot = false;                   // the carried frame is right over the target spot
 
   const currentLevel = () => LEVELS[currentLevelIndex];
   const inputLocked = () => gameState.get().isInputLocked;
@@ -81,10 +82,19 @@ export function createLevelEngine({ gameState, crane, claw, triangles, bridge, p
     input.setActionState({ mode: carried ? 'drop' : 'pick', enabled: pickReady || dropReady });
     if (triangles.setHovered(carried ? null : state.hoveredOptionId)) audio.play('bloop');
     bridge.setSocketArmed(Boolean(carried));
+    // Like a real target: the spot turns green (with a chime) the moment the carried frame is right over it.
+    if (!busy && !state.isInputLocked) {
+      const over = placement.isOverSpot(carried, crane.position.x, crane.position.depth);
+      if (over !== overSpot) {
+        overSpot = over;
+        bridge.setSocketAligned(over);
+        if (over) audio.play('ding');
+      }
+    }
   }
 
   gameState.subscribe((state, patch) => {
-    if ('craneState' in patch || 'hoveredOptionId' in patch || 'craneX' in patch || 'craneBusy' in patch) syncUi();
+    if ('craneState' in patch || 'hoveredOptionId' in patch || 'craneX' in patch || 'craneDepth' in patch || 'craneBusy' in patch) syncUi();
   });
   crane.setHoverResolver((x, carried, depth) => placement.resolveHover(x, carried, depth));
   input.on('axis', (axis) => {
@@ -183,13 +193,17 @@ export function createLevelEngine({ gameState, crane, claw, triangles, bridge, p
           bridge.setSocketLanding(true);
           fireAndForget(cameraShots.focusBridgeTarget(socket, { closer: true, duration: 900 }));
         }
-        if (phase === 'place') audio.play('bolt');
+        if (phase === 'place') {
+          bridge.lockSocket();                                // green lock-in burst under the frame
+          audio.play('bolt');
+        }
       },
     });
     if (!released) throw new Error('the crane could not carry the frame to the bridge');
     triangles.placeInWorld(option, released.left, released.top, released.scale);
-    bridge.hideSocket();
     await triangles.seat(option);
+    bridge.hideSocket();
+    overSpot = false;
     if (placement.isCorrect(option.id, level)) await handleCorrect(option, level);
     else await handleIncorrect(option);
   }

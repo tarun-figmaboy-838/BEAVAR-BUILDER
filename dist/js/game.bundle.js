@@ -94,14 +94,14 @@ const CRANE_LAYOUT = Object.freeze({
 
 const PLATFORM_LAYOUT = Object.freeze({
   src: 'assets/images/bridge/yard-platform.webp', // the hazard-stripe yard platform (2139 x 422)
-  left: 310,
-  top: 890,
-  width: 1300,
-  deckLeft: 425,       // usable plate surface (inside the yellow end caps)
-  deckRight: 1495,
-  slotXs: Object.freeze([590, 960, 1330]),
+  left: 340,           // 1240 px wide, centred on the stage: leaves room for a large direction pad
+  top: 893,
+  width: 1240,
+  deckLeft: 450,       // usable plate surface (inside the yellow end caps)
+  deckRight: 1470,
+  slotXs: Object.freeze([600, 960, 1320]),
   baseY: 950,          // where frames stand: centred on the grey plate
-  pileXs: Object.freeze([520, 759, 950, 1161, 1400]),   // equal 43 px gaps between the yard frames
+  pileXs: Object.freeze([540, 768, 950, 1162, 1380]),   // the yard frames, evenly spaced on the plate
   pileBaseY: 950,
   optionScale: 1,
   pileScale: 0.72,
@@ -2474,8 +2474,8 @@ function createCraneController({ craneEl, dom, claw, gameState, audio }) {
     if (drivable) refreshHoverState(travelling || winching);
 
     const current = gameState.get();
-    if (Math.abs(current.craneX - motion.x) >= 1 || Math.abs(current.hoistY - motion.y) >= 1) {
-      gameState.update({ craneX: Math.round(motion.x), hoistY: Math.round(motion.y) });
+    if (Math.abs(current.craneX - motion.x) >= 1 || Math.abs(current.hoistY - motion.y) >= 1 || Math.abs((current.craneDepth ?? 0) - motion.depth) >= 0.01) {
+      gameState.update({ craneX: Math.round(motion.x), hoistY: Math.round(motion.y), craneDepth: Math.round(motion.depth * 100) / 100 });
     }
     render();
   }
@@ -2680,21 +2680,26 @@ function createCraneController({ craneEl, dom, claw, gameState, audio }) {
         const seat = target(farScale);                                     // stage coordinates on the bridge
         const spot = screenToFront({ x: seat.x, y: seat.y, z: 1 });        // the same point for the crane (world)
 
+        const alreadyOver = motion.depth >= 0.8;              // the player brought it out over the bridge
+        if (!alreadyOver) {
         // A. Lift: straight up, away from the yard. The cable tightens and the load gives a small sway.
         onPhase?.('lift');
         audio.play('winchUp');
         this.swingImpulse(-6);
         await hoistTo(CRANE_LAYOUT.restY, { signal, duration: 560, ease: easings.outCubic });
         await wait(80, signal);
+        }
 
         // B + C. Into depth, then a long gentle approach: the jib slews into the scene, the trolley runs out
         // along it, and the load (same height above the ground) shrinks and recedes with it.
         onPhase?.('depth');
         audio.startLoop('craneMotor', { heavy: true });
+        audio.play('whoosh');
+        this.swingImpulse(12);                                  // the load lags as the jib starts to turn (cartoon swing)
         const start = { x: motion.x, depth: motion.depth };
         try {
           await runScripted({
-            duration: DEPTH_TRAVEL_MS,
+            duration: Math.max(420, DEPTH_TRAVEL_MS * (1 - start.depth)),
             ease: easings.linear,
             signal,
             apply: (t) => {
@@ -2707,6 +2712,7 @@ function createCraneController({ craneEl, dom, claw, gameState, audio }) {
         } finally {
           audio.stopLoop('craneMotor');
         }
+        this.swingImpulse(-9);                                  // ...and swings on when it stops: a wobble, then it settles
 
         // D. Align over the spot (the spot was computed from the frame's real geometry at this scale).
         setState(S.ALIGNING_WITH_BRIDGE);
@@ -2721,9 +2727,10 @@ function createCraneController({ craneEl, dom, claw, gameState, audio }) {
         audio.play('winchDown');
         await hoistTo(spot.y, { signal, duration: 760, ease: easings.outCubic });
 
-        // F. Place: the frame seats on the road with a small metallic click.
+        // F. Place: the frame touches down on the spot: a green lock-in and a metallic click.
         onPhase?.('place');
         audio.play('placement');
+        audio.play('ding');
         await wait(110, signal);
 
         // G. Release: the claw opens; the frame stays on the bridge.
@@ -2772,6 +2779,7 @@ function createCraneController({ craneEl, dom, claw, gameState, audio }) {
         } finally {
           audio.stopLoop('craneMotor');
           motion.depth = Math.max(0, motion.depth);
+          motion.swayVelocity += 8;                             // the empty hook bobs as it arrives home
           if (state === S.RETURNING) setState(unlockWhenLanded ? S.IDLE : S.LOCKED);
           unlockWhenLanded = false;
         }
@@ -3322,7 +3330,13 @@ const CHORD_WIDTH = 28;           // outer frame: chunky yellow box beams (built
 const FRAME_TUBE_WIDTH = 16;   // matches the frames on the yard (frame-shapes.js)
 const PANEL_INSET = 11;        // colour plates sit inside the beams, as on PDF p7
 const COVERED_FRACTION = 0.5;  // a plate mostly hidden behind later plates fades, so no leftover region reads as a triangle
-const HOTSPOT_MARKUP = '<span class="hotspot__pad"></span><span class="hotspot__column"></span><span class="hotspot__sparks"><i></i><i></i><i></i><i></i></span><span class="hotspot__chevrons"><i></i><i></i></span>';
+/** The spot is light (painted VFX on black, screened onto the scene): a gold beam while it waits, a green beam
+ *  when the carried frame is right over it, a green burst when the frame touches down. */
+const HOTSPOT_MARKUP = '<img class="hotspot__beam hotspot__beam--gold" src="assets/images/fx/spot-light-gold.webp" alt="" draggable="false">'
+  + '<img class="hotspot__beam hotspot__beam--green" src="assets/images/fx/spot-light-green.webp" alt="" draggable="false">'
+  + '<span class="hotspot__pulse"></span><span class="hotspot__flow"></span>'
+  + '<span class="hotspot__motes"><i></i><i></i><i></i><i></i><i></i><i></i></span>'
+  + '<img class="hotspot__burst" src="assets/images/fx/spot-light-burst.webp" alt="" draggable="false">';
 
 /* ---------- Piers: short brick piers standing in the canal under the deck ---------- */
 function buildPillar(x) {
@@ -3807,11 +3821,22 @@ function createBridgeController({ bridgeEl, fxEl, fx, audio }) {
       if (!point) return;
       socket.style.left = `${point.x}px`;
       socket.style.top = `${BRIDGE_GEOMETRY.deckY}px`;
-      socket.classList.remove('is-aligned', 'is-landing');
+      socket.classList.remove('is-aligned', 'is-landing', 'is-locked');
       socket.classList.add('is-visible');
     },
     hideSocket() {
-      socket.classList.remove('is-visible', 'is-aligned', 'is-armed', 'is-landing');
+      socket.classList.remove('is-visible', 'is-aligned', 'is-armed', 'is-landing', 'is-locked');
+    },
+    /** Touchdown on the spot: a green lock-in burst under the frame (the spot stays green until it hides),
+     *  a puff of dust and a few sparks where it lands. */
+    lockSocket() {
+      const x = parseFloat(socket.style.left) || 0;
+      fx.dust(x, BRIDGE_GEOMETRY.deckY);
+      fx.sparks(x, BRIDGE_GEOMETRY.deckY, { small: true });
+      socket.classList.add('is-aligned', 'is-landing');
+      socket.classList.remove('is-locked');
+      void socket.offsetWidth;
+      socket.classList.add('is-locked');
     },
     /** The frame is being lowered onto the spot: keep only the landing ring. */
     setSocketLanding(landing) {
@@ -3839,6 +3864,10 @@ function createBridgeController({ bridgeEl, fxEl, fx, audio }) {
 __define('js/gameplay/placement-controller.js', function () {
 const { CRANE_LAYOUT } = __require('js/data/layout.js');
 const { BRIDGE_GEOMETRY, stageById } = __require('js/data/bridge-geometry.js');
+const { frontToScreen } = __require('js/gameplay/depth-projection.js');
+const OVER_SPOT_DEPTH = 0.8;      // the load is out over the bridge
+const OVER_SPOT_PX = 42;          // its centre is this close to the spot (stage px)
+
 /**
  * Where the crane must be to seat `carried` with its centroid over stage x `spotX`, when the load is
  * drawn at `scale`: the trolley x, and the claw-top y that stands the frame's base on the road.
@@ -3878,6 +3907,12 @@ function createPlacementController({ triangles }) {
         if (distance <= CRANE_LAYOUT.optionTolerance && (!best || distance < best.distance)) best = { option, distance };
       }
       return { option: best?.option ?? null };
+    },
+    /** The carried frame is right over the active spot: out over the bridge, its centre above the spot. */
+    isOverSpot(carried, craneX, depth) {
+      if (!carried || !activeStage || depth < OVER_SPOT_DEPTH) return false;
+      const centreX = frontToScreen({ x: craneX + carried.centroid[0] - carried.grabX * carried.width, y: 0, z: depth }).x;
+      return Math.abs(centreX - activeStage.socket.x) <= OVER_SPOT_PX;
     },
     isCorrect(triangleId, level) {
       return triangleId === level.correctTriangleId;
@@ -4479,6 +4514,7 @@ function createLevelEngine({ gameState, crane, claw, triangles, bridge, placemen
   let active = false;
   let inviteTimer = 0;
   let homeTrip = Promise.resolve();       // the empty hook's flight back to the yard after a placement
+  let overSpot = false;                   // the carried frame is right over the target spot
 
   const currentLevel = () => LEVELS[currentLevelIndex];
   const inputLocked = () => gameState.get().isInputLocked;
@@ -4538,10 +4574,19 @@ function createLevelEngine({ gameState, crane, claw, triangles, bridge, placemen
     input.setActionState({ mode: carried ? 'drop' : 'pick', enabled: pickReady || dropReady });
     if (triangles.setHovered(carried ? null : state.hoveredOptionId)) audio.play('bloop');
     bridge.setSocketArmed(Boolean(carried));
+    // Like a real target: the spot turns green (with a chime) the moment the carried frame is right over it.
+    if (!busy && !state.isInputLocked) {
+      const over = placement.isOverSpot(carried, crane.position.x, crane.position.depth);
+      if (over !== overSpot) {
+        overSpot = over;
+        bridge.setSocketAligned(over);
+        if (over) audio.play('ding');
+      }
+    }
   }
 
   gameState.subscribe((state, patch) => {
-    if ('craneState' in patch || 'hoveredOptionId' in patch || 'craneX' in patch || 'craneBusy' in patch) syncUi();
+    if ('craneState' in patch || 'hoveredOptionId' in patch || 'craneX' in patch || 'craneDepth' in patch || 'craneBusy' in patch) syncUi();
   });
   crane.setHoverResolver((x, carried, depth) => placement.resolveHover(x, carried, depth));
   input.on('axis', (axis) => {
@@ -4640,13 +4685,17 @@ function createLevelEngine({ gameState, crane, claw, triangles, bridge, placemen
           bridge.setSocketLanding(true);
           fireAndForget(cameraShots.focusBridgeTarget(socket, { closer: true, duration: 900 }));
         }
-        if (phase === 'place') audio.play('bolt');
+        if (phase === 'place') {
+          bridge.lockSocket();                                // green lock-in burst under the frame
+          audio.play('bolt');
+        }
       },
     });
     if (!released) throw new Error('the crane could not carry the frame to the bridge');
     triangles.placeInWorld(option, released.left, released.top, released.scale);
-    bridge.hideSocket();
     await triangles.seat(option);
+    bridge.hideSocket();
+    overSpot = false;
     if (placement.isCorrect(option.id, level)) await handleCorrect(option, level);
     else await handleIncorrect(option);
   }

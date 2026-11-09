@@ -237,36 +237,34 @@
 }
 
 
-/* ---------- Controls: the direction pad (left), PICK and DROP (right) ----------
-   A dark steel cross panel (art 720 px, shown at 313 px: its visible cross is 300 px wide and ends at x 302,
-   clear of the yard platform at x 310) with bright yellow keys and a green PICK: strong contrast against the
-   panel and the sky. Each key (the same size in all four) sits centred inside its square socket (84 px); the
-   sockets are symmetric about the cross's axes and the centre is a plain steel hub (not a button). The button
-   box is the socket, so the whole socket is the touch target.
-   Every state change is on the element's own picture (scale / translate / filter), so pressing one key never
-   moves another key or the panel. */
-.dpad-dock { position: absolute; left: -4px; bottom: 6px; }
+/* ---------- Controls: the direction pad (left), the action button (right) ----------
+   A dark steel cross panel (art 720 px, shown at 345 px: its visible cross ends at x 332, clear of the yard
+   platform, which starts at x 340) with big bright yellow keys: each key is 100 px tall and sits raised over
+   its socket, and its tap area is the whole 112 px arm, so it is easy to see and easy to hit. The sockets are
+   symmetric about the cross's axes; the centre is a plain steel hub. Every state change is on the key's own
+   picture (scale / translate / filter), so pressing one key never moves another key or the panel. */
+.dpad-dock { position: absolute; left: -6px; bottom: 2px; }
 .controls.is-entering .dpad-dock { animation: dock-enter-left 620ms var(--ease-out) both; }
 .controls.is-entering .action-dock { animation: dock-enter-right 620ms var(--ease-out) both; }
-.dpad { position: relative; width: 313px; height: 313px; touch-action: none; }
+.dpad { position: relative; width: 345px; height: 345px; touch-action: none; }
 .dpad__plate { position: absolute; inset: 0; width: 100%; height: 100%; display: block; filter: drop-shadow(0 10px 10px rgba(6, 24, 48, 0.35)); pointer-events: none; }
 .dpad__key {
   position: absolute; padding: 0; margin: 0;
-  border: 0; background: none; border-radius: 24px; cursor: pointer; touch-action: none;
+  border: 0; background: none; border-radius: 28px; cursor: pointer; touch-action: none;
   -webkit-user-select: none; user-select: none;
 }
-.dpad__key--up { left: 114.9px; top: 17.1px; width: 84px; height: 84px; }
-.dpad__key--up img { left: 0.6px; top: -1.8px; width: 82.4px; height: 87.6px; }
-.dpad__key--down { left: 114.9px; top: 212.1px; width: 84px; height: 84px; }
-.dpad__key--down img { left: 1.3px; top: -1.8px; width: 81.6px; height: 87.6px; }
-.dpad__key--left { left: 17.6px; top: 114.3px; width: 84px; height: 84px; }
-.dpad__key--left img { left: 1.6px; top: -1.8px; width: 81.1px; height: 87.6px; }
-.dpad__key--right { left: 212.3px; top: 114.3px; width: 84px; height: 84px; }
-.dpad__key--right img { left: 0.9px; top: -1.8px; width: 82.2px; height: 87.6px; }
+.dpad__key--up { left: 117.0px; top: 9.2px; width: 112px; height: 112px; }
+.dpad__key--up img { left: 1.7px; top: -1.5px; width: 108.2px; height: 115.0px; }
+.dpad__key--down { left: 117.0px; top: 224.1px; width: 112px; height: 112px; }
+.dpad__key--down img { left: 2.6px; top: -1.5px; width: 107.1px; height: 115.0px; }
+.dpad__key--left { left: 9.6px; top: 116.3px; width: 112px; height: 112px; }
+.dpad__key--left img { left: 3.0px; top: -1.5px; width: 106.4px; height: 115.0px; }
+.dpad__key--right { left: 224.3px; top: 116.3px; width: 112px; height: 112px; }
+.dpad__key--right img { left: 2.1px; top: -1.5px; width: 107.9px; height: 115.0px; }
 .dpad__key img {
   position: absolute; display: block; pointer-events: none;
   filter: drop-shadow(0 5px 3px rgba(6, 24, 48, 0.38));
-  transition: scale 90ms var(--ease-out), translate 90ms var(--ease-out), filter 90ms;
+  transition: scale 240ms cubic-bezier(0.34, 1.9, 0.5, 1), translate 240ms cubic-bezier(0.34, 1.9, 0.5, 1), filter 90ms;   /* springs back with a little overshoot */
 }
 /* Pressed: that key alone compresses, its shadow tightens, its face brightens; it springs back on release. */
 .dpad__key.is-pressed img { scale: 0.94; translate: 0 3px; filter: brightness(1.1) saturate(1.08) drop-shadow(0 1px 1px rgba(6, 24, 48, 0.42)); transition-duration: 50ms; }

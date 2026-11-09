@@ -63,14 +63,14 @@ export const CRANE_LAYOUT = Object.freeze({
 
 export const PLATFORM_LAYOUT = Object.freeze({
   src: 'assets/images/bridge/yard-platform.png', // the hazard-stripe yard platform (2139 x 422)
-  left: 310,
-  top: 890,
-  width: 1300,
-  deckLeft: 425,       // usable plate surface (inside the yellow end caps)
-  deckRight: 1495,
-  slotXs: Object.freeze([590, 960, 1330]),
+  left: 340,           // 1240 px wide, centred on the stage: leaves room for a large direction pad
+  top: 893,
+  width: 1240,
+  deckLeft: 450,       // usable plate surface (inside the yellow end caps)
+  deckRight: 1470,
+  slotXs: Object.freeze([600, 960, 1320]),
   baseY: 950,          // where frames stand: centred on the grey plate
-  pileXs: Object.freeze([520, 759, 950, 1161, 1400]),   // equal 43 px gaps between the yard frames
+  pileXs: Object.freeze([540, 768, 950, 1162, 1380]),   // the yard frames, evenly spaced on the plate
   pileBaseY: 950,
   optionScale: 1,
   pileScale: 0.72,

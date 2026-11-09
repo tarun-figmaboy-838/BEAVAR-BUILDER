@@ -8,7 +8,13 @@ const CHORD_WIDTH = 28;           // outer frame: chunky yellow box beams (built
 const FRAME_TUBE_WIDTH = 16;   // matches the frames on the yard (frame-shapes.js)
 const PANEL_INSET = 11;        // colour plates sit inside the beams, as on PDF p7
 const COVERED_FRACTION = 0.5;  // a plate mostly hidden behind later plates fades, so no leftover region reads as a triangle
-const HOTSPOT_MARKUP = '<span class="hotspot__pad"></span><span class="hotspot__column"></span><span class="hotspot__sparks"><i></i><i></i><i></i><i></i></span><span class="hotspot__chevrons"><i></i><i></i></span>';
+/** The spot is light (painted VFX on black, screened onto the scene): a gold beam while it waits, a green beam
+ *  when the carried frame is right over it, a green burst when the frame touches down. */
+const HOTSPOT_MARKUP = '<img class="hotspot__beam hotspot__beam--gold" src="assets/images/fx/spot-light-gold.png" alt="" draggable="false">'
+  + '<img class="hotspot__beam hotspot__beam--green" src="assets/images/fx/spot-light-green.png" alt="" draggable="false">'
+  + '<span class="hotspot__pulse"></span><span class="hotspot__flow"></span>'
+  + '<span class="hotspot__motes"><i></i><i></i><i></i><i></i><i></i><i></i></span>'
+  + '<img class="hotspot__burst" src="assets/images/fx/spot-light-burst.png" alt="" draggable="false">';
 
 /* ---------- Piers: short brick piers standing in the canal under the deck ---------- */
 function buildPillar(x) {
@@ -493,11 +499,22 @@ export function createBridgeController({ bridgeEl, fxEl, fx, audio }) {
       if (!point) return;
       socket.style.left = `${point.x}px`;
       socket.style.top = `${BRIDGE_GEOMETRY.deckY}px`;
-      socket.classList.remove('is-aligned', 'is-landing');
+      socket.classList.remove('is-aligned', 'is-landing', 'is-locked');
       socket.classList.add('is-visible');
     },
     hideSocket() {
-      socket.classList.remove('is-visible', 'is-aligned', 'is-armed', 'is-landing');
+      socket.classList.remove('is-visible', 'is-aligned', 'is-armed', 'is-landing', 'is-locked');
+    },
+    /** Touchdown on the spot: a green lock-in burst under the frame (the spot stays green until it hides),
+     *  a puff of dust and a few sparks where it lands. */
+    lockSocket() {
+      const x = parseFloat(socket.style.left) || 0;
+      fx.dust(x, BRIDGE_GEOMETRY.deckY);
+      fx.sparks(x, BRIDGE_GEOMETRY.deckY, { small: true });
+      socket.classList.add('is-aligned', 'is-landing');
+      socket.classList.remove('is-locked');
+      void socket.offsetWidth;
+      socket.classList.add('is-locked');
     },
     /** The frame is being lowered onto the spot: keep only the landing ring. */
     setSocketLanding(landing) {

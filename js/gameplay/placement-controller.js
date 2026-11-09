@@ -1,5 +1,9 @@
 import { CRANE_LAYOUT } from '../data/layout.js';
 import { BRIDGE_GEOMETRY, stageById } from '../data/bridge-geometry.js';
+import { frontToScreen } from './depth-projection.js';
+
+const OVER_SPOT_DEPTH = 0.8;      // the load is out over the bridge
+const OVER_SPOT_PX = 42;          // its centre is this close to the spot (stage px)
 
 /**
  * Where the crane must be to seat `carried` with its centroid over stage x `spotX`, when the load is
@@ -40,6 +44,12 @@ export function createPlacementController({ triangles }) {
         if (distance <= CRANE_LAYOUT.optionTolerance && (!best || distance < best.distance)) best = { option, distance };
       }
       return { option: best?.option ?? null };
+    },
+    /** The carried frame is right over the active spot: out over the bridge, its centre above the spot. */
+    isOverSpot(carried, craneX, depth) {
+      if (!carried || !activeStage || depth < OVER_SPOT_DEPTH) return false;
+      const centreX = frontToScreen({ x: craneX + carried.centroid[0] - carried.grabX * carried.width, y: 0, z: depth }).x;
+      return Math.abs(centreX - activeStage.socket.x) <= OVER_SPOT_PX;
     },
     isCorrect(triangleId, level) {
       return triangleId === level.correctTriangleId;

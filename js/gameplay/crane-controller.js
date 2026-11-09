@@ -328,8 +328,8 @@ export function createCraneController({ craneEl, dom, claw, gameState, audio }) 
     if (drivable) refreshHoverState(travelling || winching);
 
     const current = gameState.get();
-    if (Math.abs(current.craneX - motion.x) >= 1 || Math.abs(current.hoistY - motion.y) >= 1) {
-      gameState.update({ craneX: Math.round(motion.x), hoistY: Math.round(motion.y) });
+    if (Math.abs(current.craneX - motion.x) >= 1 || Math.abs(current.hoistY - motion.y) >= 1 || Math.abs((current.craneDepth ?? 0) - motion.depth) >= 0.01) {
+      gameState.update({ craneX: Math.round(motion.x), hoistY: Math.round(motion.y), craneDepth: Math.round(motion.depth * 100) / 100 });
     }
     render();
   }
@@ -534,21 +534,26 @@ export function createCraneController({ craneEl, dom, claw, gameState, audio }) 
         const seat = target(farScale);                                     // stage coordinates on the bridge
         const spot = screenToFront({ x: seat.x, y: seat.y, z: 1 });        // the same point for the crane (world)
 
+        const alreadyOver = motion.depth >= 0.8;              // the player brought it out over the bridge
+        if (!alreadyOver) {
         // A. Lift: straight up, away from the yard. The cable tightens and the load gives a small sway.
         onPhase?.('lift');
         audio.play('winchUp');
         this.swingImpulse(-6);
         await hoistTo(CRANE_LAYOUT.restY, { signal, duration: 560, ease: easings.outCubic });
         await wait(80, signal);
+        }
 
         // B + C. Into depth, then a long gentle approach: the jib slews into the scene, the trolley runs out
         // along it, and the load (same height above the ground) shrinks and recedes with it.
         onPhase?.('depth');
         audio.startLoop('craneMotor', { heavy: true });
+        audio.play('whoosh');
+        this.swingImpulse(12);                                  // the load lags as the jib starts to turn (cartoon swing)
         const start = { x: motion.x, depth: motion.depth };
         try {
           await runScripted({
-            duration: DEPTH_TRAVEL_MS,
+            duration: Math.max(420, DEPTH_TRAVEL_MS * (1 - start.depth)),
             ease: easings.linear,
             signal,
             apply: (t) => {
@@ -561,6 +566,7 @@ export function createCraneController({ craneEl, dom, claw, gameState, audio }) 
         } finally {
           audio.stopLoop('craneMotor');
         }
+        this.swingImpulse(-9);                                  // ...and swings on when it stops: a wobble, then it settles
 
         // D. Align over the spot (the spot was computed from the frame's real geometry at this scale).
         setState(S.ALIGNING_WITH_BRIDGE);
@@ -575,9 +581,10 @@ export function createCraneController({ craneEl, dom, claw, gameState, audio }) 
         audio.play('winchDown');
         await hoistTo(spot.y, { signal, duration: 760, ease: easings.outCubic });
 
-        // F. Place: the frame seats on the road with a small metallic click.
+        // F. Place: the frame touches down on the spot: a green lock-in and a metallic click.
         onPhase?.('place');
         audio.play('placement');
+        audio.play('ding');
         await wait(110, signal);
 
         // G. Release: the claw opens; the frame stays on the bridge.
@@ -626,6 +633,7 @@ export function createCraneController({ craneEl, dom, claw, gameState, audio }) 
         } finally {
           audio.stopLoop('craneMotor');
           motion.depth = Math.max(0, motion.depth);
+          motion.swayVelocity += 8;                             // the empty hook bobs as it arrives home
           if (state === S.RETURNING) setState(unlockWhenLanded ? S.IDLE : S.LOCKED);
           unlockWhenLanded = false;
         }
