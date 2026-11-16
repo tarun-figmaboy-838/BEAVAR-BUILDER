@@ -23,7 +23,7 @@ from PIL import Image
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 DIST = os.path.join(ROOT, "dist")
-STYLES = ["tokens", "base", "layout", "components", "gameplay", "animations", "responsive"]
+STYLES = ["tokens", "base", "layout", "components", "gameplay", "animations", "learning", "responsive"]
 BACKDROP = "assets/images/background/canal.png"
 # Sprites drawn as repeating backgrounds: lossless so tile edges stay seamless.
 LOSSLESS = {
@@ -36,6 +36,8 @@ WEBP_QUALITY = 90
 AVIF_QUALITY = 80
 OPUS_BITRATE = 40000  # speech, mono: transparent at this rate
 PNG_RE = re.compile(r"assets/images/[A-Za-z0-9_/.-]+?\.png")
+# Art already compressed at the source (the lesson's WebP / AVIF): shipped as it is.
+READY_RE = re.compile(r"assets/images/[A-Za-z0-9_/.-]+?\.(?:webp|avif)")
 
 
 def read(path):
@@ -188,9 +190,25 @@ def main():
     print(f"images: {len(images)} PNG {before / 1e6:.2f} MB -> WebP {after / 1e6:.2f} MB; "
           f"backdrop AVIF {size(backdrop_avif) / 1e3:.0f} KB (WebP {size(os.path.join(DIST, BACKDROP[:-4] + '.webp')) / 1e3:.0f} KB)")
 
+    ready = set(READY_RE.findall(html + bundle + css.replace("../assets/", "assets/")))
+    missing = [path for path in ready if not os.path.isfile(os.path.join(ROOT, path))]
+    if missing:
+        raise SystemExit(f"referenced images not found: {missing}")
+    # The lesson's folder ships whole: its code builds some paths from the folder and a frame name.
+    workshop = "assets/images/workshop"
+    ready |= {f"{workshop}/{name}" for name in os.listdir(os.path.join(ROOT, workshop)) if name.endswith((".webp", ".avif"))}
+    for path in sorted(ready):
+        target = os.path.join(DIST, path)
+        os.makedirs(os.path.dirname(target), exist_ok=True)
+        shutil.copy2(os.path.join(ROOT, path), target)
+    print(f"images already WebP / AVIF: {len(ready)} copied as they are")
+
     vo_dir = "assets/audio/vo"
     mp3_total = ogg_total = 0
     for name in sorted(os.listdir(os.path.join(ROOT, vo_dir))):
+        if name.endswith((".m4a", ".ogg")):        # the lesson's clips: AAC and its Ogg twin, ready as they are
+            shutil.copy2(os.path.join(ROOT, vo_dir, name), out_path(f"{vo_dir}/{name}", os.path.splitext(name)[1]))
+            continue
         if not name.endswith(".mp3"):
             continue
         path = f"{vo_dir}/{name}"

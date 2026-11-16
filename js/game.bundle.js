@@ -26,7 +26,14 @@ const DRONE_INTRO = false;
 
 /** TEMPORARY (review aid): a "Skip to end" button that builds the whole bridge and jumps to the ending. Set false to remove. */
 const SKIP_TO_END_BUTTON = true;
-  return { DEBUG_MODE, GAME_VERSION, DRONE_INTRO, SKIP_TO_END_BUTTON };
+
+
+/**
+ * The Triangle Workshop (js/learning/): after "Your help is needed" the operator takes the learner into his
+ * workshop on the yard to explore triangles before the crane game. false skips straight to "How to play".
+ */
+const LEARNING_SECTION = true;
+  return { DEBUG_MODE, GAME_VERSION, DRONE_INTRO, SKIP_TO_END_BUTTON, LEARNING_SECTION };
 });
 __define('js/data/layout.js', function () {
 /**
@@ -482,6 +489,63 @@ const SOUNDS = {
       noise({ t0, duration: 1.6, gain: 0.12, filter: 'bandpass', freq: 900, freqEnd: 1500, q: 0.7, attack: 0.25, release: 0.9 });
       noise({ t0: t0 + 0.1, duration: 1.3, gain: 0.07, filter: 'bandpass', freq: 2400, freqEnd: 2000, q: 1.2, attack: 0.2, release: 0.8 });
       [523, 659, 784, 1047].forEach((f, i) => tone({ t0: t0 + 0.05 + i * 0.11, type: 'triangle', freq: f, duration: 0.32, gain: 0.07, release: 0.2 }));
+    },
+  },
+  /* ---- Triangle Workshop (js/learning): quiet, short, never over the narration ---- */
+  /** The drafting board rising on its hydraulics: a low hum that settles with a click. */
+  panelRise: {
+    minInterval: 0.5,
+    play: ({ tone, noise, t0 }) => {
+      tone({ t0, type: 'sawtooth', freq: 70, freqEnd: 120, duration: 0.8, gain: 0.04, release: 0.3 });
+      noise({ t0, duration: 0.8, gain: 0.03, filter: 'lowpass', freq: 500, release: 0.3 });
+      noise({ t0: t0 + 0.82, duration: 0.04, gain: 0.16, filter: 'bandpass', freq: 1800, q: 2 });
+    },
+  },
+  /** A side being drawn or traced: a soft pencil sweep. */
+  drawLine: { minInterval: 0.2, play: ({ noise, t0 }) => noise({ t0, duration: 0.42, gain: 0.07, filter: 'bandpass', freq: 1800, freqEnd: 2600, q: 1.2, attack: 0.03, release: 0.25 }) },
+  /** A measurement lands on its tag: a tape click and a small bright tone. */
+  measure: {
+    minInterval: 0.15,
+    play: ({ tone, noise, t0 }) => {
+      noise({ t0, duration: 0.03, gain: 0.14, filter: 'bandpass', freq: 3200, q: 2 });
+      tone({ t0: t0 + 0.02, type: 'sine', freq: 880, freqEnd: 1180, duration: 0.14, gain: 0.07, release: 0.1 });
+    },
+  },
+  /** A corner picked up to drag. */
+  vertexPick: { minInterval: 0.15, play: ({ tone, t0 }) => tone({ t0, type: 'sine', freq: 520, freqEnd: 700, duration: 0.08, gain: 0.06 }) },
+  /** Two sides become equal: a double click that settles. */
+  snapEqual: {
+    minInterval: 0.2,
+    play: ({ tone, noise, t0 }) => {
+      noise({ t0, duration: 0.025, gain: 0.14, filter: 'bandpass', freq: 2400, q: 2 });
+      tone({ t0, type: 'triangle', freq: 660, duration: 0.07, gain: 0.07 });
+      tone({ t0: t0 + 0.08, type: 'triangle', freq: 880, duration: 0.12, gain: 0.07, release: 0.1 });
+    },
+  },
+  /** A right angle locks in: a firmer click with a ping. */
+  snapRight: {
+    minInterval: 0.2,
+    play: ({ tone, noise, t0 }) => {
+      noise({ t0, duration: 0.035, gain: 0.2, filter: 'bandpass', freq: 1900, q: 2 });
+      tone({ t0, type: 'square', freq: 440, freqEnd: 330, duration: 0.06, gain: 0.05 });
+      tone({ t0: t0 + 0.05, type: 'sine', freq: 1320, duration: 0.3, gain: 0.06, release: 0.26 });
+    },
+  },
+  /** A wrong pick: a soft, neutral two-note nudge (no buzzer). */
+  softNo: {
+    minInterval: 0.4,
+    play: ({ tone, t0 }) => {
+      tone({ t0, type: 'sine', freq: 392, freqEnd: 370, duration: 0.14, gain: 0.07 });
+      tone({ t0: t0 + 0.16, type: 'sine', freq: 330, freqEnd: 311, duration: 0.2, gain: 0.07, release: 0.15 });
+    },
+  },
+  /** A category is named: a two-note chime. */
+  badge: {
+    minInterval: 0.3,
+    play: ({ tone, t0 }) => {
+      tone({ t0, type: 'sine', freq: 880, duration: 0.18, gain: 0.07 });
+      tone({ t0: t0 + 0.12, type: 'sine', freq: 1319, duration: 0.42, gain: 0.07, release: 0.35 });
+      tone({ t0: t0 + 0.12, type: 'triangle', freq: 1760, duration: 0.3, gain: 0.02, release: 0.25 });
     },
   },
   controlPress: {
@@ -1047,6 +1111,57 @@ const VO_LINES = {
   "Excellent work! Our bridge is complete.": { id: "vo018", file: "vo018.mp3", seconds: 3.53, speaker: "narrator" },
   "BRIDGE BUILT! Great work, Engineer!": { id: "vo019", file: "vo019.mp3", seconds: 3.5, speaker: "narrator" },
   "The bridge is complete! Now the people of both towns can visit each other!": { id: "vo020", file: "vo020.mp3", seconds: 5.18, speaker: "builder" },
+  "We must identify them! But to do that we need to learn about triangles first.": { id: "vo021", file: "vo021.m4a", ogg: "vo021.ogg", seconds: 6.08, speaker: "builder" },
+  "This is a triangle.": { id: "vo022", file: "vo022.m4a", ogg: "vo022.ogg", seconds: 2.24, speaker: "builder" },
+  "A closed shape with 3 straight sides is called a triangle.": { id: "vo023", file: "vo023.m4a", ogg: "vo023.ogg", seconds: 4.96, speaker: "builder" },
+  "Triangles can be of different types. Let's explore them!": { id: "vo024", file: "vo024.m4a", ogg: "vo024.ogg", seconds: 3.92, speaker: "builder" },
+  "Let's measure the sides of this triangle.": { id: "vo025", file: "vo025.m4a", ogg: "vo025.ogg", seconds: 3.08, speaker: "builder" },
+  "What do you notice about the sides?": { id: "vo026", file: "vo026.m4a", ogg: "vo026.ogg", seconds: 2.56, speaker: "builder" },
+  "A triangle with all three sides different is called a scalene triangle.": { id: "vo027", file: "vo027.m4a", ogg: "vo027.ogg", seconds: 5.12, speaker: "builder" },
+  "What if two sides were equal?": { id: "vo028", file: "vo028.m4a", ogg: "vo028.ogg", seconds: 2.4, speaker: "builder" },
+  "Drag any vertex to make two sides equal.": { id: "vo065", file: "vo065.m4a", ogg: "vo065.ogg", seconds: 3.76, speaker: "builder" },
+  "A triangle with two equal sides is called an isosceles triangle.": { id: "vo029", file: "vo029.m4a", ogg: "vo029.ogg", seconds: 4.84, speaker: "builder" },
+  "Can you make all three sides equal?": { id: "vo030", file: "vo030.m4a", ogg: "vo030.ogg", seconds: 2.88, speaker: "builder" },
+  "Drag a vertex until the three lengths match.": { id: "vo066", file: "vo066.m4a", ogg: "vo066.ogg", seconds: 3.13, speaker: "builder" },
+  "Sort the triangles.": { id: "vo032", file: "vo032.m4a", ogg: "vo032.ogg", seconds: 1.77, speaker: "builder" },
+  "Great job! You sorted all the triangles.": { id: "vo033", file: "vo033.m4a", ogg: "vo033.ogg", seconds: 2.93, speaker: "builder" },
+  "A triangle with all three sides equal is called an equilateral triangle.": { id: "vo031", file: "vo031.m4a", ogg: "vo031.ogg", seconds: 6.28, speaker: "builder" },
+  "Make this triangle isosceles.": { id: "vo034", file: "vo034.m4a", ogg: "vo034.ogg", seconds: 2.75, speaker: "builder" },
+  "Great! This triangle is isosceles.": { id: "vo035", file: "vo035.m4a", ogg: "vo035.ogg", seconds: 3.6, speaker: "builder" },
+  "Now let's measure the angles.": { id: "vo036", file: "vo036.m4a", ogg: "vo036.ogg", seconds: 3.4, speaker: "builder" },
+  "What do you notice about the angles?": { id: "vo037", file: "vo037.m4a", ogg: "vo037.ogg", seconds: 2.89, speaker: "builder" },
+  "All three angles are less than 90°. So they are acute angles.": { id: "vo038", file: "vo038.m4a", ogg: "vo038.ogg", seconds: 7.07, speaker: "builder" },
+  "A triangle which has 3 acute angles is called an acute angled triangle.": { id: "vo039", file: "vo039.m4a", ogg: "vo039.ogg", seconds: 7.23, speaker: "builder" },
+  "Can you make one angle exactly 90°?": { id: "vo040", file: "vo040.m4a", ogg: "vo040.ogg", seconds: 4.47, speaker: "builder" },
+  "Drag a vertex; angles change live.": { id: "vo067", file: "vo067.m4a", ogg: "vo067.ogg", seconds: 4.09, speaker: "builder" },
+  "A triangle with one angle equal to 90° is called a right angled triangle.": { id: "vo041", file: "vo041.m4a", ogg: "vo041.ogg", seconds: 6.56, speaker: "builder" },
+  "What if one of the angles was obtuse?": { id: "vo042", file: "vo042.m4a", ogg: "vo042.ogg", seconds: 3.27, speaker: "builder" },
+  "Drag any vertex to make any angle obtuse.": { id: "vo068", file: "vo068.m4a", ogg: "vo068.ogg", seconds: 3.94, speaker: "builder" },
+  "A triangle with one angle greater than 90° is called an obtuse-angled triangle.": { id: "vo043", file: "vo043.m4a", ogg: "vo043.ogg", seconds: 6.85, speaker: "builder" },
+  "Which of these are acute-angled triangles?": { id: "vo044", file: "vo044.m4a", ogg: "vo044.ogg", seconds: 3.95, speaker: "builder" },
+  "Correct! Both A and D have only acute angles.": { id: "vo045", file: "vo045.m4a", ogg: "vo045.ogg", seconds: 4.85, speaker: "builder" },
+  "Make this triangle right-angled.": { id: "vo046", file: "vo046.m4a", ogg: "vo046.ogg", seconds: 3.0, speaker: "builder" },
+  "Drag any vertex to create one 90° angle.": { id: "vo069", file: "vo069.m4a", ogg: "vo069.ogg", seconds: 4.82, speaker: "builder" },
+  "A triangle with one 90° angle is right-angled.": { id: "vo047", file: "vo047.m4a", ogg: "vo047.ogg", seconds: 4.77, speaker: "builder" },
+  "What type of triangle is this by its sides?": { id: "vo048", file: "vo048.m4a", ogg: "vo048.ogg", seconds: 4.14, speaker: "builder" },
+  "What type is this triangle by its angles?": { id: "vo049", file: "vo049.m4a", ogg: "vo049.ogg", seconds: 3.78, speaker: "builder" },
+  "This triangle is both isosceles and right angled.": { id: "vo050", file: "vo050.m4a", ogg: "vo050.ogg", seconds: 4.8, speaker: "builder" },
+  "So a triangle can be classified by both its sides and its angles.": { id: "vo051", file: "vo051.m4a", ogg: "vo051.ogg", seconds: 6.41, speaker: "builder" },
+  "Classify the triangle.": { id: "vo052", file: "vo052.m4a", ogg: "vo052.ogg", seconds: 2.02, speaker: "builder" },
+  "Correct! This triangle is scalene and obtuse-angled.": { id: "vo053", file: "vo053.m4a", ogg: "vo053.ogg", seconds: 4.69, speaker: "builder" },
+  "Make a right-angled isosceles triangle.": { id: "vo054", file: "vo054.m4a", ogg: "vo054.ogg", seconds: 3.2, speaker: "builder" },
+  "Satisfy both conditions in one shape.": { id: "vo070", file: "vo070.m4a", ogg: "vo070.ogg", seconds: 3.31, speaker: "builder" },
+  "You can classify triangles by sides and angles!": { id: "vo055", file: "vo055.m4a", ogg: "vo055.ogg", seconds: 3.99, speaker: "builder" },
+  "Scalene. All sides are different.": { id: "vo057", file: "vo057.m4a", ogg: "vo057.ogg", seconds: 3.56, speaker: "builder" },
+  "Isosceles. Two sides are equal.": { id: "vo058", file: "vo058.m4a", ogg: "vo058.ogg", seconds: 3.3, speaker: "builder" },
+  "Equilateral. All three sides are equal.": { id: "vo059", file: "vo059.m4a", ogg: "vo059.ogg", seconds: 4.23, speaker: "builder" },
+  "Acute-angled. All angles are less than 90°.": { id: "vo060", file: "vo060.m4a", ogg: "vo060.ogg", seconds: 4.97, speaker: "builder" },
+  "Right-angled. One angle is 90°.": { id: "vo061", file: "vo061.m4a", ogg: "vo061.ogg", seconds: 4.27, speaker: "builder" },
+  "Obtuse-angled. One angle is greater than 90°.": { id: "vo062", file: "vo062.m4a", ogg: "vo062.ogg", seconds: 5.02, speaker: "builder" },
+  "Let's summarise what we learned.": { id: "vo056", file: "vo056.m4a", ogg: "vo056.ogg", seconds: 2.49, speaker: "builder" },
+  "A triangle can be classified by both its sides and its angles.": { id: "vo063", file: "vo063.m4a", ogg: "vo063.ogg", seconds: 5.25, speaker: "builder" },
+  "Let's explore triangles!": { id: "vo071", file: "vo071.m4a", ogg: "vo071.ogg", seconds: 2.53, speaker: "builder" },
+  "You're ready!": { id: "vo064", file: "vo064.m4a", ogg: "vo064.ogg", seconds: 1.38, speaker: "builder" },
 };
   return { VO_LINES };
 });
@@ -1089,7 +1204,9 @@ function createVoiceManager({ audio }) {
     element = null;
   }
   const clipsEnabled = Boolean(element) && !disabledByQuery && Object.keys(VO_LINES).length > 0;
-  const speechEnabled = !disabledByQuery && typeof speechSynthesis !== 'undefined' && typeof SpeechSynthesisUtterance !== 'undefined';
+  // Only the studio voice (the beaver's recorded clips) is heard: a line without its clip is shown at a reading
+  // pace instead of being read by a different device voice. `?speech=1` turns the device voice on for review.
+  const speechEnabled = params.get('speech') === '1' && !disabledByQuery && typeof speechSynthesis !== 'undefined' && typeof SpeechSynthesisUtterance !== 'undefined';
   const blobUrls = new Map();
   let token = 0;
   let unlocked = false;
@@ -1099,16 +1216,29 @@ function createVoiceManager({ audio }) {
 
   // The production build (dist/) ships every clip as small Ogg Opus too and marks <html data-vo-ogg>;
   // browsers that can play it (Chrome, Firefox, Edge, newer Safari) take the Ogg, the rest keep the MP3.
-  const useOgg = Boolean(element) && document.documentElement.hasAttribute('data-vo-ogg')
-    && element.canPlayType('audio/ogg; codecs="opus"') !== '';
-  const fileFor = (clip) => (useOgg ? clip.file.replace(/\.mp3$/, '.ogg') : clip.file);
+  const canOgg = Boolean(element) && element.canPlayType('audio/ogg; codecs="opus"') !== '';
+  const useOgg = canOgg && document.documentElement.hasAttribute('data-vo-ogg');
+  // A clip with its own Ogg twin (the lesson's: `ogg` in the map) plays it wherever Opus plays, else its AAC.
+  const fileFor = (clip) => (clip.ogg && canOgg ? clip.ogg : useOgg ? clip.file.replace(/\.mp3$/, '.ogg') : clip.file);
   const clipFor = (text) => VO_LINES[normalize(text)] ?? null;
-  const sourceFor = (clip) => blobUrls.get(clip.file) ?? VO_DIR + fileFor(clip);
+  const sourceFor = (clip) => blobUrls.get(fileFor(clip)) ?? VO_DIR + fileFor(clip);
 
+  /**
+   * Until the beaver's studio lines exist, the device reads them: a MALE Indian English voice first, so it
+   * sounds like the operator's recorded voice (Male Teacher), then any Indian English voice, then the rest.
+   */
+  const MALE_VOICE_NAMES = ['rishi', 'aman', 'ravi', 'prabhat', 'hemant', 'kumar', 'daniel', 'arthur', 'oliver', 'aaron', 'alex', 'fred', 'guy', 'ryan', 'thomas'];
+  const FEMALE_VOICE_NAMES = ['tara', 'veena', 'isha', 'lekha', 'heera', 'neerja', 'kalpana', 'swara', 'samantha', 'karen', 'moira', 'tessa', 'fiona', 'victoria', 'kate', 'serena', 'susan', 'zira', 'aria', 'jenny', 'female'];
+  const nameHas = (voice, names) => names.some((n) => voice.name?.toLowerCase().includes(n));
   function pickSpeechVoice() {
     const voices = speechSynthesis.getVoices();
     for (const lang of PREFERRED_SPEECH_LANGS) {
-      const match = voices.find((voice) => voice.lang?.toLowerCase().startsWith(lang.toLowerCase()));
+      const inLang = voices.filter((voice) => voice.lang?.toLowerCase().replace('_', '-').startsWith(lang.toLowerCase()));
+      const male = inLang.find((voice) => nameHas(voice, MALE_VOICE_NAMES)) ?? inLang.find((voice) => !nameHas(voice, FEMALE_VOICE_NAMES));
+      if (male) return male;
+    }
+    for (const lang of PREFERRED_SPEECH_LANGS) {
+      const match = voices.find((voice) => voice.lang?.toLowerCase().replace('_', '-').startsWith(lang.toLowerCase()));
       if (match) return match;
     }
     return voices[0] ?? null;
@@ -1259,11 +1389,11 @@ function createVoiceManager({ audio }) {
     prefetch() {
       if (!clipsEnabled || prefetchStarted || location.protocol === 'file:' || typeof fetch !== 'function') return;
       prefetchStarted = true;
-      const files = [...new Set(Object.values(VO_LINES).map((clip) => clip.file))];
+      const files = [...new Set(Object.values(VO_LINES).map(fileFor))];
       (async () => {
         for (const file of files) {
           try {
-            const response = await fetch(VO_DIR + (useOgg ? file.replace(/\.mp3$/, '.ogg') : file));
+            const response = await fetch(VO_DIR + file);
             if (response.ok) blobUrls.set(file, URL.createObjectURL(await response.blob()));
           } catch {
             /* the clip streams when it is needed instead */
@@ -4229,6 +4359,496 @@ const VO_WORD_TIMES = Object.freeze({
     3945,
     4295,
     4470
+  ],
+  "vo021": [
+    300,
+    516,
+    733,
+    1599,
+    2260,
+    2422,
+    2738,
+    2955,
+    3402,
+    3618,
+    3944,
+    4161,
+    4378,
+    4970,
+    5494
+  ],
+  "vo022": [
+    320,
+    544,
+    918,
+    1272
+  ],
+  "vo023": [
+    300,
+    673,
+    1058,
+    1251,
+    1683,
+    2036,
+    2349,
+    2834,
+    3027,
+    3762,
+    4215
+  ],
+  "vo024": [
+    300,
+    630,
+    795,
+    960,
+    1225,
+    1920,
+    2830,
+    2995,
+    3325
+  ],
+  "vo025": [
+    300,
+    527,
+    981,
+    1208,
+    1662,
+    1889,
+    2116
+  ],
+  "vo026": [
+    280,
+    460,
+    740,
+    920,
+    1280,
+    1640,
+    1820
+  ],
+  "vo027": [
+    300,
+    610,
+    990,
+    1180,
+    1540,
+    1890,
+    2270,
+    3140,
+    3330,
+    3710,
+    4020,
+    4400
+  ],
+  "vo028": [
+    260,
+    409,
+    558,
+    936,
+    1334,
+    1482
+  ],
+  "vo065": [
+    290,
+    473,
+    840,
+    1207,
+    1390,
+    1923,
+    2107,
+    2723
+  ],
+  "vo029": [
+    280,
+    568,
+    944,
+    1132,
+    1559,
+    1935,
+    2311,
+    2499,
+    3015,
+    3293,
+    4044
+  ],
+  "vo030": [
+    330,
+    506,
+    681,
+    857,
+    1162,
+    1468,
+    1819
+  ],
+  "vo066": [
+    330,
+    534,
+    738,
+    1146,
+    1644,
+    2028,
+    2232,
+    2436
+  ],
+  "vo032": [
+    250,
+    512,
+    775
+  ],
+  "vo033": [
+    190,
+    431,
+    1110,
+    1233,
+    1716,
+    1957,
+    2198
+  ],
+  "vo031": [
+    320,
+    629,
+    1026,
+    1224,
+    1573,
+    1771,
+    2169,
+    2676,
+    2964,
+    3811,
+    4010,
+    5673
+  ],
+  "vo034": [
+    320,
+    515,
+    710,
+    1210
+  ],
+  "vo035": [
+    340,
+    1200,
+    1392,
+    1934,
+    2266
+  ],
+  "vo036": [
+    330,
+    574,
+    1279,
+    1957,
+    2331
+  ],
+  "vo037": [
+    320,
+    510,
+    700,
+    890,
+    1270,
+    1840,
+    2030
+  ],
+  "vo038": [
+    330,
+    550,
+    960,
+    1500,
+    1960,
+    2180,
+    2690,
+    4780,
+    5010,
+    5230,
+    5570,
+    6310
+  ],
+  "vo039": [
+    320,
+    550,
+    1010,
+    1370,
+    1600,
+    2110,
+    2700,
+    3160,
+    3740,
+    4640,
+    5060,
+    5520,
+    6490
+  ],
+  "vo040": [
+    320,
+    535,
+    749,
+    964,
+    1298,
+    1828,
+    3242
+  ],
+  "vo067": [
+    320,
+    622,
+    925,
+    2140,
+    2985,
+    3428
+  ],
+  "vo041": [
+    330,
+    682,
+    1065,
+    1407,
+    1799,
+    2182,
+    2906,
+    3097,
+    4234,
+    4566,
+    5100,
+    5291,
+    5483,
+    5867
+  ],
+  "vo042": [
+    320,
+    479,
+    1028,
+    1187,
+    1346,
+    1505,
+    1823,
+    2222
+  ],
+  "vo068": [
+    340,
+    511,
+    962,
+    1304,
+    1885,
+    2055,
+    2597,
+    2938
+  ],
+  "vo043": [
+    320,
+    622,
+    1006,
+    1338,
+    1680,
+    2065,
+    2619,
+    2811,
+    3579,
+    3771,
+    4535,
+    4848,
+    6196
+  ],
+  "vo044": [
+    320,
+    570,
+    820,
+    1070,
+    1440,
+    2860
+  ],
+  "vo045": [
+    320,
+    1910,
+    2000,
+    2260,
+    2450,
+    2640,
+    2980,
+    3360,
+    3920
+  ],
+  "vo046": [
+    320,
+    531,
+    1263,
+    1686
+  ],
+  "vo069": [
+    320,
+    548,
+    1134,
+    1589,
+    2257,
+    2735,
+    2963,
+    4104
+  ],
+  "vo047": [
+    390,
+    720,
+    1160,
+    1650,
+    1870,
+    2750,
+    3330,
+    3740
+  ],
+  "vo048": [
+    320,
+    493,
+    1015,
+    1608,
+    1954,
+    2216,
+    2389,
+    2562,
+    3045
+  ],
+  "vo049": [
+    330,
+    693,
+    886,
+    1489,
+    1772,
+    2158,
+    2521,
+    2714
+  ],
+  "vo050": [
+    320,
+    520,
+    1060,
+    1260,
+    1750,
+    2950,
+    3540,
+    4020
+  ],
+  "vo051": [
+    350,
+    551,
+    862,
+    1264,
+    1466,
+    1927,
+    2740,
+    3271,
+    3472,
+    4093,
+    4796,
+    4997,
+    5618
+  ],
+  "vo052": [
+    320,
+    1155,
+    1347
+  ],
+  "vo053": [
+    330,
+    1930,
+    2020,
+    2395,
+    2588,
+    2975,
+    3458
+  ],
+  "vo054": [
+    320,
+    515,
+    869,
+    1453,
+    2521
+  ],
+  "vo070": [
+    370,
+    1015,
+    1320,
+    2255,
+    2470,
+    2685
+  ],
+  "vo055": [
+    320,
+    510,
+    790,
+    1360,
+    1980,
+    2310,
+    2690,
+    3120
+  ],
+  "vo057": [
+    490,
+    1560,
+    1660,
+    2130,
+    2290
+  ],
+  "vo058": [
+    320,
+    2040,
+    2130,
+    2482,
+    2708
+  ],
+  "vo059": [
+    330,
+    2520,
+    2610,
+    2700,
+    3050,
+    3410
+  ],
+  "vo060": [
+    320,
+    3500,
+    3590,
+    3680,
+    3770,
+    3860,
+    3950
+  ],
+  "vo061": [
+    320,
+    1830,
+    2015,
+    2818,
+    3055
+  ],
+  "vo062": [
+    330,
+    2470,
+    2560,
+    2885,
+    3215,
+    3617,
+    3817
+  ],
+  "vo056": [
+    320,
+    514,
+    1185,
+    1379,
+    1702
+  ],
+  "vo063": [
+    320,
+    623,
+    1009,
+    1462,
+    1655,
+    2444,
+    2816,
+    3259,
+    3452,
+    4078,
+    4271,
+    4574
+  ],
+  "vo071": [
+    320,
+    544,
+    1592
+  ],
+  "vo064": [
+    360,
+    600
   ]
 });
   return { VO_WORD_TIMES };
@@ -4383,7 +5003,7 @@ function createFeedbackController({ hudEl, overlaysEl, voice, builder }) {
     },
   };
 }
-  return { createFeedbackController };
+  return { revealWords, hugWords, createFeedbackController };
 });
 __define('js/gameplay/construction-fx.js', function () {
 const { prefersReducedMotion } = __require('js/core/motion.js');
@@ -5442,7 +6062,7 @@ const CAPTION_MS = 2600;
  * Start sends the drone on its flight over the town (with the deck's subline as a caption); it lands
  * on the live site and the story begins. Any tap or key during the flight skips to the landing.
  */
-function createTitleScreen({ els, audio, voice, camera, builder, screenManager }) {
+function createTitleScreen({ els, audio, voice, camera, builder, screenManager, startScreen = null }) {
   let button = null;
   let card = null;
   let caption = null;
@@ -5521,7 +6141,7 @@ function createTitleScreen({ els, audio, voice, camera, builder, screenManager }
         button = null;
         card = null;
         if (flight) await fly();
-        screenManager.go('meet-builder');
+        screenManager.go(startScreen ?? 'meet-builder');
       });
       button.classList.add('is-entering');
       button.addEventListener('animationend', () => button?.classList.remove('is-entering'), { once: true });
@@ -5883,6 +6503,7 @@ async function openRibbon(shotEl, { signal, audio } = {}) {
 });
 __define('js/screens/story-screens.js', function () {
 const { COPY } = __require('js/data/copy.js');
+const { LEARNING_SECTION } = __require('js/config.js');
 const { createSequenceScope, wait } = __require('js/core/motion.js');
 const CAB_ZOOM = 2.1;
 
@@ -5948,7 +6569,7 @@ function createHelpNeededScreen({ camera, triangles, feedback, builder, screenMa
       await camera.focus({ x: 960, y: 880, scale: 1.12, pull: 0.5, duration: 1300, signal: scope.signal }).catch(() => {});
       await triangles.focusPulseSequence(scope.signal).catch(() => {});
       await wait(500, scope.signal);
-      screenManager.go('how-to-play');
+      screenManager.go(LEARNING_SECTION ? 'hook' : 'how-to-play');
     } catch {
       /* the screen was left early */
     }
@@ -6288,8 +6909,3644 @@ function createCompletionScreen({ els, audio, voice, camera, crane, claw, bridge
 }
   return { createCompletionScreen };
 });
+__define('js/learning/learning-content.js', function () {
+/**
+ * The Triangle Workshop, screen by screen. Only data lives here: the maths, wording, questions and
+ * answers come from the source deck ("Triangles.pdf", learning and checkpoint pages); one flow
+ * (js/learning/learning-flow.js) renders and runs every screen from it.
+ *
+ * Triangle specs (see triangle-model.js): sides [AB, BC, CA] in cm are the deck's left / bottom /
+ * right labels; angles [A, B, C] are its top / left / right labels; pts are explicit cm coordinates.
+ * `keep: true` keeps the learner's own triangle from the previous screen when it already has the
+ * `requires` classification (so a discovery names the shape the learner actually made).
+ */
+/** Every learner-facing string is the deck's own wording (the spaceship framing is not used). */
+const LEARNING_COPY = Object.freeze({
+  workshopTitle: 'Triangles',
+  beaver: {
+    enter: "Let's explore triangles!",
+    leave: "You're ready!",
+  },
+  check: 'CHECK',
+  continue: 'CONTINUE',
+  greatJob: 'GREAT JOB!',
+  summary: {
+    heading: "Let's summarise what we learned.",
+    sidesTitle: 'Triangles by sides',
+    anglesTitle: 'Triangles by angles',
+    both: 'A triangle can be classified by both its sides and its angles.',
+    cta: "You're ready!",
+  },
+});
+
+const SCALENE_546 = Object.freeze({ sides: [5, 6, 4] });            // left 5, bottom 6, right 4 (PDF L04)
+const RIGHT_ISOSCELES = Object.freeze({ pts: [[0, 5], [0, 0], [5, 0]] });   // 5 / 5 / 7.1 with the 90° at B (PDF L18)
+
+const LEARNING_SCREENS = Object.freeze([
+  /* ---- Recall ---- */
+  { id: 'L01', kind: 'draw', triangle: { sides: [5, 6, 5] },
+    narration: 'This is a triangle.' },
+  { id: 'L02', kind: 'count', triangle: { sides: [5, 6, 5] }, keep: true, requires: null,
+    narration: 'A closed shape with 3 straight sides is called a triangle.', focus: '3 straight sides' },
+  { id: 'L03', kind: 'morph', triangle: { sides: [5, 6, 5] }, keep: true, requires: null,
+    shapes: [{ sides: [6.2, 3.2, 6.2] }, { sides: [4.4, 7.2, 4.4] }, SCALENE_546],
+    narration: "Triangles can be of different types. Let's explore them!" },
+
+  /* ---- Sides ---- */
+  { id: 'L04', kind: 'measureSides', zoom: 1.2, triangle: SCALENE_546,
+    narration: "Let's measure the sides of this triangle.", focus: 'measure the sides' },
+  { id: 'L05', kind: 'question', triangle: SCALENE_546, layout: 'stack',
+    show: { sideLabels: true },
+    question: {
+      prompt: 'What do you notice about the sides?',
+      options: ['All three are different', 'Two sides are equal', 'All three are equal'],
+      correct: 'All three are different',
+      reinforce: 'sides',
+    } },
+  { id: 'L06', kind: 'discover', triangle: SCALENE_546,
+    show: { sideLabels: true }, tones: ['orange', 'green', 'purple'],
+    badge: 'SCALENE', tone: 'scalene', cues: { highlight: 'all three sides different', name: 'scalene' },
+    narration: 'A triangle with all three sides different is called a scalene triangle.', focus: 'scalene' },
+  { id: 'L07', kind: 'drag', triangle: SCALENE_546, goal: 'isosceles', hintVertex: 0,
+    show: { sideLabels: true, ticks: true },
+    narration: 'What if two sides were equal?', instruction: 'Drag any vertex to make two sides equal.' },
+  { id: 'L08', kind: 'discover', triangle: { sides: [5, 6, 5] }, keep: true, requires: 'isosceles',
+    show: { sideLabels: true, ticks: true }, highlightEqual: true,
+    badge: 'ISOSCELES', tone: 'isosceles', cues: { highlight: 'two equal sides', name: 'isosceles' },
+    narration: 'A triangle with two equal sides is called an isosceles triangle.', focus: 'isosceles' },
+  { id: 'L09', kind: 'drag', triangle: { pts: [[2.65, 4.24], [0, 0], [5.3, 0]] }, goal: 'equilateral', hintVertex: 2,
+    show: { sideLabels: true, ticks: true },
+    narration: 'Can you make all three sides equal?', instruction: 'Drag a vertex until the three lengths match.' },
+  { id: 'L10', kind: 'discover', triangle: { sides: [5, 5, 5] }, keep: true, requires: 'equilateral',
+    show: { sideLabels: true, ticks: true }, highlightEqual: true,
+    badge: 'EQUILATERAL', tone: 'equilateral', cues: { highlight: 'all three sides equal', name: 'equilateral' },
+    narration: 'A triangle with all three sides equal is called an equilateral triangle.', focus: 'equilateral' },
+
+  /* ---- Checkpoints on sides ---- */
+  { id: 'CFU01', kind: 'sort',
+    narration: 'Sort the triangles.',
+    cards: [
+      { id: 'A', spec: { sides: [5, 6, 4] }, answer: 'scalene' },
+      { id: 'B', spec: { sides: [5, 7, 5] }, answer: 'isosceles' },
+      { id: 'C', spec: { sides: [6, 6, 6] }, answer: 'equilateral' },
+    ],
+    bins: [{ id: 'scalene', label: 'SCALENE' }, { id: 'isosceles', label: 'ISOSCELES' }, { id: 'equilateral', label: 'EQUILATERAL' }],
+    success: 'Great job! You sorted all the triangles.' },
+  { id: 'CFU02', kind: 'drag', triangle: SCALENE_546, goal: 'isosceles', hintVertex: 0, hintAfterMs: 20000,
+    show: { sideLabels: true, ticks: true },
+    narration: 'Make this triangle isosceles.',
+    success: { badge: 'ISOSCELES', tone: 'isosceles', narration: 'Great! This triangle is isosceles.', highlightEqual: true, name: 'isosceles' } },
+
+  /* ---- Angles ---- */
+  { id: 'L11', kind: 'measureAngles', zoom: 1.2, triangle: { angles: [60, 60, 60], base: 5 },
+    narration: "Now let's measure the angles.", focus: 'measure the angles' },
+  { id: 'L12', kind: 'question', triangle: { angles: [60, 60, 60], base: 5 }, layout: 'stack',
+    show: { angleArcs: true, angleLabels: true },
+    question: {
+      prompt: 'What do you notice about the angles?',
+      options: ['All are acute angles', 'One angle is right angle', 'One angle is obtuse angle'],
+      correct: 'All are acute angles',
+      reinforce: 'angles',
+    } },
+  { id: 'L13', kind: 'compare90', triangle: { angles: [60, 60, 60], base: 5 },
+    show: { angleArcs: true, angleLabels: true },
+    narration: 'All three angles are less than 90°. So they are acute angles.', focus: 'less than 90°' },
+  { id: 'L14', kind: 'discover', triangle: { angles: [60, 60, 60], base: 5 },
+    show: { angleArcs: true, angleLabels: true }, highlightAngles: [0, 1, 2],
+    badge: 'ACUTE-ANGLED', tone: 'acute', cues: { highlight: '3 acute angles', name: 'acute angled' },
+    narration: 'A triangle which has 3 acute angles is called an acute angled triangle.', focus: 'acute angled' },
+  { id: 'L15', kind: 'drag', triangle: { angles: [65, 62, 53], base: 5.6 }, goal: 'right', hintVertex: 0,
+    show: { angleArcs: true, angleLabels: true, square: true },
+    narration: 'Can you make one angle exactly 90°?', instruction: 'Drag a vertex; angles change live.' },
+  { id: 'L16', kind: 'discover', triangle: { angles: [55, 90, 35], base: 5 }, keep: true, requires: 'right',
+    show: { angleArcs: true, angleLabels: true, square: true }, highlightAngles: 'right',
+    badge: 'RIGHT-ANGLED', tone: 'right', cues: { highlight: 'one angle equal to 90°', name: 'right angled' },
+    narration: 'A triangle with one angle equal to 90° is called a right angled triangle.', focus: 'right angled' },
+  { id: 'L17', kind: 'drag', triangle: { angles: [78, 54, 48], base: 6 }, goal: 'obtuse', hintVertex: 0,
+    show: { angleArcs: true, angleLabels: true, square: true },
+    narration: 'What if one of the angles was obtuse?', instruction: 'Drag any vertex to make any angle obtuse.' },
+  { id: 'L18', kind: 'discover', triangle: { angles: [110, 40, 30], base: 7 }, keep: true, requires: 'obtuse',
+    show: { angleArcs: true, angleLabels: true }, highlightAngles: 'obtuse',
+    badge: 'OBTUSE-ANGLED', tone: 'obtuse', cues: { highlight: 'greater than 90°', name: 'obtuse-angled' },
+    narration: 'A triangle with one angle greater than 90° is called an obtuse-angled triangle.', focus: 'greater than 90°' },
+
+  /* ---- Checkpoints on angles ---- */
+  { id: 'CFU03', kind: 'multi',
+    narration: 'Which of these are acute-angled triangles?',
+    cards: [
+      { id: 'A', spec: { angles: [60, 50, 70], base: 5 } },
+      { id: 'B', spec: { angles: [90, 40, 50], base: 6 } },
+      { id: 'C', spec: { angles: [100, 40, 40], base: 6 } },
+      { id: 'D', spec: { angles: [60, 60, 60], base: 5 } },
+    ],
+    correct: ['A', 'D'],
+    success: 'Correct! Both A and D have only acute angles.' },
+  { id: 'CFU04', kind: 'drag', triangle: { angles: [70, 60, 50], base: 5.6 }, goal: 'right', hintVertex: 0, hintAfterMs: 20000,
+    show: { angleArcs: true, angleLabels: true, square: true },
+    narration: 'Make this triangle right-angled.', instruction: 'Drag any vertex to create one 90° angle.',
+    success: { badge: 'RIGHT-ANGLED', tone: 'right', narration: 'A triangle with one 90° angle is right-angled.', highlightAngles: 'right', name: 'right-angled' } },
+
+  /* ---- Both ---- */
+  { id: 'L19', kind: 'question', triangle: RIGHT_ISOSCELES, layout: 'stack',
+    show: { sideLabels: true, ticks: true, angleLabels: [1], square: true },
+    question: {
+      prompt: 'What type of triangle is this by its sides?',
+      options: ['Scalene', 'Isosceles', 'Equilateral'],
+      correct: 'Isosceles',
+      reinforce: 'equalSides',
+    } },
+  { id: 'L20', kind: 'question', triangle: RIGHT_ISOSCELES, layout: 'stack',
+    show: { sideLabels: true, ticks: true, angleLabels: [1], square: true },
+    question: {
+      prompt: 'What type is this triangle by its angles?',
+      options: ['Acute-angled', 'Right-angled', 'Obtuse-angled'],
+      correct: 'Right-angled',
+      reinforce: 'rightAngle',
+    } },
+  { id: 'L21', kind: 'dualReveal', layout: 'stack', triangle: RIGHT_ISOSCELES,
+    show: { sideLabels: true, ticks: true, angleLabels: [1], square: true },
+    badges: [{ text: 'ISOSCELES', tone: 'isosceles' }, { text: 'RIGHT-ANGLED', tone: 'right' }],
+    narration: 'This triangle is both isosceles and right angled.', focus: 'both' },
+  { id: 'L22', kind: 'lenses', layout: 'stack', triangle: RIGHT_ISOSCELES,
+    show: { sideLabels: true, ticks: true, angleLabels: [1], square: true },
+    lenses: [{ title: 'BY SIDES', result: 'Isosceles', tone: 'isosceles' }, { title: 'BY ANGLES', result: 'Right-angled', tone: 'right' }],
+    narration: 'So a triangle can be classified by both its sides and its angles.', focus: 'both its sides and its angles' },
+
+  /* ---- Checkpoints on both ---- */
+  { id: 'CFU05', kind: 'dual', triangle: { sides: [4, 7.5, 5.1] }, layout: 'dual',
+    show: { sideLabels: true, angleArcs: true, angleLabels: true },
+    narration: 'Classify the triangle.',
+    prompt: 'Classify by sides and angles.',
+    groups: [
+      { id: 'sides', label: 'BY SIDES', options: ['Scalene', 'Isosceles', 'Equilateral'], correct: 'Scalene', style: 'list' },
+      { id: 'angles', label: 'BY ANGLES', options: ['Acute', 'Right', 'Obtuse'], correct: 'Obtuse', style: 'pills' },
+    ],
+    success: { badges: [{ text: 'SCALENE', tone: 'scalene' }, { text: 'OBTUSE-ANGLED', tone: 'obtuse' }],
+      narration: 'Correct! This triangle is scalene and obtuse-angled.' } },
+  { id: 'CFU06', kind: 'drag', layout: 'stack', triangle: SCALENE_546, goal: 'rightIsosceles', hintVertex: 0, hintAfterMs: 30000, silentSnaps: true,
+    show: { sideLabels: true, ticks: true, angleLabels: true, square: true },
+    narration: 'Make a right-angled isosceles triangle.', instruction: 'Satisfy both conditions in one shape.',
+    success: { final: true, badges: [{ text: 'ISOSCELES', tone: 'isosceles' }, { text: 'RIGHT-ANGLED', tone: 'right' }],
+      narration: 'You can classify triangles by sides and angles!' } },
+
+  /* ---- Summary ---- */
+  { id: 'SUMMARY', kind: 'summary',
+    bySides: [
+      { name: 'Scalene', tone: 'scalene', text: 'All sides are different.', spec: { sides: [5, 6, 4] }, labels: 'sides' },
+      { name: 'Isosceles', tone: 'isosceles', text: 'Two sides are equal.', spec: { sides: [5, 6, 5] }, labels: 'sides' },
+      { name: 'Equilateral', tone: 'equilateral', text: 'All three sides are equal.', spec: { sides: [5, 5, 5] }, labels: 'sides' },
+    ],
+    byAngles: [
+      // All three angles different, so it is not mistaken for the equilateral card above it.
+      { name: 'Acute-angled', tone: 'acute', text: 'All angles are less than 90°.', spec: { angles: [65, 70, 45], base: 5 }, labels: 'angles' },
+      { name: 'Right-angled', tone: 'right', text: 'One angle is 90°.', spec: { angles: [60, 90, 30], base: 4 }, labels: 'angles' },
+      { name: 'Obtuse-angled', tone: 'obtuse', text: 'One angle is greater than 90°.', spec: { angles: [120, 30, 30], base: 6 }, labels: 'angles' },
+    ],
+    example: { spec: RIGHT_ISOSCELES, badges: [{ text: 'Isosceles', tone: 'isosceles' }, { text: 'Right-angled', tone: 'right' }] } },
+]);
+  return { LEARNING_COPY, LEARNING_SCREENS };
+});
+__define('js/learning/workshop-board.js', function () {
+/**
+ * The lesson card in front of the workshop backdrop: the narration box at the top (sized to its words),
+ * the drawing surface with the live triangle and the screen's widgets, and the beaver's place.
+ * Everything written on it is live text, revealed word by word with the voice.
+ */
+const { LEARNING_COPY } = __require('js/learning/learning-content.js');
+const { revealWords, hugWords } = __require('js/gameplay/feedback-controller.js');
+const { fitBubble } = __require('js/gameplay/bubble-shape.js');
+const { playClassAnimation, wait, prefersReducedMotion } = __require('js/core/motion.js');
+const { VO_WORD_TIMES } = __require('js/data/vo-word-times.js');
+/** Stage-space geometry of the card and its parts. */
+const BOARD = Object.freeze({
+  left: 160, top: 110, width: 1600, height: 820,
+  backdrop: 'assets/images/workshop/learning-backdrop.webp',
+  /** The drawing surface inside the card (below the narration box), in card px. */
+  surface: Object.freeze({ left: 20, top: 150, width: 1560, height: 640 }),
+  canvas: Object.freeze({ width: 1560, height: 640 }),
+  /** Where the beaver stands: his feet, in card px. */
+  guide: Object.freeze({ x: 150, groundY: 800 }),
+});
+
+const READING_MS_PER_CHARACTER = 58;         // a reading pace for lines without a clip (a clip sets its own)
+
+/** When each word of `text` appears: the clip's measured word times, or the same even pace revealWords uses. */
+function wordDelays(text, spoken, typingMs) {
+  const words = text.split(' ');
+  const times = spoken.clipId ? VO_WORD_TIMES[spoken.clipId] : null;
+  const synced = Array.isArray(times) && times.length === words.length;
+  const step = words.length > 1 ? Math.max(40, Math.min(220, (typingMs - 300) / (words.length - 1))) : 0;
+  return words.map((_, i) => Math.round(synced ? times[i] / (spoken.rate ?? 1) : i * step));
+}
+/**
+ * A line longer than one comfortable box is shown in parts, one after another (the voice reads it whole):
+ * first at sentence ends, then at a natural join nearest the middle. Returns word-index boundaries.
+ */
+const LINE_MAX = 58;
+const JOINS = [' is called ', ', ', ' and ', ' but ', ' so ', ' by ', ' when ', ' to ', ' with '];
+function splitLine(text) {
+  const words = text.split(' ');
+  if (text.length <= LINE_MAX) return [[0, words.length]];
+  const pieces = [];                                 // [startWord, endWord) ranges
+  let start = 0;
+  words.forEach((w, i) => { if (/[.!?]$/.test(w) && i < words.length - 1) { pieces.push([start, i + 1]); start = i + 1; } });
+  pieces.push([start, words.length]);
+  const out = [];
+  for (const [a, b] of pieces) {
+    const piece = words.slice(a, b).join(' ');
+    if (piece.length <= LINE_MAX || b - a < 4) { out.push([a, b]); continue; }
+    let bestAt = -1; let bestDist = Infinity;
+    for (const join of JOINS) {
+      let from = 0;
+      for (;;) {
+        const at = piece.indexOf(join, from);
+        if (at < 0) break;
+        const cut = join === ', ' ? at + 1 : at;    // the comma stays with the first part
+        const dist = Math.abs(cut - piece.length / 2);
+        const wordsBefore = piece.slice(0, cut).trim().split(' ').length;
+        if (dist < bestDist && wordsBefore >= 2 && b - a - wordsBefore >= 2) { bestDist = dist; bestAt = a + wordsBefore; }
+        from = at + 1;
+      }
+    }
+    if (bestAt > a && bestAt < b) { out.push([a, bestAt]); out.push([bestAt, b]); } else out.push([a, b]);
+  }
+  return out;
+}
+/** The index of the word where `phrase` begins in `text` (case and trailing punctuation ignored), or -1. */
+function phraseIndex(text, phrase) {
+  const clean = (w) => w.toLowerCase().replace(/[.,!?;:]+$/, '');
+  const words = text.split(' ').map(clean);
+  const wanted = phrase.split(' ').map(clean);
+  for (let i = 0; i + wanted.length <= words.length; i += 1) {
+    if (wanted.every((w, k) => words[i + k] === w)) return i;
+  }
+  return -1;
+}
+
+function createWorkshopBoard({ hostEl, voice, audio, talker = null }) {
+  const root = document.createElement('div');
+  root.className = 'workshop';
+  root.dataset.state = 'ENTERING';
+  root.setAttribute('aria-label', LEARNING_COPY.workshopTitle);
+  root.innerHTML = `
+    <div class="workshop__card">
+      <div class="ws-narration" role="status" aria-live="polite">
+        <p class="ws-narration__text"></p>
+      </div>
+      <div class="workshop__surface">
+        <div class="ws-stage"></div>
+        <div class="ws-overlay"></div>
+      </div>
+      <div class="workshop__guide"></div>
+    </div>`;
+  hostEl.appendChild(root);
+
+  const cardEl = root.querySelector('.workshop__card');
+  const stageEl = root.querySelector('.ws-stage');
+  const overlayEl = root.querySelector('.ws-overlay');
+  let bubbleEl = null;
+  const guideHostEl = root.querySelector('.workshop__guide');
+  const narrationEl = root.querySelector('.ws-narration');
+  const textEl = root.querySelector('.ws-narration__text');
+
+  const reduced = () => prefersReducedMotion();
+  let cueTimers = [];
+  let partTimers = [];
+  let currentLine = '';
+  const cancelParts = () => { partTimers.forEach(clearTimeout); partTimers = []; };
+  const cancelCues = () => { cueTimers.forEach(clearTimeout); cueTimers = []; cancelParts(); };
+  /** Runs each cue when its phrase is spoken (the words appear at the same moment). */
+  function scheduleCues(text, spoken, typingMs, cues) {
+    cancelCues();
+    if (!cues?.length) return;
+    const delays = wordDelays(text, spoken, typingMs);
+    const start = () => {
+      for (const cue of cues) {
+        const index = phraseIndex(text, cue.phrase);
+        const at = reduced() ? 0 : index >= 0 ? delays[index] : 0;
+        cueTimers.push(setTimeout(() => { try { cue.run(); } catch (error) { console.error('[learning] cue', error); } }, at));
+      }
+    };
+    (spoken.started ?? Promise.resolve()).then(start);
+  }
+
+  return {
+    root, stageEl, overlayEl, guideHostEl, narrationEl,
+    talker,
+    cancelCues,
+    /** The card comes up from the workshop floor and settles. */
+    async rise({ signal } = {}) {
+      root.classList.remove('is-lowered');
+      root.classList.add('is-rising');
+      audio?.play('panelRise');
+      await wait(reduced() ? 0 : 900, signal).catch(() => {});
+      root.classList.remove('is-rising');
+      root.classList.add('is-up');
+    },
+    async lower({ signal } = {}) {
+      root.classList.remove('is-up');
+      root.classList.add('is-lowering');
+      audio?.play('panelRise');
+      await wait(reduced() ? 0 : 700, signal).catch(() => {});
+      root.classList.remove('is-lowering');
+      root.classList.add('is-lowered');
+    },
+    setState(name) {
+      root.dataset.state = name;
+    },
+    /** The beaver at the card: in front of it at the bottom-left, or peeking from behind a summary card. */
+    setGuidePresent(present) {
+      root.classList.toggle('has-guide', Boolean(present));
+    },
+    setGuidePeeking(on) {
+      root.classList.toggle('is-peeking', Boolean(on));
+    },
+    /**
+     * The teaching line: the words appear at the voice's pace (recorded clip or a reading pace), and each
+     * cue ({ phrase, run }) fires on its spoken word. `focus` words take the key-word style.
+     */
+    narrate(text, { focus = null, cues = null } = {}) {
+      narrationEl.hidden = false;
+      playClassAnimation(narrationEl, 'is-swapping', 420);
+      const spoken = voice.say(text, { speaker: 'builder' });
+      const typingMs = spoken.spoke ? Math.max(300, (spoken.seconds - 0.35) * 1000) : Math.min(4200, text.length * READING_MS_PER_CHARACTER);
+      currentLine = text;
+      cancelParts();
+      const parts = splitLine(text);
+      let typed;
+      if (parts.length === 1) {
+        typed = revealWords(textEl, text, typingMs, focus, { times: spoken.clipId ? VO_WORD_TIMES[spoken.clipId] : null, rate: spoken.rate ?? 1, started: spoken.started });
+      } else {
+        // Each part takes the box in turn, when its first word is due; the words keep the whole line's timing.
+        const words = text.split(' ');
+        const delays = wordDelays(text, spoken, typingMs);
+        // Each part reveals word by word on the line's own word times (its span is passed so it animates).
+        const showPart = ([a, b], started) => revealWords(textEl, words.slice(a, b).join(' '), delays[b - 1] - delays[a] + 300, focus, { times: delays.slice(a, b).map((d) => d - delays[a]), rate: 1, started });
+        showPart(parts[0], spoken.started);
+        (spoken.started ?? Promise.resolve()).then(() => {
+          for (const part of parts.slice(1)) {
+            partTimers.push(setTimeout(() => { playClassAnimation(narrationEl, 'is-swapping', 420); showPart(part, null); }, reduced() ? 0 : delays[part[0]]));
+          }
+        });
+        const last = parts[parts.length - 1];
+        typed = wait(reduced() ? 0 : delays[last[1] - 1] + 460);
+      }
+      scheduleCues(text, spoken, typingMs, cues);
+      this.talker?.talkUntil?.(spoken.finished);
+      return { finished: Promise.all([spoken.finished, typed]).then(() => undefined), seconds: spoken.seconds };
+    },
+    /** The line on screen, as plain text (for the QA hooks). */
+    get narrationText() {
+      return currentLine || (textEl.querySelector('.visually-hidden')?.textContent ?? textEl.textContent);
+    },
+    /** Stops the voice mid-line (a debug jump). */
+    stopVoice() {
+      voice.stop();
+    },
+    clearNarration() {
+      cancelParts();
+      currentLine = '';
+      textEl.textContent = '';
+    },
+    /**
+     * The beaver says a line himself, in the game's own speech bubble (the cab's: white, crane-yellow outline,
+     * drawn tail), its tail on `tip` (card px, just above his head), not in the narration box.
+     */
+    speak(text, { focus = null, tip = { x: 205, y: 430 }, holdMs = 900, cues = null } = {}) {
+      narrationEl.hidden = true;
+      cancelCues();
+      currentLine = text;
+      bubbleEl?.remove();
+      bubbleEl = document.createElement('div');
+      bubbleEl.className = 'speech-bubble ws-say';
+      bubbleEl.innerHTML = '<svg class="speech-bubble__shape" aria-hidden="true"><path class="speech-bubble__face"/></svg><p class="speech-bubble__text"></p>';
+      cardEl.appendChild(bubbleEl);
+      const textEl = bubbleEl.querySelector('.speech-bubble__text');
+      const spoken = voice.say(text, { speaker: 'builder' });
+      const typingMs = spoken.spoke ? Math.max(300, (spoken.seconds - 0.35) * 1000) : Math.min(4200, text.length * READING_MS_PER_CHARACTER);
+      const typed = revealWords(textEl, text, typingMs, focus, { times: spoken.clipId ? VO_WORD_TIMES[spoken.clipId] : null, rate: spoken.rate ?? 1, started: spoken.started });
+      scheduleCues(text, spoken, typingMs, cues);
+      hugWords(bubbleEl, textEl);
+      const at = fitBubble(bubbleEl.querySelector('.speech-bubble__shape'), bubbleEl, { at: 0.16, lean: -1 });
+      bubbleEl.style.left = `${Math.round(tip.x - at[0])}px`;
+      bubbleEl.style.top = `${Math.round(tip.y - at[1])}px`;
+      bubbleEl.style.transformOrigin = `${Math.round(at[0])}px ${Math.round(at[1])}px`;
+      playClassAnimation(bubbleEl, 'is-entering', 620);
+      this.talker?.talkUntil?.(spoken.finished);
+      const finished = Promise.all([spoken.finished, typed]).then(() => wait(reduced() ? 0 : holdMs)).then(() => this.hideBubble());
+      return { finished, seconds: spoken.seconds };
+    },
+    hideBubble() {
+      const bubble = bubbleEl;
+      if (!bubble) return Promise.resolve();
+      bubbleEl = null;
+      bubble.classList.add('is-leaving');
+      return wait(reduced() ? 0 : 280).then(() => bubble.remove());
+    },
+    hideNarration() {
+      narrationEl.hidden = true;
+    },
+    destroy() {
+      root.remove();
+    },
+  };
+}
+  return { BOARD, createWorkshopBoard };
+});
+__define('js/learning/triangle-model.js', function () {
+/**
+ * Pure triangle maths for the Triangle Workshop (the learning section).
+ *
+ * Vertices live in canvas px; 1 cm of the lesson is PX_PER_CM px, so every length and angle on
+ * screen is computed from the drawn shape, never typed in. Nothing here touches the DOM, so the
+ * same functions run under JavaScriptCore in tests/learning-model.test.js.
+ *
+ * Vertex order is A (apex), B (base left), C (base right). Side i joins vertex i and vertex i + 1,
+ * so sides are [AB, BC, CA] and angles are [at A, at B, at C], as the PDF labels them.
+ */
+const PX_PER_CM = 92;
+const MIN_VERTEX_GAP_CM = 1.6;      // two corners never come closer than this
+const MIN_ALTITUDE_CM = 1.1;        // a dragged corner never comes closer than this to the opposite side
+const MIN_ANGLE_DEG = 10;           // no needle-thin triangles
+const SNAP_RADIUS_PX = 10;          // a corner this close to an equality / right-angle locus snaps onto it
+const EQUAL_CM_TOLERANCE = 0.03;    // after a snap the sides are equal to the pixel; this absorbs float noise
+const RIGHT_DEG_TOLERANCE = 0.49;   // an angle that rounds to 90° on screen is a right angle
+const sub = (a, b) => [a[0] - b[0], a[1] - b[1]];
+const add = (a, b) => [a[0] + b[0], a[1] + b[1]];
+const mul = (a, k) => [a[0] * k, a[1] * k];
+const dot = (a, b) => a[0] * b[0] + a[1] * b[1];
+const cross = (a, b) => a[0] * b[1] - a[1] * b[0];
+const length = (a) => Math.hypot(a[0], a[1]);
+const dist = (a, b) => length(sub(a, b));
+const unit = (a) => {
+  const l = length(a) || 1;
+  return [a[0] / l, a[1] / l];
+};
+/** Left-hand normal of a direction vector. */
+const perp = (a) => [-a[1], a[0]];
+const others = (index) => [(index + 1) % 3, (index + 2) % 3];
+
+const vec = Object.freeze({ sub, add, mul, dot, cross, length, dist, unit, perp });
+
+/** [AB, BC, CA] in px. */
+function sideLengthsPx(vertices) {
+  return [0, 1, 2].map((i) => dist(vertices[i], vertices[(i + 1) % 3]));
+}
+
+/** The angle at each vertex, in degrees. */
+function anglesDeg(vertices) {
+  return vertices.map((vertex, index) => {
+    const [j, k] = others(index);
+    const u = sub(vertices[j], vertex);
+    const v = sub(vertices[k], vertex);
+    const cosine = dot(u, v) / ((length(u) * length(v)) || 1);
+    return (Math.acos(Math.min(1, Math.max(-1, cosine))) * 180) / Math.PI;
+  });
+}
+
+const nearlyEqualCm = (a, b) => Math.abs(a - b) <= EQUAL_CM_TOLERANCE;
+
+/** 'equilateral' | 'isosceles' (exactly two equal sides) | 'scalene', from side lengths in cm. */
+function classifyBySides(cm) {
+  const pairs = [nearlyEqualCm(cm[0], cm[1]), nearlyEqualCm(cm[1], cm[2]), nearlyEqualCm(cm[2], cm[0])].filter(Boolean).length;
+  if (pairs >= 2) return 'equilateral';
+  if (pairs === 1) return 'isosceles';
+  return 'scalene';
+}
+
+/** 'right' | 'obtuse' | 'acute', from angles in degrees. */
+function classifyByAngles(deg) {
+  const largest = Math.max(...deg);
+  if (Math.abs(largest - 90) <= RIGHT_DEG_TOLERANCE) return 'right';
+  if (largest > 90) return 'obtuse';
+  return 'acute';
+}
+
+const EQUAL_DEG_TOLERANCE = 0.05;
+
+/**
+ * The angles as shown, in whole degrees, as a learner checks them: they always add up to 180, equal angles
+ * (an isosceles triangle's base angles) always show the same number, a right angle is 90 and nothing else
+ * is. Of the whole-degree sets that keep those rules, the one closest to the true angles is shown.
+ */
+function displayDegrees(deg) {
+  const near = (d) => [Math.floor(d) - 1, Math.floor(d), Math.ceil(d), Math.ceil(d) + 1];
+  const options = deg.map((d) => (Math.abs(d - 90) <= RIGHT_DEG_TOLERANCE ? [90] : [...new Set(near(d))].filter((v) => v > 0 && v !== 90)));
+  const pairs = [[0, 1], [1, 2], [0, 2]].filter(([i, j]) => Math.abs(deg[i] - deg[j]) < EQUAL_DEG_TOLERANCE);
+  let best = null;
+  for (const a of options[0]) for (const b of options[1]) for (const c of options[2]) {
+    const shown = [a, b, c];
+    if (a + b + c !== 180 || pairs.some(([i, j]) => shown[i] !== shown[j])) continue;
+    const errors = shown.map((v, i) => Math.abs(v - deg[i]));
+    const cost = errors.reduce((sum, e) => sum + e, 0) + Math.max(...errors) * 0.01;
+    if (!best || cost < best.cost) best = { shown, cost };
+  }
+  return best ? best.shown : deg.map(Math.round);
+}
+
+/** Everything the lesson shows about a triangle, computed from its corners. */
+function measure(vertices, pxPerCm = PX_PER_CM) {
+  const px = sideLengthsPx(vertices);
+  const cm = px.map((value) => value / pxPerCm);
+  const deg = anglesDeg(vertices);
+  const equalSides = cm.map((value, i) => others(i).some((j) => nearlyEqualCm(value, cm[j])));
+  const rightAt = deg.findIndex((value) => Math.abs(value - 90) <= RIGHT_DEG_TOLERANCE);
+  const obtuseAt = deg.findIndex((value) => value > 90 + RIGHT_DEG_TOLERANCE);
+  return {
+    px, cm, deg, equalSides, rightAt, obtuseAt,
+    // Lengths as shown: sides the lesson counts as equal (and ticks) always read the same number.
+    shownCm: cm.map((value, i) => {
+      const group = [i, ...others(i).filter((j) => nearlyEqualCm(value, cm[j]))];
+      return formatCm(group.reduce((sum, k) => sum + cm[k], 0) / group.length);
+    }),
+    shownDeg: displayDegrees(deg),
+    bySides: classifyBySides(cm),
+    byAngles: classifyByAngles(deg),
+  };
+}
+
+/** "5 cm" or "4.9 cm": one decimal, dropped when it is zero. */
+function formatCm(cm) {
+  const rounded = Math.round(cm * 10) / 10;
+  return `${Number.isInteger(rounded) ? rounded : rounded.toFixed(1)} cm`;
+}
+
+function formatDeg(deg) {
+  return `${Math.round(deg)}°`;
+}
+
+/* ---------- Building a triangle from a lesson spec ---------- */
+
+/**
+ * Corner positions in cm with y up, B at the origin and C on the x axis, from one of:
+ *   { sides: [AB, BC, CA] }        lengths in cm (the PDF's left / bottom / right labels)
+ *   { angles: [A, B, C], base }    degrees, with BC = base cm
+ *   { pts: [[x, y], [x, y], [x, y]] }  explicit cm coordinates
+ */
+function cmPointsFromSpec(spec) {
+  if (spec.pts) return spec.pts.map((p) => [p[0], p[1]]);
+  if (spec.angles) {
+    const [A, B, C] = spec.angles.map((d) => (d * Math.PI) / 180);
+    const base = spec.base ?? 6;
+    const ab = (base * Math.sin(C)) / Math.sin(A);
+    return [[ab * Math.cos(B), ab * Math.sin(B)], [0, 0], [base, 0]];
+  }
+  const [ab, bc, ca] = spec.sides;
+  // Law of cosines at B gives A's position above the base.
+  const cosB = Math.min(1, Math.max(-1, (ab * ab + bc * bc - ca * ca) / (2 * ab * bc)));
+  const angleB = Math.acos(cosB);
+  return [[ab * Math.cos(angleB), ab * Math.sin(angleB)], [0, 0], [bc, 0]];
+}
+
+/**
+ * Place a spec on the canvas at PX_PER_CM: the shape's bounding box is centred on (cx, cy), or stands
+ * on `baseY` when that is given instead. Canvas y runs down, so cm y is flipped.
+ */
+function layoutFromSpec(spec, { cx, cy = null, baseY = null, pxPerCm = PX_PER_CM }) {
+  const pts = cmPointsFromSpec(spec);
+  const xs = pts.map((p) => p[0]);
+  const ys = pts.map((p) => p[1]);
+  const midX = (Math.min(...xs) + Math.max(...xs)) / 2;
+  const minY = Math.min(...ys);
+  const maxY = Math.max(...ys);
+  const bottom = baseY ?? (cy + ((maxY - minY) * pxPerCm) / 2);
+  return pts.map(([x, y]) => [cx + (x - midX) * pxPerCm, bottom - (y - minY) * pxPerCm]);
+}
+
+/* ---------- Keeping a dragged triangle usable ---------- */
+
+function isValidTriangle(vertices, bounds = null) {
+  const px = sideLengthsPx(vertices);
+  if (px.some((value) => value < MIN_VERTEX_GAP_CM * PX_PER_CM)) return false;
+  if (anglesDeg(vertices).some((value) => value < MIN_ANGLE_DEG)) return false;
+  if (bounds && vertices.some(([x, y]) => x < bounds.left || x > bounds.right || y < bounds.top || y > bounds.bottom)) return false;
+  return true;
+}
+
+function clampToBounds(point, bounds) {
+  if (!bounds) return point;
+  return [Math.min(bounds.right, Math.max(bounds.left, point[0])), Math.min(bounds.bottom, Math.max(bounds.top, point[1]))];
+}
+
+/**
+ * Where corner `index` may go for a wanted position: inside the bounds, never through the opposite
+ * side (the triangle keeps its orientation), never too close to the other corners, never needle-thin.
+ * The corner slides along a limit rather than sticking, except in the rare cases a bisection resolves.
+ */
+function constrainVertex(index, wanted, vertices, bounds) {
+  const [j, k] = others(index);
+  const a = vertices[j];
+  const b = vertices[k];
+  const n = unit(perp(sub(b, a)));
+  const side = Math.sign(dot(sub(vertices[index], a), n)) || 1;
+  const minAltitude = MIN_ALTITUDE_CM * PX_PER_CM;
+  const minGap = MIN_VERTEX_GAP_CM * PX_PER_CM;
+  let point = clampToBounds(wanted, bounds);
+  for (let pass = 0; pass < 2; pass += 1) {
+    const altitude = dot(sub(point, a), n) * side;
+    if (altitude < minAltitude) point = add(point, mul(n, (minAltitude - altitude) * side));
+    for (const fixed of [a, b]) {
+      const gap = dist(point, fixed);
+      if (gap < minGap) {
+        const away = gap < 1e-6 ? mul(n, side) : unit(sub(point, fixed));
+        point = add(fixed, mul(away, minGap));
+      }
+    }
+    point = clampToBounds(point, bounds);
+  }
+  const candidate = vertices.map((v, i) => (i === index ? point : v));
+  if (isValidTriangle(candidate, bounds)) return point;
+  // Rare (a needle angle at a fixed corner): the furthest valid point between where it was and where it wants to be.
+  let lo = 0;
+  let hi = 1;
+  const from = vertices[index];
+  for (let step = 0; step < 8; step += 1) {
+    const mid = (lo + hi) / 2;
+    const test = add(from, mul(sub(point, from), mid));
+    if (isValidTriangle(vertices.map((v, i) => (i === index ? test : v)), bounds)) lo = mid;
+    else hi = mid;
+  }
+  return add(from, mul(sub(point, from), lo));
+}
+
+/* ---------- Magnetic snapping onto the lesson's goal ---------- */
+
+const projectOntoLine = (p, origin, direction) => add(origin, mul(direction, dot(sub(p, origin), direction)));
+const projectOntoCircle = (p, centre, radius, fallbackDirection) => {
+  const away = sub(p, centre);
+  return add(centre, mul(length(away) < 1e-6 ? fallbackDirection : unit(away), radius));
+};
+
+/**
+ * Candidate positions for corner `index` that make the goal true, given the other two corners:
+ *   isosceles        the perpendicular bisector of AB (VA = VB), the circles VA = AB and VB = AB
+ *   equilateral      the apex of the equilateral triangle on AB (same side as the corner)
+ *   right            the circle on diameter AB (90° at V), the perpendiculars at A and B (90° there)
+ *   rightIsosceles   the six points where both hold, plus the loci above as partial help
+ * Points are returned before loci so an exact solution wins over a partial one.
+ */
+function snapCandidates(goal, index, vertices, wanted) {
+  const [j, k] = others(index);
+  const a = vertices[j];
+  const b = vertices[k];
+  const ab = sub(b, a);
+  const l = length(ab);
+  const direction = unit(ab);
+  const n = perp(direction);
+  const m = mul(add(a, b), 0.5);
+  const side = Math.sign(dot(sub(wanted, a), n)) || 1;
+  const points = [];
+  const loci = [];
+  const addLine = (kind, origin) => loci.push({ kind, point: projectOntoLine(wanted, origin, n) });
+  const addCircle = (kind, centre, radius) => loci.push({ kind, point: projectOntoCircle(wanted, centre, radius, mul(n, side)) });
+  if (goal === 'isosceles' || goal === 'rightIsosceles') {
+    addLine('equal', m);
+    addCircle('equal', a, l);
+    addCircle('equal', b, l);
+  }
+  if (goal === 'equilateral') {
+    points.push({ kind: 'equilateral', point: add(m, mul(n, (Math.sqrt(3) / 2) * l * side)) });
+  }
+  if (goal === 'right' || goal === 'rightIsosceles') {
+    addCircle('right', m, l / 2);
+    addLine('right', a);
+    addLine('right', b);
+  }
+  if (goal === 'rightIsosceles') {
+    points.push(
+      { kind: 'rightIsosceles', point: add(m, mul(n, (l / 2) * side)) },
+      { kind: 'rightIsosceles', point: add(a, mul(n, l * side)) },
+      { kind: 'rightIsosceles', point: add(b, mul(n, l * side)) },
+    );
+  }
+  return { points, loci };
+}
+
+/**
+ * The position the corner takes for a wanted position: an exact goal point when one is within reach
+ * (a wider magnet), else the nearest partial locus within SNAP_RADIUS_PX, else the wanted point itself.
+ * Returns { point, snapped } where snapped names what it snapped to, or null.
+ */
+function snapVertex(goal, index, wanted, vertices, radius = SNAP_RADIUS_PX) {
+  if (!goal) return { point: wanted, snapped: null };
+  const { points, loci } = snapCandidates(goal, index, vertices, wanted);
+  const nearest = (list, reach) => {
+    let best = null;
+    for (const candidate of list) {
+      const d = dist(candidate.point, wanted);
+      if (d <= reach && (!best || d < best.d)) best = { ...candidate, d };
+    }
+    return best;
+  };
+  const exact = nearest(points, radius * 1.6);
+  if (exact) return { point: exact.point, snapped: exact.kind };
+  const partial = nearest(loci, radius);
+  if (partial) return { point: partial.point, snapped: partial.kind };
+  return { point: wanted, snapped: null };
+}
+
+/** True when the measured triangle satisfies the drag screen's goal. */
+function goalMet(goal, measured) {
+  switch (goal) {
+    case 'isosceles': return measured.bySides === 'isosceles';
+    case 'equilateral': return measured.bySides === 'equilateral';
+    case 'right': return measured.byAngles === 'right';
+    case 'obtuse': return measured.byAngles === 'obtuse';
+    case 'rightIsosceles': return measured.bySides === 'isosceles' && measured.byAngles === 'right';
+    default: return false;
+  }
+}
+
+/**
+ * One position for corner `index` that satisfies the goal (used by the QA play-through and by the
+ * late hint's ghost arrow): of the exact goal positions, the usable one nearest to where the corner is.
+ */
+function solutionFor(goal, index, vertices, bounds = null) {
+  const [j, k] = others(index);
+  const a = vertices[j];
+  const b = vertices[k];
+  const ab = sub(b, a);
+  const l = length(ab);
+  const direction = unit(ab);
+  const n = perp(direction);
+  const m = mul(add(a, b), 0.5);
+  const current = vertices[index];
+  const side = Math.sign(dot(sub(current, a), n)) || 1;
+  const up = mul(n, side);
+  const candidates = [];
+  if (goal === 'isosceles') {
+    // On the bisector at the corner's own height (never the equilateral apex), or VA = AB / VB = AB.
+    const onBisector = projectOntoLine(current, m, n);
+    const apex = add(m, mul(up, (Math.sqrt(3) / 2) * l));
+    candidates.push(dist(onBisector, apex) < 12 ? add(m, mul(up, dot(sub(onBisector, m), up) * 0.8)) : onBisector);
+    candidates.push(add(m, mul(up, l * 0.55)), add(m, mul(up, l * 1.1)));
+    for (const [centre, awayFrom] of [[a, b], [b, a]]) {
+      const towards = unit(add(mul(unit(sub(centre, awayFrom)), 0.35), up));
+      candidates.push(add(centre, mul(towards, l)));
+    }
+  } else if (goal === 'equilateral') {
+    candidates.push(add(m, mul(up, (Math.sqrt(3) / 2) * l)));
+  } else if (goal === 'right') {
+    candidates.push(add(m, mul(up, l / 2)), add(a, mul(up, l * 0.75)), add(b, mul(up, l * 0.75)));
+  } else if (goal === 'obtuse') {
+    candidates.push(add(m, mul(up, l * 0.28)), add(m, mul(up, l * 0.22)));
+  } else if (goal === 'rightIsosceles') {
+    candidates.push(add(m, mul(up, l / 2)), add(a, mul(up, l)), add(b, mul(up, l)));
+  } else {
+    return current;
+  }
+  const usable = candidates.filter((point) => {
+    const trial = vertices.map((v, i) => (i === index ? point : v));
+    return isValidTriangle(trial, bounds) && goalMet(goal, measure(trial.map((v, i) => (i === index ? snapVertex(goal, index, point, vertices).point : v))));
+  });
+  const pool = usable.length ? usable : candidates;
+  return pool.reduce((best, point) => (dist(point, current) < dist(best, current) ? point : best), pool[0]);
+}
+  return { PX_PER_CM, MIN_ALTITUDE_CM, SNAP_RADIUS_PX, vec, classifyBySides, classifyByAngles, displayDegrees, measure, formatCm, formatDeg, cmPointsFromSpec, layoutFromSpec, isValidTriangle, constrainVertex, snapVertex, goalMet, solutionFor };
+});
+__define('js/learning/triangle-draw.js', function () {
+/**
+ * Shared SVG geometry for the workshop's triangles (the live canvas and the static figures):
+ * where a side label sits, a corner's frame, arc and right-angle paths, tick marks, value colours.
+ * Pure functions over canvas px.
+ */
+const { vec } = __require('js/learning/triangle-model.js');
+const SVG_NS = 'http://www.w3.org/2000/svg';
+const ARC_RADIUS = 38;
+const SQUARE_SIZE = 24;
+const TICK_HALF = 12;
+const SIDE_LABEL_GAP = 38;
+
+function svgEl(name, attributes = {}, children = []) {
+  const element = document.createElementNS(SVG_NS, name);
+  for (const [key, value] of Object.entries(attributes)) {
+    if (value !== undefined && value !== null) element.setAttribute(key, String(value));
+  }
+  for (const child of children) element.appendChild(child);
+  return element;
+}
+
+const fmt = (n) => (Math.round(n * 10) / 10).toString();
+
+/** The normal of side i that points away from the triangle. */
+function outwardNormal(vertices, i) {
+  const a = vertices[i];
+  const b = vertices[(i + 1) % 3];
+  const c = vertices[(i + 2) % 3];
+  const mid = vec.mul(vec.add(a, b), 0.5);
+  let n = vec.perp(vec.unit(vec.sub(b, a)));
+  if (vec.dot(n, vec.sub(c, mid)) > 0) n = vec.mul(n, -1);
+  return n;
+}
+
+function sideMidpoint(vertices, i) {
+  return vec.mul(vec.add(vertices[i], vertices[(i + 1) % 3]), 0.5);
+}
+
+/** Where side i's measurement tag goes: just outside the middle of the side. */
+function sideLabelPoint(vertices, i, gap = SIDE_LABEL_GAP) {
+  return vec.add(sideMidpoint(vertices, i), vec.mul(outwardNormal(vertices, i), gap));
+}
+
+/** Unit vectors from vertex i along its two sides, and the angle between them in radians. */
+function cornerFrame(vertices, i) {
+  const u = vec.unit(vec.sub(vertices[(i + 1) % 3], vertices[i]));
+  const w = vec.unit(vec.sub(vertices[(i + 2) % 3], vertices[i]));
+  const theta = Math.acos(Math.min(1, Math.max(-1, vec.dot(u, w))));
+  return { u, w, theta, bisector: vec.unit(vec.add(u, w)) };
+}
+
+/** Arc of radius r inside corner i, optionally only the first `fraction` of the angle (drawing it in). */
+function arcPath(vertices, i, radius = ARC_RADIUS, fraction = 1) {
+  const { u, w, theta } = cornerFrame(vertices, i);
+  const v = vertices[i];
+  const sign = vec.cross(u, w) > 0 ? 1 : -1;
+  const angle = theta * fraction;
+  const end = [u[0] * Math.cos(angle) - sign * u[1] * Math.sin(angle), sign * u[0] * Math.sin(angle) + u[1] * Math.cos(angle)];
+  const start = vec.add(v, vec.mul(u, radius));
+  const stop = vec.add(v, vec.mul(end, radius));
+  return `M ${fmt(start[0])} ${fmt(start[1])} A ${radius} ${radius} 0 0 ${sign > 0 ? 1 : 0} ${fmt(stop[0])} ${fmt(stop[1])}`;
+}
+
+function squarePoints(vertices, i, size = SQUARE_SIZE) {
+  const { u, w } = cornerFrame(vertices, i);
+  const v = vertices[i];
+  const p = vec.add(v, vec.mul(u, size));
+  const q = vec.add(vec.add(v, vec.mul(u, size)), vec.mul(w, size));
+  const r = vec.add(v, vec.mul(w, size));
+  return [p, q, r].map((pt) => `${fmt(pt[0])},${fmt(pt[1])}`).join(' ');
+}
+
+/** A short line across the middle of side i (an "equal sides" tick). */
+function tickSegment(vertices, i, half = TICK_HALF, offset = 0) {
+  const direction = vec.unit(vec.sub(vertices[(i + 1) % 3], vertices[i]));
+  const n = vec.perp(direction);
+  const centre = vec.add(sideMidpoint(vertices, i), vec.mul(direction, offset));
+  const p = vec.add(centre, vec.mul(n, half));
+  const q = vec.sub(centre, vec.mul(n, half));
+  return { x1: fmt(p[0]), y1: fmt(p[1]), x2: fmt(q[0]), y2: fmt(q[1]) };
+}
+
+function centroid(vertices) {
+  return [(vertices[0][0] + vertices[1][0] + vertices[2][0]) / 3, (vertices[0][1] + vertices[1][1] + vertices[2][1]) / 3];
+}
+
+/** Colour groups by value: equal values (as shown) share an index, different values get the next one. */
+function valueHues(labels) {
+  const seen = [];
+  return labels.map((label) => { let k = seen.indexOf(label); if (k < 0) { seen.push(label); k = seen.length - 1; } return k; });
+}
+  return { svgEl, fmt, outwardNormal, sideLabelPoint, cornerFrame, arcPath, squarePoints, tickSegment, centroid, valueHues };
+});
+__define('js/learning/triangle-canvas.js', function () {
+/**
+ * The workshop's live triangle: three steel sides with bolted corners drawn as SVG from exact
+ * vertices, with side lengths, angle arcs, ticks and the right-angle square computed from the
+ * shape every frame. Corners can be dragged (pointer capture, touch, a wide invisible hit area);
+ * while a goal is set, a corner near a position that makes the goal true snaps onto it.
+ */
+const { measure, formatDeg, constrainVertex, snapVertex, goalMet, solutionFor, vec, PX_PER_CM } = __require('js/learning/triangle-model.js');
+const { svgEl, fmt, sideLabelPoint, arcPath, squarePoints, tickSegment, cornerFrame, outwardNormal, centroid, valueHues } = __require('js/learning/triangle-draw.js');
+const { tween, easings, wait, prefersReducedMotion, playClassAnimation } = __require('js/core/motion.js');
+const VERTEX_HIT_RADIUS = 46;
+const DEFAULT_VISIBLE = Object.freeze({ sides: true, vertices: true, sideLabels: false, angleArcs: false, angleLabels: false, ticks: false, square: false });
+
+/** Every corner mark is the same size, big enough to read at a glance. */
+const CORNER_RADIUS = 80;
+/** The right-angle square: the same share of the corner as on the card figures, so it reads as big as an arc. */
+const SQUARE = CORNER_RADIUS * 0.7;
+const normaliseSet = (value) => (value === true ? [0, 1, 2] : Array.isArray(value) ? value : []);
+
+function createTriangleCanvas({ host, width, height, audio }) {
+  const svg = svgEl('svg', { class: 'ws-canvas', viewBox: `0 0 ${width} ${height}`, 'aria-hidden': 'true' });
+  host.appendChild(svg);
+  const defs = svgEl('defs');
+  const pattern = svgEl('pattern', { id: 'ws-tape-ticks', patternUnits: 'userSpaceOnUse', width: PX_PER_CM, height: 16 });
+  const tickLong = svgEl('rect', { x: 0, y: 0, width: 2, height: 9, fill: '#5a4310' });
+  const tickHalf = svgEl('rect', { x: PX_PER_CM / 2 - 1, y: 0, width: 2, height: 5, fill: '#5a4310' });
+  pattern.append(tickLong, tickHalf);
+  defs.appendChild(pattern);
+  svg.appendChild(defs);
+  const toolLayer = svgEl('g', { class: 'ws-tools' });
+  const tri = svgEl('g', { class: 'ws-tri' });
+  const markLayer = svgEl('g', { class: 'ws-marks' });     // corner fills and arcs sit UNDER the sides, so nothing crosses a line
+  const fxLayer = svgEl('g', { class: 'ws-fx' });
+  svg.append(toolLayer, tri, fxLayer);
+  tri.appendChild(markLayer);
+
+  const sides = [0, 1, 2].map((i) => {
+    const group = svgEl('g', { class: 'ws-side', 'data-index': i });
+    const body = svgEl('line', { class: 'ws-side__body' });
+    const tick = svgEl('line', { class: 'ws-tick' });
+    group.append(body, tick);
+    return { group, body, tick };
+  });
+  const angles = [0, 1, 2].map((i) => {
+    const group = svgEl('g', { class: 'ws-angle', 'data-index': i });
+    const mark = svgEl('g', { class: 'ws-angle ws-angle--mark', 'data-index': i });   // same classes as the group, drawn under the sides
+    const wedge = svgEl('path', { class: 'ws-angle__wedge' });    // the filled slice of the corner (Fishing Frenzy / Polygon style)
+    const arc = svgEl('path', { class: 'ws-angle__arc' });
+    const square = svgEl('polyline', { class: 'ws-angle__square' });
+    const label = svgEl('text', { class: 'ws-angle__label' });
+    mark.append(wedge);
+    group.append(arc, square, label);
+    return { group, mark, wedge, arc, square, label };
+  });
+  const sideLabels = [0, 1, 2].map((i) => {
+    const group = svgEl('g', { class: 'ws-side-label', 'data-index': i });
+    const text = svgEl('text', { class: 'ws-side-label__text' });
+    group.append(text);
+    return { group, text };
+  });
+  const vertices = [0, 1, 2].map((i) => {
+    const group = svgEl('g', { class: 'ws-vertex', 'data-index': i });
+    const hit = svgEl('circle', { class: 'ws-vertex__hit', r: VERTEX_HIT_RADIUS });
+    const point = svgEl('g', { class: 'ws-vertex__point' });      // the dot that breathes / pulses as one piece
+    const plate = svgEl('circle', { class: 'ws-vertex__plate', r: 16 });
+    const bolt = svgEl('circle', { class: 'ws-vertex__bolt', r: 6 });
+    point.append(plate, bolt);
+    group.append(hit, point);
+    return { group, hit, point, plate, bolt };
+  });
+  for (const a of angles) markLayer.appendChild(a.mark);
+  for (const s of sides) tri.appendChild(s.group);
+  for (const a of angles) tri.appendChild(a.group);
+  for (const l of sideLabels) tri.appendChild(l.group);
+  for (const v of vertices) tri.appendChild(v.group);
+
+  let points = [[width / 2, 120], [width / 2 - 180, 420], [width / 2 + 180, 420]];
+  let visible = { ...DEFAULT_VISIBLE, sides: false, vertices: false };     // nothing until a screen places its triangle
+  let pxPerCm = PX_PER_CM;              // bigger on the measuring screens (setZoom), 1 cm stays 1 cm
+  let measured = measure(points, pxPerCm);
+  let drag = { enabled: false, goal: null, bounds: null, silentSnaps: false, onChange: null, onRelease: null };
+  let active = null;      // the drag in progress
+  let lastSnap = null;
+  let hint = null;
+  const chips = [];
+
+  const setHidden = (element, hidden) => element.classList.toggle('ws-hidden', hidden);
+  const inSet = (value, i) => value === true || (Array.isArray(value) && value.includes(i));
+
+  /** Positions every element from the current corners; cheap enough to run on every pointer move. */
+  function render() {
+    measured = measure(points, pxPerCm);
+    const angleHue = valueHues(measured.shownDeg);                // equal angles (as shown) share a colour
+    const sideHue = valueHues(measured.shownCm);                  // equal lengths share a colour
+    for (let i = 0; i < 3; i += 1) {
+      const [x1, y1] = points[i];
+      const [x2, y2] = points[(i + 1) % 3];
+      const s = sides[i];
+      s.body.setAttribute('x1', fmt(x1)); s.body.setAttribute('y1', fmt(y1));
+      s.body.setAttribute('x2', fmt(x2)); s.body.setAttribute('y2', fmt(y2));
+      const tick = tickSegment(points, i);
+      for (const [key, value] of Object.entries(tick)) s.tick.setAttribute(key, value);
+      setHidden(s.group, !visible.sides);
+      setHidden(s.tick, !(visible.ticks && measured.equalSides[i]));
+
+      const v = vertices[i];
+      v.group.setAttribute('transform', `translate(${fmt(points[i][0])} ${fmt(points[i][1])})`);
+      setHidden(v.group, !visible.vertices);
+
+      const a = angles[i];
+      const isRight = measured.rightAt === i;
+      const radius = CORNER_RADIUS;
+      a.arc.setAttribute('d', cornerArc(points, i, radius));
+      a.wedge.setAttribute('d', wedgePath(points, i, radius));
+      a.square.setAttribute('points', squarePoints(points, i, SQUARE));
+      const showArc = inSet(visible.angleArcs, i);
+      const showSquare = (visible.square || showArc) && isRight;      // a right angle is marked with its square, never a curve
+      if (showSquare) {
+        const [p1, p2, p3] = squarePoints(points, i, SQUARE).split(' ');
+        a.wedge.setAttribute('d', `M ${fmt(points[i][0])} ${fmt(points[i][1])} L ${p1} L ${p2} L ${p3} Z`);   // the square, filled
+      }
+      setHidden(a.arc, !showArc || showSquare);
+      setHidden(a.wedge, !showArc && !showSquare);
+      setHidden(a.square, !showSquare);
+      const [lx, ly] = cornerLabelPoint(points, i);
+      a.label.setAttribute('x', fmt(lx)); a.label.setAttribute('y', fmt(ly));
+      a.label.style.setProperty('--ox', `${fmt((points[i][0] - lx) * 0.75)}px`);   // the value slides out of its corner
+      a.label.style.setProperty('--oy', `${fmt((points[i][1] - ly) * 0.75)}px`);
+      a.label.textContent = formatDeg(measured.shownDeg[i]);
+      setHidden(a.label, !inSet(visible.angleLabels, i));
+      a.group.dataset.hue = String(angleHue[i]);
+      a.mark.dataset.hue = String(angleHue[i]);
+      angleClass(a, 'is-right', isRight);
+      angleClass(a, 'is-obtuse', measured.obtuseAt === i);
+
+      const l = sideLabels[i];
+      l.group.dataset.hue = String(sideHue[i]);
+      l.text.textContent = measured.shownCm[i];
+      // The number sits clear of the line and its equal-side tick whichever way the side runs: the gap
+      // grows by the half of the text that lies along the side's normal (its width on a vertical side).
+      const normal = outwardNormal(points, i);
+      const gap = 22 + Math.abs(normal[0]) * (l.text.textContent.length * 8.5) + Math.abs(normal[1]) * 15;
+      const [sx, sy] = sideLabelPoint(points, i, gap);
+      l.group.style.setProperty('--ox', `${fmt(-normal[0] * gap * 0.75)}px`);
+      l.group.style.setProperty('--oy', `${fmt(-normal[1] * gap * 0.75)}px`);
+      l.text.setAttribute('x', fmt(sx)); l.text.setAttribute('y', fmt(sy));
+      setHidden(l.group, !inSet(visible.sideLabels, i));
+    }
+    tri.dataset.bySides = measured.bySides;
+    tri.dataset.byAngles = measured.byAngles;
+  }
+
+  /* ---------- Pointer mapping (works through the stage scale and the camera's world transform) ---------- */
+  function toSvg(clientX, clientY) {
+    const matrix = svg.getScreenCTM();
+    if (!matrix) return [clientX, clientY];
+    const point = new DOMPoint(clientX, clientY).matrixTransform(matrix.inverse());
+    return [point.x, point.y];
+  }
+  function toClient(x, y) {
+    const matrix = svg.getScreenCTM();
+    if (!matrix) return { x, y };
+    const point = new DOMPoint(x, y).matrixTransform(matrix);
+    return { x: point.x, y: point.y };
+  }
+
+  /* ---------- Dragging ---------- */
+  function onPointerDown(index, event) {
+    if (!drag.enabled || active) return;
+    event.preventDefault();
+    const group = vertices[index].group;
+    try { group.setPointerCapture(event.pointerId); } catch { /* older browsers */ }
+    const pointer = toSvg(event.clientX, event.clientY);
+    active = { index, pointerId: event.pointerId, offset: vec.sub(points[index], pointer), moved: false };
+    group.classList.add('is-dragging');
+    svg.classList.add('is-dragging');
+    clearHint();
+    audio?.play('vertexPick');
+  }
+  function onPointerMove(event) {
+    if (!active || event.pointerId !== active.pointerId) return;
+    event.preventDefault();
+    const wanted = vec.add(toSvg(event.clientX, event.clientY), active.offset);
+    const constrained = constrainVertex(active.index, wanted, points, drag.bounds);
+    const { point, snapped } = snapVertex(drag.goal, active.index, constrained, points);
+    const settled = constrainVertex(active.index, point, points, drag.bounds);
+    points = points.map((p, i) => (i === active.index ? settled : p));
+    active.moved = true;
+    render();
+    if (snapped !== lastSnap) {
+      lastSnap = snapped;
+      if (snapped && !drag.silentSnaps) {
+        audio?.play(snapped === 'equal' || snapped === 'equilateral' ? 'snapEqual' : 'snapRight');
+        sparkleAt(points[active.index], { count: 6 });
+      }
+      tri.classList.toggle('is-snapped', Boolean(snapped));
+    }
+    drag.onChange?.(measured, { snapped, goalMet: goalMet(drag.goal, measured) });
+  }
+  function endDrag(event) {
+    if (!active || (event && event.pointerId !== active.pointerId)) return;
+    const { index, moved } = active;
+    vertices[index].group.classList.remove('is-dragging');
+    svg.classList.remove('is-dragging');
+    tri.classList.remove('is-snapped');
+    active = null;
+    lastSnap = null;
+    drag.onRelease?.(measured, { moved, goalMet: goalMet(drag.goal, measured), index });
+  }
+  vertices.forEach((v, index) => {
+    v.group.addEventListener('pointerdown', (event) => onPointerDown(index, event));
+    v.group.addEventListener('pointermove', onPointerMove);
+    for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) v.group.addEventListener(type, endDrag);
+  });
+  svg.addEventListener('contextmenu', (event) => event.preventDefault());
+
+  const angleClass = (a, cls, on) => { a.group.classList.toggle(cls, on); a.mark.classList.toggle(cls, on); };
+  /** Corner i's arc at radius r, trimmed to the space between the two sides (drawn over them, never across them). */
+  function cornerArc(pts, i, r = CORNER_RADIUS, fraction = 1) {
+    const { u, w, theta } = cornerFrame(pts, i);
+    const v = pts[i];
+    const sign = vec.cross(u, w) > 0 ? 1 : -1;
+    const trim = Math.min(theta * 0.3, Math.asin(Math.min(0.9, 13 / r)));       // a side's half width plus its edge
+    const a0 = trim;
+    const a1 = trim + (theta - 2 * trim) * fraction;
+    const dir = (a) => [u[0] * Math.cos(a) - sign * u[1] * Math.sin(a), sign * u[0] * Math.sin(a) + u[1] * Math.cos(a)];
+    const p0 = vec.add(v, vec.mul(dir(a0), r));
+    const p1 = vec.add(v, vec.mul(dir(a1), r));
+    return `M ${fmt(p0[0])} ${fmt(p0[1])} A ${r} ${r} 0 0 ${sign > 0 ? 1 : 0} ${fmt(p1[0])} ${fmt(p1[1])}`;
+  }
+  /** Where corner i's value goes: just past its arc, along the corner's bisector. */
+  function cornerLabelPoint(pts, i) {
+    const { bisector, theta } = cornerFrame(pts, i);
+    const distance = Math.min(170, Math.max(CORNER_RADIUS + 40, 24 / Math.sin(theta / 2) + 52));
+    return vec.add(pts[i], vec.mul(bisector, distance));
+  }
+
+  /** The filled slice of corner i: from the vertex out to the arc and back (the arc may be partly swept). */
+  function wedgePath(pts, i, radius = CORNER_RADIUS, fraction = 1) {
+    const v = pts[i];
+    return `M ${fmt(v[0])} ${fmt(v[1])} L ${arcPath(pts, i, radius, fraction).slice(2)} Z`;
+  }
+
+  /* ---------- Tools and hints ---------- */
+  function clearHint() {
+    hint?.remove();
+    hint = null;
+    for (const v of vertices) v.group.classList.remove('is-hinted');
+  }
+
+  /** A ghost corner and a dashed arrow showing which corner to drag and roughly where. */
+  function hintDirection(index) {
+    const from = points[index];
+    const target = solutionFor(drag.goal, index, points, drag.bounds);
+    const away = vec.sub(target, from);
+    return { from, target, dir: vec.length(away) > 24 ? vec.unit(away) : vec.mul(outwardNormal(points, (index + 1) % 3), 1) };
+  }
+  /** Where the ghost hand should carry corner i: from the corner, the way the hint arrow points. */
+  function ghostPath(index) {
+    if (!drag.goal) return null;
+    const { from, dir } = hintDirection(index);
+    return [[...from], vec.add(from, vec.mul(dir, 120))];
+  }
+  function showHint(index, direction = null) {
+    clearHint();
+    const from = points[index];
+    let dir = direction;
+    if (!dir) dir = hintDirection(index).dir;
+    // From the corner outwards: a dashed shaft, an arrowhead pointing the way, and the ghost corner to drag to.
+    const start = vec.add(from, vec.mul(dir, 30));
+    const shaftEnd = vec.add(from, vec.mul(dir, 66));
+    const ghost = vec.add(from, vec.mul(dir, 102));
+    const group = svgEl('g', { class: 'ws-hint' });
+    group.append(
+      svgEl('line', { class: 'ws-hint__line', x1: fmt(start[0]), y1: fmt(start[1]), x2: fmt(shaftEnd[0]), y2: fmt(shaftEnd[1]) }),
+      svgEl('polygon', { class: 'ws-hint__arrow', points: arrowHead(from, dir) }),
+      svgEl('circle', { class: 'ws-hint__ghost', cx: fmt(ghost[0]), cy: fmt(ghost[1]), r: 12 }),
+    );
+    fxLayer.appendChild(group);
+    hint = group;
+    vertices.forEach((v, i) => v.group.classList.toggle('is-hinted', i === index));
+  }
+  function arrowHead(at, dir) {
+    const base = vec.add(at, vec.mul(dir, 64));
+    const n = vec.perp(dir);
+    const p1 = vec.add(at, vec.mul(dir, 86));       // the tip points away from the corner, towards the ghost
+    const p2 = vec.add(base, vec.mul(n, 11));
+    const p3 = vec.sub(base, vec.mul(n, 11));
+    return [p1, p2, p3].map((p) => `${fmt(p[0])},${fmt(p[1])}`).join(' ');
+  }
+
+  function clearChips() {
+    chips.splice(0).forEach((chip) => chip.remove());
+  }
+  /** A bold number beside side i (the "1, 2, 3" count of PDF L02): text alone, no tag behind it. */
+  function showCountChip(index, text) {
+    const [x, y] = sideLabelPoint(points, index, 48);
+    const group = svgEl('g', { class: 'ws-coin', transform: `translate(${fmt(x)} ${fmt(y)})` });
+    group.append(svgEl('text', { class: 'ws-coin__text', y: 1 }, [document.createTextNode(text)]));
+    fxLayer.appendChild(group);
+    chips.push(group);
+    return playClassAnimation(group, 'is-pop', 500);
+  }
+
+  const reduced = () => prefersReducedMotion();
+
+  /** A glowing light runs along side i from one corner to the other, then fades (a gold trace). */
+  function traceSide(index, { delay = 0, duration = 900 } = {}) {
+    if (reduced()) return;
+    const a = points[index];
+    const b = points[(index + 1) % 3];
+    const line = svgEl('line', { class: 'ws-trace-glow', x1: fmt(a[0]), y1: fmt(a[1]), x2: fmt(b[0]), y2: fmt(b[1]), pathLength: 1 });
+    runTrace(line, delay, duration);
+  }
+  /** The same light sweeps round the arc of corner i. */
+  function traceAngle(index, { delay = 0, duration = 700 } = {}) {
+    if (reduced()) return;
+    // A right angle is marked with its square, never a curve: the light runs along the square's two edges.
+    let d = cornerArc(points, index, CORNER_RADIUS);
+    if (measured.rightAt === index) {
+      const [p, q, r] = squarePoints(points, index, SQUARE).split(' ');
+      d = `M ${p} L ${q} L ${r}`;
+    }
+    const path = svgEl('path', { class: 'ws-trace-glow', d, pathLength: 1 });
+    runTrace(path, delay, duration);
+  }
+  function runTrace(el, delay, duration) {
+    el.style.strokeDasharray = '1 1';
+    el.style.strokeDashoffset = '1';
+    setTimeout(() => {
+      fxLayer.appendChild(el);
+      const anim = el.animate?.([{ strokeDashoffset: 1, opacity: 1 }, { strokeDashoffset: 0, opacity: 1, offset: 0.6 }, { strokeDashoffset: 0, opacity: 0 }],
+        { duration, easing: 'ease-out', fill: 'both' });
+      (anim?.finished ?? Promise.resolve()).catch(() => {}).finally(() => el.remove());
+    }, delay);
+  }
+
+  /** A little burst of sparks at a point (a snap, a success): dots thrown outward. */
+  function sparkleAt([x, y], { count = 8 } = {}) {
+    if (reduced()) return;
+    const group = svgEl('g', { class: 'ws-sparks', transform: `translate(${fmt(x)} ${fmt(y)})` });
+    for (let i = 0; i < count; i += 1) {
+      const angle = (i / count) * Math.PI * 2 + Math.random() * 0.4;
+      const distance = 34 + Math.random() * 26;
+      const dot = svgEl('circle', { class: 'ws-spark', r: 4 + Math.random() * 3 });
+      dot.style.setProperty('--dx', `${(Math.cos(angle) * distance).toFixed(1)}px`);
+      dot.style.setProperty('--dy', `${(Math.sin(angle) * distance).toFixed(1)}px`);
+      group.appendChild(dot);
+    }
+    fxLayer.appendChild(group);
+    setTimeout(() => group.remove(), 700);
+  }
+
+  /** PDF L01: the triangle is built corner → side → corner → side → corner → closing side, then clicks shut. */
+  async function drawIn({ signal } = {}) {
+    visible = { ...DEFAULT_VISIBLE };
+    render();
+    tri.classList.add('is-drawing');
+    for (const s of sides) { s.body.style.strokeDasharray = ''; setHidden(s.group, true); }
+    for (const v of vertices) setHidden(v.group, true);
+    for (let i = 0; i < 3; i += 1) {
+      const v = vertices[i];
+      setHidden(v.group, false);
+      playClassAnimation(v.group, 'is-pop', 420);
+      audio?.play('bolt');
+      await wait(reduced() ? 0 : 480, signal);
+      const s = sides[i];
+      const length = measured.px[i];
+      s.body.style.strokeDasharray = `${fmt(length)} ${fmt(length)}`;
+      s.body.style.strokeDashoffset = fmt(length);
+      setHidden(s.group, false);
+      audio?.play('drawLine');
+      await tween({ duration: reduced() ? 0 : 950, ease: easings.mechanical, signal, onUpdate: (t) => {
+        s.body.style.strokeDashoffset = fmt(length * (1 - t));
+      } });
+      await wait(reduced() ? 0 : 260, signal);
+    }
+    for (const s of sides) { s.body.style.strokeDasharray = ''; s.body.style.strokeDashoffset = ''; }
+    tri.classList.remove('is-drawing');
+    audio?.play('clank', { variant: 1 });
+    await playClassAnimation(tri, 'is-closed', 620);
+  }
+
+  /** Slide the corners to new positions (the shape keeps its identity, nothing is swapped). */
+  async function morphTo(target, { duration = 800, ease = easings.inOutCubic, signal } = {}) {
+    const from = points.map((p) => [...p]);
+    if (reduced() || duration <= 0) {
+      points = target.map((p) => [...p]);
+      render();
+      return;
+    }
+    await tween({ duration, ease, signal, onUpdate: (t) => {
+      points = from.map((p, i) => [p[0] + (target[i][0] - p[0]) * t, p[1] + (target[i][1] - p[1]) * t]);
+      render();
+    } });
+    points = target.map((p) => [...p]);
+    render();
+  }
+
+  /**
+   * The tape is pulled along side i (from its far end with `fromEnd`), running beside it and up to the
+   * beaver's hand (`hand()`), then the length slides out of the side (PDF L04).
+   */
+  async function measureSide(index, { signal, fromEnd = 0, onProgress = null, hand = null } = {}) {
+    const s = sides[index];
+    const a = fromEnd ? points[(index + 1) % 3] : points[index];
+    const b = fromEnd ? points[index] : points[(index + 1) % 3];
+    const n = outwardNormal(points, index);
+    const direction = vec.unit(vec.sub(b, a));
+    const length = measured.px[index];
+    // The tape, spread along the side as far as it has been pulled: a yellow band with tick marks.
+    const stripAngle = (Math.atan2(direction[1], direction[0]) * 180) / Math.PI;
+    const beside = vec.add(a, vec.mul(n, 20));     // the tape runs alongside the side, so the side itself stays in view
+    const strip = svgEl('g', { class: 'ws-tape-strip', transform: `translate(${fmt(beside[0])} ${fmt(beside[1])}) rotate(${fmt(stripAngle)})` });
+    const band = svgEl('rect', { class: 'ws-tape-strip__band', x: 0, y: -8, width: 0, height: 16, rx: 3 });
+    const ticks = svgEl('rect', { class: 'ws-tape-strip__ticks', x: 0, y: -8, width: 0, height: 16, fill: 'url(#ws-tape-ticks)' });
+    const hook = svgEl('rect', { class: 'ws-tape-strip__hook', x: -3, y: -12, width: 7, height: 24, rx: 2 });
+    strip.append(band, ticks, hook);
+    toolLayer.appendChild(strip);
+    // The tape runs on from the tip of the strip straight into the tape measure in his hand.
+    const lead = hand ? svgEl('line', { class: 'ws-tape-strip__lead' }) : null;
+    if (hand) toolLayer.append(lead);
+    const leadTo = (tip) => {
+      const h = hand?.();
+      if (!h) return;
+      lead.setAttribute('x1', fmt(tip[0])); lead.setAttribute('y1', fmt(tip[1])); lead.setAttribute('x2', fmt(h[0])); lead.setAttribute('y2', fmt(h[1]));
+    };
+    s.group.classList.add('is-measuring');
+    audio?.play('drawLine');
+    await tween({ duration: reduced() ? 0 : 1500, ease: easings.mechanical, signal, onUpdate: (t) => {
+      const along = vec.add(a, vec.mul(direction, length * t));
+      band.setAttribute('width', fmt(length * t));
+      ticks.setAttribute('width', fmt(length * t));
+      hook.setAttribute('x', fmt(length * t - 3));
+      onProgress?.(t, along);
+      leadTo(vec.add(along, vec.mul(n, 20)));
+    } });
+    await wait(reduced() ? 0 : 450, signal);          // the reading settles on the tape
+    strip.classList.add('is-leaving');
+    lead?.classList.add('is-leaving');
+    s.group.classList.remove('is-measuring');
+    await wait(reduced() ? 0 : 400, signal);
+    strip.remove();
+    lead?.remove();
+    visible.sideLabels = [...new Set([...normaliseSet(visible.sideLabels), index])];
+    render();
+    audio?.play('measure');
+    playClassAnimation(sideLabels[index].group, 'is-pop', 600);   // the length slides out of the side
+    await wait(reduced() ? 0 : 450, signal);
+  }
+
+  /** The arc of corner i sweeps open while the value counts up beside it (the beaver holds the protractor on it, PDF L11). */
+  async function measureAngle(index, { signal } = {}) {
+    const a = angles[index];
+    const reading = measured.shownDeg[index];
+    const radius = CORNER_RADIUS;
+    angleClass(a, 'is-measuring', true);
+    visible.angleLabels = [...new Set([...normaliseSet(visible.angleLabels), index])];
+    render();
+    setHidden(a.arc, false);                          // after the redraw, so the sweep is seen
+    setHidden(a.wedge, false);
+    a.arc.setAttribute('d', cornerArc(points, index, radius, 0.02));
+    a.wedge.setAttribute('d', wedgePath(points, index, radius, 0.02));
+    audio?.play('drawLine');
+    await tween({ duration: reduced() ? 0 : 1400, ease: easings.mechanical, signal, onUpdate: (t) => {
+      a.arc.setAttribute('d', cornerArc(points, index, radius, Math.max(0.02, t)));
+      a.wedge.setAttribute('d', wedgePath(points, index, radius, Math.max(0.02, t)));
+      a.label.textContent = `${Math.round(reading * t)}°`;
+    } });
+    a.arc.setAttribute('d', cornerArc(points, index, radius));
+    a.label.textContent = formatDeg(reading);
+    visible.angleArcs = [...new Set([...normaliseSet(visible.angleArcs), index])];
+    render();                                         // the corner keeps its mark from now on
+    audio?.play('measure');
+    playClassAnimation(a.label, 'is-pop', 520);
+    angleClass(a, 'is-measuring', false);
+    await wait(reduced() ? 0 : 500, signal);
+  }
+
+  render();
+
+  return {
+    get points() { return points.map((p) => [...p]); },
+    get measured() { return measured; },
+    setPoints(next) {
+      points = next.map((p) => [...p]);
+      render();
+    },
+    /** Which parts show: sides, vertices, sideLabels, angleArcs, angleLabels (true | [indices]), ticks, square. */
+    setVisible(next, { merge = true, instant = false } = {}) {
+      visible = merge ? { ...visible, ...next } : { ...DEFAULT_VISIBLE, ...next };
+      if (instant) tri.classList.add('is-instant');      // no fade: nothing of the old shape lingers
+      render();
+      if (instant) requestAnimationFrame(() => requestAnimationFrame(() => tri.classList.remove('is-instant')));
+    },
+    get visible() { return { ...visible }; },
+    setTone(index, tone) {
+      for (const el of [sides[index].group, sideLabels[index].group]) {
+        if (tone) el.dataset.tone = tone;
+        else delete el.dataset.tone;
+      }
+    },
+    /** The shape's scale: 1 cm = PX_PER_CM × zoom px (the measuring screens show it bigger). */
+    setZoom(zoom = 1) {
+      pxPerCm = PX_PER_CM * zoom;
+      pattern.setAttribute('width', fmt(pxPerCm));
+      tickHalf.setAttribute('x', fmt(pxPerCm / 2 - 1));
+      render();
+    },
+    get pxPerCm() { return pxPerCm; },
+    get basePxPerCm() { return PX_PER_CM; },
+    /** Removes any tape or trace left by a screen that was skipped mid-measure. */
+    clearTools() {
+      toolLayer.replaceChildren();
+      fxLayer.querySelectorAll('.ws-trace-glow, .ws-tape-strip__lead').forEach((el) => el.remove());
+    },
+    clearTones() {
+      for (const el of [...sides, ...sideLabels]) delete el.group.dataset.tone;
+    },
+    /** Names some sides: they glow, the others step back, and a spark runs along each named one. */
+    emphasiseSides(indices) {
+      sides.forEach((s, i) => s.group.classList.toggle('is-emphasis', indices.includes(i)));
+      tri.classList.toggle('is-focusing', indices.length > 0);
+      svg.closest('.workshop')?.classList.toggle('is-shape-focus', indices.length > 0);
+      indices.forEach((i, n) => traceSide(i, { delay: n * 120 }));
+    },
+    emphasiseAngles(indices) {
+      angles.forEach((a, i) => angleClass(a, 'is-emphasis', indices.includes(i)));
+      tri.classList.toggle('is-focusing', indices.length > 0);
+      svg.closest('.workshop')?.classList.toggle('is-shape-focus', indices.length > 0);
+      indices.forEach((i, n) => traceAngle(i, { delay: n * 120 }));
+    },
+    clearEmphasis() {
+      for (const s of sides) s.group.classList.remove('is-emphasis');
+      for (const a of angles) angleClass(a, 'is-emphasis', false);
+      tri.classList.remove('is-focusing');
+      svg.closest('.workshop')?.classList.remove('is-shape-focus');
+    },
+    pulseSide: (i) => { traceSide(i); return playClassAnimation(sides[i].group, 'is-pulse', 620); },
+    pulseSideLabel: (i) => playClassAnimation(sideLabels[i].group, 'is-pulse', 620),
+    pulseAngle: (i) => { traceAngle(i); playClassAnimation(angles[i].mark, 'is-pulse', 700); return playClassAnimation(angles[i].group, 'is-pulse', 700); },
+    pulseAll: () => playClassAnimation(tri, 'is-closed', 620),
+    drawIn,
+    morphTo,
+    measureSide,
+    measureAngle,
+    showHint,
+    ghostPath,
+    clearHint,
+    showCountChip,
+    clearChips,
+    sparkleVertices: () => points.forEach((p) => sparkleAt(p)),
+    /** Dragging: enabled, goal ('isosceles' | 'equilateral' | 'right' | 'obtuse' | 'rightIsosceles'), bounds, callbacks. */
+    setDrag(next) {
+      drag = { ...drag, ...next };
+      if (!drag.bounds) drag.bounds = { left: 50, top: 50, right: width - 50, bottom: height - 40 };
+      svg.classList.toggle('is-draggable', Boolean(drag.enabled));
+      if (!drag.enabled && active) endDrag(null);
+    },
+    get isDragging() { return Boolean(active); },
+    toClient,
+    solutionFor: (goal, index, bounds = drag.bounds) => solutionFor(goal, index, points, bounds),
+    centroid: () => centroid(points),
+    outwardNormal: (i) => outwardNormal(points, i),
+  };
+}
+  return { createTriangleCanvas };
+});
+__define('js/learning/beaver-guide.js', function () {
+/**
+ * The beaver in the workshop: the operator, climbed down from his cab, appears only to work. He walks each
+ * side with the tape, sets the protractor on each corner, and peeks over the summary cards. Painted frames
+ * (assets/images/workshop/beaver-*.webp, generated in Figma to match the cab operator) step as short
+ * sprite cycles, each registered on his boots, hat or tool so he never jumps, with gentle body motion on top.
+ */
+const { prefersReducedMotion } = __require('js/core/motion.js');
+const DIR = 'assets/images/workshop/';
+/** Per frame: the art, its size, the x of the boots' centre, the y of the ground line, the body height (for a common scale). */
+const GUIDE_FRAMES = Object.freeze({
+  idle: { src: `${DIR}beaver-measure.webp`, width: 356, height: 619, centre: 209, ground: 612, body: 606, hat: [189, 6] },
+  blink: { src: `${DIR}beaver-idle-blink.webp`, width: 324, height: 607, centre: 198, ground: 600, body: 593, hat: [186, 7] },
+  talk: { src: `${DIR}beaver-idle-talk.webp`, width: 321, height: 607, centre: 191, ground: 600, body: 594, hat: [184, 6] },
+  // Holding the protractor: `tool` is the centre of its flat edge (set on the corner), `disc` the way its
+  // round side faces, `bodyDir` where his body is relative to the tool (so he can be kept outside the shape).
+  protLow: { src: `${DIR}beaver-protractor-low.webp`, width: 943, height: 978, centre: 300, ground: 970, body: 963, hat: [400, 7], tool: [678, 890], disc: [0, -1], bodyDir: [-1, 0] },
+  protSide: { src: `${DIR}beaver-protractor-side.webp`, width: 787, height: 990, centre: 300, ground: 982, body: 976, hat: [240, 6], tool: [560, 340], disc: [1, 0], bodyDir: [-1, 0] },
+  protHigh: { src: `${DIR}beaver-protractor-high.webp`, width: 631, height: 995, centre: 300, ground: 988, body: 763, hat: [160, 225], tool: [330, 32], disc: [0, 1], bodyDir: [0, 1] },
+  // Peeking over a card, hands on its top edge (the bottom of the picture): one listening, one talking frame, same crop.
+  peekIdle: { src: `${DIR}beaver-peek-idle.webp`, width: 867, height: 909, centre: 433, ground: 900, body: 1384, hat: [427, 10] },
+  peekTalk: { src: `${DIR}beaver-peek-talk.webp`, width: 867, height: 909, centre: 433, ground: 900, body: 1384, hat: [427, 10] },
+  walk1: { src: `${DIR}beaver-walk-1.webp`, width: 374, height: 521, centre: 203, ground: 514, body: 508, hat: [200, 6], hand: [318, 300] },
+  walk2: { src: `${DIR}beaver-walk-2.webp`, width: 332, height: 534, centre: 167, ground: 527, body: 521, hat: [164, 6], hand: [282, 312] },
+  walk3: { src: `${DIR}beaver-walk-3.webp`, width: 360, height: 520, centre: 188, ground: 513, body: 507, hat: [186, 6], hand: [303, 298] },
+  walk4: { src: `${DIR}beaver-walk-4.webp`, width: 335, height: 533, centre: 169, ground: 526, body: 520, hat: [166, 6], hand: [284, 311] },
+});
+/** Each pose is a short cycle of frames. */
+const POSES = Object.freeze({
+  idle: { frames: ['idle', 'blink', 'idle', 'blink', 'idle'], durations: [3400, 110, 160, 90, 2200] },
+  talk: { frames: ['talk', 'idle', 'talk', 'blink', 'talk', 'idle'], durations: [150, 110, 170, 90, 140, 120] },
+  protLow: { frames: ['protLow'], durations: [1000] },
+  protSide: { frames: ['protSide'], durations: [1000] },
+  protHigh: { frames: ['protHigh'], durations: [1000] },
+  walk: { frames: ['walk1', 'walk2', 'walk3', 'walk4'], durations: [115, 115, 115, 115] },
+  peek: { frames: ['peekIdle'], durations: [1000] },
+  peekTalk: { frames: ['peekTalk', 'peekIdle', 'peekTalk', 'peekTalk', 'peekIdle'], durations: [170, 110, 150, 120, 120] },
+  walkStop: { frames: ['walk1'], durations: [1000] },
+});
+const HEIGHT = 372;                      // on stage
+const SCALE = HEIGHT / 606;
+const GUIDE_IMAGES = Object.values(GUIDE_FRAMES).map((frame) => frame.src);
+
+function createBeaverGuide({ hostEl, x, groundY }) {
+  const root = document.createElement('div');
+  root.className = 'guide';
+  root.hidden = true;
+  root.setAttribute('aria-hidden', 'true');
+  root.style.left = `${x}px`;
+  root.style.top = `${groundY}px`;
+  const pivot = document.createElement('div');
+  pivot.className = 'guide__pivot';
+  const body = document.createElement('div');
+  body.className = 'guide__body';
+  pivot.appendChild(body);
+  root.appendChild(pivot);
+  const home = { x, groundY };
+  const layers = {};
+  for (const [name, frame] of Object.entries(GUIDE_FRAMES)) {
+    const image = new Image();
+    image.className = 'guide__frame';
+    image.dataset.frame = name;
+    image.alt = '';
+    image.draggable = false;
+    image.src = frame.src;
+    body.appendChild(image);
+    layers[name] = image;
+  }
+  let registration = 'feet';
+  let placed = { x: 0, y: 0, scale: 1, flip: false, rotate: 0 };
+  let shownFrame = 'idle';
+  /**
+   * Frames from different sheets differ by a few px, so each is scaled to a common body height and
+   * registered on the boots' centre (walking, measuring: his feet on the line) or on the hat's
+   * top-centre (peeking over a card: his head stays put while the mouth moves).
+   */
+  function fitFrames() {
+    for (const [name, frame] of Object.entries(GUIDE_FRAMES)) {
+      const image = layers[name];
+      const k = SCALE * (606 / (frame.body || 600));
+      const [ax, ay] = registration === 'head' ? frame.hat : registration === 'tool' ? (frame.tool ?? [frame.centre, frame.ground]) : [frame.centre, frame.ground];
+      image.style.width = `${(frame.width * k).toFixed(1)}px`;
+      image.style.height = `${(frame.height * k).toFixed(1)}px`;
+      image.style.left = `${(-ax * k).toFixed(1)}px`;
+      image.style.top = `${(-ay * k).toFixed(1)}px`;
+    }
+  }
+  fitFrames();
+  hostEl.appendChild(root);
+  let pose = 'idle';
+  let index = 0;
+  let timer = 0;
+  let present = false;
+
+  function show(frameName) {
+    shownFrame = frameName;
+    for (const [key, layer] of Object.entries(layers)) layer.classList.toggle('is-on', key === frameName);
+  }
+  function advance() {
+    clearTimeout(timer);
+    const definition = POSES[pose];
+    if (root.hidden || document.hidden || prefersReducedMotion() || definition.frames.length < 2) return;
+    timer = setTimeout(() => {
+      index = (index + 1) % definition.frames.length;
+      show(definition.frames[index]);
+      advance();
+    }, definition.durations[index]);
+  }
+  function setPose(name) {
+    pose = POSES[name] ? name : 'idle';
+    root.dataset.pose = pose;
+    index = 0;
+    show(POSES[pose].frames[0]);
+    advance();
+  }
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && !root.hidden) setPose(pose); });
+  setPose('idle');
+
+  return {
+    element: root,
+    get pose() { return pose; },
+    get isPresent() { return present; },
+    /** Steps in at the foot of the card (a short walk-in), then settles. */
+    async enter() {
+      if (present) return;
+      present = true;
+      root.hidden = false;
+      setPose('idle');
+      root.classList.remove('is-leaving');
+      root.classList.add('is-entering');
+      await new Promise((resolve) => setTimeout(resolve, prefersReducedMotion() ? 0 : 700));
+      root.classList.remove('is-entering');
+    },
+    /** Steps away (precise work, questions and checkpoints are the learner's alone). */
+    async leave() {
+      if (!present) return;
+      present = false;
+      root.classList.add('is-leaving');
+      await new Promise((resolve) => setTimeout(resolve, prefersReducedMotion() ? 0 : 500));
+      root.classList.remove('is-leaving');
+      root.hidden = true;
+      clearTimeout(timer);
+    },
+    setPose,
+    /**
+     * Walks to a spot on the card (card px, his feet), smaller and facing the way the work goes, with a
+     * slight lean into it: measuring a side from its lower end, reading a corner with the protractor.
+     */
+    moveTo({ x: toX, y: toY, scale = 0.5, flip = false, rotate = 0 }) {
+      if (flip !== placed.flip) {
+        // He turns round at once (no mirror animation), then walks.
+        root.classList.add('is-instant');
+        this.placeAt({ ...placed, flip });
+        void root.offsetWidth;
+      }
+      root.classList.remove('is-instant');
+      root.classList.add('is-walking');
+      this.placeAt({ x: toX, y: toY, scale, flip, rotate });
+      return new Promise((resolve) => setTimeout(() => { root.classList.remove('is-walking'); resolve(); }, prefersReducedMotion() ? 0 : 520));
+    },
+    /** Sets his place at once (every frame while he walks along a side). `rotate` turns him onto the side. */
+    placeAt({ x: toX, y: toY, scale = 0.5, flip = false, rotate = 0 }) {
+      placed = { x: toX, y: toY, scale, flip, rotate };
+      root.style.left = `${toX.toFixed(1)}px`;
+      root.style.top = `${toY.toFixed(1)}px`;
+      pivot.style.transform = `scale(${(flip ? -scale : scale).toFixed(3)}, ${scale.toFixed(3)}) rotate(${rotate.toFixed(1)}deg)`;
+    },
+    /** Instant placement without the walking transition (used while he walks along a side with the tape). */
+    setInstant(on) {
+      root.classList.toggle('is-instant', Boolean(on));
+    },
+    /** Where the hand that holds the tape is right now (stage px), for the tape to run up to it. */
+    handPoint() {
+      const frame = GUIDE_FRAMES[shownFrame] ?? GUIDE_FRAMES.idle;
+      const hand = frame.hand ?? [frame.centre, frame.ground - 240];
+      const k = SCALE * (606 / (frame.body || 600));
+      const [ax, ay] = registration === 'head' ? frame.hat : registration === 'tool' ? (frame.tool ?? [frame.centre, frame.ground]) : [frame.centre, frame.ground];
+      let lx = (hand[0] - ax) * k;
+      const ly = (hand[1] - ay) * k;
+      const r = (placed.rotate * Math.PI) / 180;
+      const rx = lx * Math.cos(r) - ly * Math.sin(r);
+      const ry = lx * Math.sin(r) + ly * Math.cos(r);
+      return { x: placed.x + (placed.flip ? -rx : rx) * placed.scale, y: placed.y + ry * placed.scale };
+    },
+    /**
+     * Which held-protractor frame to use at a corner, flipped or not, and how far to turn it, so that the
+     * protractor's flat edge lies along one side and its round side faces into the corner while he
+     * stays upright-ish and outside the shape. `sides` are the two unit directions from the corner.
+     */
+    pickToolPose(sides) {
+      const deg = (v) => (Math.atan2(v[1], v[0]) * 180) / Math.PI;
+      const wrap = (a) => ((a + 540) % 360) - 180;
+      const inward = [sides[0][0] + sides[1][0], sides[0][1] + sides[1][1]];
+      let best = null;
+      for (const [k, d] of sides.entries()) {
+        const other = sides[1 - k];
+        let n = [-d[1], d[0]];
+        if (n[0] * other[0] + n[1] * other[1] < 0) n = [-n[0], -n[1]];         // the perpendicular that points into the corner
+        for (const frameName of ['protLow', 'protSide', 'protHigh']) {
+          const frame = GUIDE_FRAMES[frameName];
+          for (const flip of [false, true]) {
+            const disc = [flip ? -frame.disc[0] : frame.disc[0], frame.disc[1]];
+            const body = [flip ? -frame.bodyDir[0] : frame.bodyDir[0], frame.bodyDir[1]];
+            const rotate = wrap(deg(n) - deg(disc));
+            const r = (rotate * Math.PI) / 180;
+            const bodyNow = [body[0] * Math.cos(r) - body[1] * Math.sin(r), body[0] * Math.sin(r) + body[1] * Math.cos(r)];
+            const inside = bodyNow[0] * inward[0] + bodyNow[1] * inward[1] > 0.15;
+            const cost = Math.abs(rotate) + (inside ? 1000 : 0) + (frameName === 'protLow' ? 0 : 4);
+            if (!best || cost < best.cost) best = { frameName, flip, rotate, cost };
+          }
+        }
+      }
+      return best;
+    },
+    /** 'feet' (the origin is his boots on the ground), 'head' (the top of his hat) or 'tool' (the protractor's centre). */
+    setRegistration(mode) {
+      registration = mode === 'head' || mode === 'tool' ? mode : 'feet';
+      fitFrames();
+    },
+    /** Back to his place at the foot of the card. */
+    home() {
+      return this.moveTo({ x: home.x, y: home.groundY, scale: 1, flip: false, rotate: 0 });   // every frame faces right: at home he faces the shape
+    },
+    idle: () => setPose('idle'),
+    /** While a line is spoken: the talking cycle, then back to idle (or to listening, when peeking). */
+    async talkUntil(finished) {
+      const peeking = pose === 'peek' || pose === 'peekTalk';
+      if (peeking) setPose('peekTalk');
+      else if (pose === 'idle' || pose === 'talk') setPose('talk');
+      root.classList.add('is-talking');
+      try { await finished; } finally {
+        root.classList.remove('is-talking');
+        if (pose === 'talk') setPose('idle');
+        if (pose === 'peekTalk') setPose('peek');
+      }
+    },
+    destroy() {
+      clearTimeout(timer);
+      root.remove();
+    },
+  };
+}
+  return { GUIDE_FRAMES, GUIDE_IMAGES, createBeaverGuide };
+});
+__define('js/learning/triangle-figure.js', function () {
+/**
+ * A static triangle figure (checkpoint cards, sorting cards, the summary):
+ * the same geometry as the live canvas, drawn once from a spec and fitted into a box. Side lengths,
+ * angles, ticks and the right-angle square are all computed from the shape, never typed in.
+ */
+const { cmPointsFromSpec, measure, formatDeg, PX_PER_CM } = __require('js/learning/triangle-model.js');
+const { svgEl, fmt, sideLabelPoint, arcPath, squarePoints, tickSegment, outwardNormal, cornerFrame, valueHues } = __require('js/learning/triangle-draw.js');
+/**
+ * Options: labels 'sides' | 'angles' | null; ticks (equal-side marks); square (right-angle mark); arcs;
+ * pad (room around the shape); strokeScale and labelSize (line weight and number size for the card's size).
+ */
+const MAX_SCALE = PX_PER_CM * 0.78;     // small shapes are never blown up past this
+
+function buildTriangleFigure(spec, { width = 260, height = 200, labels = null, ticks = false, square = false, arcs = false, pad = 34, strokeScale = 1, labelSize = 19 } = {}) {
+  const pts = cmPointsFromSpec(spec);
+  const xs = pts.map((p) => p[0]);
+  const ys = pts.map((p) => p[1]);
+  const spanX = Math.max(...xs) - Math.min(...xs);
+  const spanY = Math.max(...ys) - Math.min(...ys);
+  const labelPad = labels === 'angles' ? pad + labelSize * 2.6 : labels ? pad + labelSize * 1.6 : pad;   // room for the numbers outside the shape (angle values sit beyond the corners)
+  const scale = Math.min(MAX_SCALE, (width - labelPad * 2) / spanX, (height - labelPad * 2) / spanY);
+  const midX = (Math.min(...xs) + Math.max(...xs)) / 2;
+  const minY = Math.min(...ys);
+  const figureHeight = spanY * scale;
+  const baseY = height / 2 + figureHeight / 2;
+  const vertices = pts.map(([x, y]) => [width / 2 + (x - midX) * scale, baseY - (y - minY) * scale]);
+  const m = measure(vertices.map(([x, y]) => [x * (PX_PER_CM / scale), y * (PX_PER_CM / scale)]));   // true cm, whatever the fit
+  const svg = svgEl('svg', { class: 'ws-figure', viewBox: `0 0 ${width} ${height}`, width, height, 'aria-hidden': 'true' });
+  const sides = svgEl('g', { class: 'ws-figure__sides' });
+  for (let i = 0; i < 3; i += 1) {
+    const [x1, y1] = vertices[i];
+    const [x2, y2] = vertices[(i + 1) % 3];
+    const attrs = { x1: fmt(x1), y1: fmt(y1), x2: fmt(x2), y2: fmt(y2) };
+    sides.append(svgEl('line', { ...attrs, class: 'ws-figure__edge', style: `stroke-width:${14 * strokeScale}` }), svgEl('line', { ...attrs, class: 'ws-figure__body', style: `stroke-width:${8 * strokeScale}` }));
+  }
+  // Corner marks go UNDER the sides (a coloured slice rimmed by its arc, as on the big triangle), ticks on top.
+  const angleHue = valueHues(m.shownDeg);
+  const sideHue = valueHues(m.shownCm);
+  const corners = svgEl('g', { class: 'ws-figure__marks' });
+  const radius = Math.max(30, 20 * strokeScale + 14);
+  for (let i = 0; i < 3; i += 1) {
+    const isRight = m.rightAt === i;
+    const tint = `ws-corner--${m.obtuseAt === i ? 'obtuse' : angleHue[i]}`;          // each corner its own colour; an obtuse one red
+    if (square && isRight) {
+      const sq = squarePoints(vertices, i, radius * 0.7).split(' ');
+      corners.appendChild(svgEl('path', { d: `M ${fmt(vertices[i][0])} ${fmt(vertices[i][1])} L ${sq.join(' L ')} Z`, class: `ws-figure__wedge ${tint}` }));
+      corners.appendChild(svgEl('polyline', { points: sq.join(' '), class: `ws-figure__square ${tint}` }));
+    } else if (arcs) {
+      const arc = arcPath(vertices, i, radius);
+      corners.appendChild(svgEl('path', { d: `M ${fmt(vertices[i][0])} ${fmt(vertices[i][1])} L ${arc.slice(2)} Z`, class: `ws-figure__wedge ${tint}` }));
+      corners.appendChild(svgEl('path', { d: arc, class: `ws-figure__arc ${tint}` }));
+    }
+  }
+  svg.append(corners, sides);
+  const marks = svgEl('g', { class: 'ws-figure__ticks' });
+  if (ticks) {
+    m.equalSides.forEach((equal, i) => {
+      if (equal) marks.appendChild(svgEl('line', { ...tickSegment(vertices, i, 8), class: 'ws-figure__tick' }));
+    });
+  }
+  svg.appendChild(marks);
+  for (let i = 0; i < 3; i += 1) {
+    const [x, y] = vertices[i];
+    svg.appendChild(svgEl('circle', { cx: fmt(x), cy: fmt(y), r: 8 * strokeScale, class: 'ws-figure__node' }));
+  }
+  if (labels === 'sides') {
+    for (let i = 0; i < 3; i += 1) {
+      // Clear of the line and its tick whichever way the side runs: the gap grows by half the text's
+      // extent along the side's normal (its width on an upright side, its height on a flat one).
+      const text = m.shownCm[i];
+      const n = outwardNormal(vertices, i);
+      const gap = 6 * strokeScale + 6 + Math.abs(n[0]) * (text.length * labelSize * 0.29) + Math.abs(n[1]) * (labelSize * 0.55);
+      const [x, y] = sideLabelPoint(vertices, i, gap);
+      svg.appendChild(svgEl('text', { x: fmt(x), y: fmt(y), class: `ws-figure__label ws-figure__label--side ws-sidehue--${sideHue[i]}`, style: `font-size:${labelSize}px` }, [document.createTextNode(text)]));
+    }
+  }
+  if (labels === 'angles') {
+    for (let i = 0; i < 3; i += 1) {
+      // Outside the corner, straight back along its bisector: on a small card the three values never meet.
+      const text = formatDeg(m.shownDeg[i]);
+      const { bisector } = cornerFrame(vertices, i);
+      const away = 10 * strokeScale + 8 + Math.abs(bisector[0]) * (text.length * labelSize * 0.3) + Math.abs(bisector[1]) * (labelSize * 0.6);
+      const [x, y] = [vertices[i][0] - bisector[0] * away, vertices[i][1] - bisector[1] * away];
+      svg.appendChild(svgEl('text', { x: fmt(x), y: fmt(y), class: `ws-figure__label ws-figure__label--angle ws-corner--${m.obtuseAt === i ? 'obtuse' : angleHue[i]}`, style: `font-size:${labelSize}px` }, [document.createTextNode(text)]));
+    }
+  }
+  return { svg, vertices, measured: m };
+}
+  return { buildTriangleFigure };
+});
+__define('js/learning/workshop-widgets.js', function () {
+/**
+ * The board's reusable widgets: pill buttons, name badges, lenses, the option row, the multi-select grid,
+ * the sorting crates, the two-way classifier, the summary view and the ghost hand.
+ * Each returns plain DOM plus a small API; the flow (learning-flow.js) decides when they appear.
+ * Before an answer every option has the same look: no colour, size or motion gives the answer away.
+ */
+const { buildTriangleFigure } = __require('js/learning/triangle-figure.js');
+const { LEARNING_COPY } = __require('js/learning/learning-content.js');
+const { playClassAnimation, prefersReducedMotion } = __require('js/core/motion.js');
+const ASSETS = 'assets/images/workshop/';
+const WIDGET_IMAGES = [`${ASSETS}btn-uiPrimary.webp`, `${ASSETS}btn-uiNav.webp`, `${ASSETS}btn-uiSuccess.webp`, `${ASSETS}btn-uiDanger.webp`, `${ASSETS}crate-back.webp`, `${ASSETS}crate-front.webp`, `${ASSETS}card-frame.webp`, `${ASSETS}summary-card.webp`];
+
+const escapeHtml = (value) => String(value).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+function element(tag, className, html = '') {
+  const node = document.createElement(tag);
+  node.className = className;
+  if (html) node.innerHTML = html;
+  return node;
+}
+
+function place(node, { left, top, right, bottom, width, height } = {}) {
+  if (left !== undefined) node.style.left = `${left}px`;
+  if (top !== undefined) node.style.top = `${top}px`;
+  if (right !== undefined) node.style.right = `${right}px`;
+  if (bottom !== undefined) node.style.bottom = `${bottom}px`;
+  if (width !== undefined) node.style.width = `${width}px`;
+  if (height !== undefined) node.style.height = `${height}px`;
+  return node;
+}
+
+const enter = (node, name = 'is-entering', ms = 520) => playClassAnimation(node, name, ms);
+async function leave(node, ms = 320) {
+  if (!node.isConnected) return;
+  if (!prefersReducedMotion()) await playClassAnimation(node, 'is-leaving', ms);
+  node.remove();
+}
+
+/* ---------- Buttons ---------- */
+
+/** A pill button with words: CHECK (yellow), CONTINUE (green). */
+function createPillButton({ overlayEl, text, tone = 'yellow', at = {}, onPress, enabled = true }) {
+  const button = element('button', `ws-pill ws-pill--${tone} ws-interactive`, escapeHtml(text));
+  button.type = 'button';
+  button.disabled = !enabled;
+  place(button, at);
+  if (at.center) button.classList.add('ws-pill--center');
+  button.addEventListener('click', () => {
+    if (button.disabled) return;
+    onPress?.();
+  });
+  overlayEl.appendChild(button);
+  enter(button, 'is-entering', 480);
+  return {
+    element: button,
+    setEnabled(value) { button.disabled = !value; },
+    pressOnce() { button.disabled = true; },
+    remove: () => leave(button, 240),
+  };
+}
+
+/* ---------- Chips, badges, cards ---------- */
+
+function createBadge({ overlayEl, text, tone, at }) {
+  const badge = element('div', `ws-badge ws-badge--${tone}`, escapeHtml(text));
+  const { center = false, ...where } = at ?? {};
+  place(badge, where);
+  if (center) badge.classList.add('ws-badge--centred');            // hugs its word, centred on `left`
+  overlayEl.appendChild(badge);
+  enter(badge, 'is-entering', 600);
+  freshFocus(badge);
+  return { element: badge, remove: () => leave(badge) };
+}
+
+/** A lens: "BY SIDES → Isosceles". Two of them merge into the badge stack (PDF L20). */
+function createLens({ overlayEl, title, result, tone, at }) {
+  const lens = element('div', `ws-lens ws-lens--${tone}`, `<span class="ws-lens__title">${escapeHtml(title)}</span><span class="ws-lens__arrow" aria-hidden="true">→</span><span class="ws-lens__result">${escapeHtml(result)}</span>`);
+  place(lens, at);
+  overlayEl.appendChild(lens);
+  enter(lens, 'is-entering', 560);
+  freshFocus(lens);
+  return { element: lens, merge: () => playClassAnimation(lens, 'is-merging', 700), remove: () => leave(lens) };
+}
+
+function createGreatJob({ overlayEl, at }) {
+  const chip = element('div', 'ws-greatjob', `<span class="ws-greatjob__tick" aria-hidden="true"></span>${escapeHtml(LEARNING_COPY.greatJob)}`);
+  place(chip, at);
+  overlayEl.appendChild(chip);
+  enter(chip, 'is-entering', 620);
+  freshFocus(chip);
+  return { element: chip, remove: () => leave(chip) };
+}
+
+/** A newly shown chip is the focus for a moment: the rest of the overlay steps back, then comes back. */
+function freshFocus(el, ms = 1500) {
+  el.classList.add('is-fresh');
+  setTimeout(() => el.classList.remove('is-fresh'), prefersReducedMotion() ? 0 : ms);
+}
+
+/* ---------- Single-choice question: a centred row of options under the triangle ---------- */
+
+function createOptionCard({ overlayEl, prompt, options, audio, onSelect, at = { top: 556 } }) {
+  const row = element('div', 'ws-options-row');
+  row.setAttribute('role', 'radiogroup');
+  row.setAttribute('aria-label', prompt);
+  place(row, at);
+  const buttons = options.map((option, index) => {
+    const button = element('button', 'ws-option ws-option--pill ws-interactive', `<span class="ws-option__text">${escapeHtml(option)}</span>`);
+    button.type = 'button';
+    button.dataset.option = option;
+    button.setAttribute('role', 'radio');
+    button.setAttribute('aria-checked', 'false');
+    button.style.setProperty('--i', String(index));
+    button.addEventListener('click', () => {
+      if (!enabled || button.disabled) return;
+      audio?.play('uiTap');
+      for (const other of buttons) {
+        other.classList.toggle('is-selected', other === button);
+        other.setAttribute('aria-checked', String(other === button));
+      }
+      onSelect?.(option, button);
+    });
+    row.appendChild(button);
+    return button;
+  });
+  let enabled = true;
+  overlayEl.appendChild(row);
+  enter(row, 'is-entering', 560);
+  return {
+    element: row,
+    setEnabled(value) {
+      enabled = Boolean(value);
+      row.classList.toggle('is-locked', !enabled);
+    },
+    markCorrect(option) {
+      for (const button of buttons) {
+        button.classList.toggle('is-correct', button.dataset.option === option);
+        button.disabled = true;
+      }
+    },
+    /** A gentle shake; the choice is cleared so the learner can try again. */
+    async markIncorrect(option) {
+      const button = buttons.find((b) => b.dataset.option === option);
+      if (!button) return;
+      button.classList.add('is-incorrect');
+      button.classList.remove('is-selected');
+      button.disabled = true;                          // a wrong answer stays out: it cannot be tapped again
+      button.setAttribute('aria-checked', 'false');
+      await playClassAnimation(button, 'is-shaking', 520);
+    },
+    remove: () => leave(row),
+  };
+}
+
+/* ---------- Multi-select grid (CFU: which are acute-angled?) ---------- */
+
+function createMultiGrid({ overlayEl, cards, audio, onChange }) {
+  const root = element('div', 'ws-grid');
+  const selection = new Set();
+  const buttons = cards.map((card, index) => {
+    const button = element('button', 'ws-pick ws-interactive');
+    button.type = 'button';
+    button.dataset.card = card.id;
+    button.setAttribute('aria-pressed', 'false');
+    button.style.setProperty('--i', String(index));
+    button.setAttribute('aria-label', `Triangle ${card.id}`);
+    const figure = buildTriangleFigure(card.spec, { width: 318, height: 270, labels: 'angles', arcs: true, square: true, pad: 6, strokeScale: 1.2, labelSize: 21 });
+    button.append(figure.svg, element('span', 'ws-pick__tick', ''));     // picked: a tick badge, no words
+    place(button, { left: 60 + index * 370, top: 70 });
+    button.addEventListener('click', () => {
+      if (!enabled) return;
+      audio?.play('uiTap');
+      const on = !selection.has(card.id);
+      if (on) selection.add(card.id); else selection.delete(card.id);
+      button.classList.toggle('is-selected', on);
+      button.setAttribute('aria-pressed', String(on));
+      onChange?.(new Set(selection));
+    });
+    root.appendChild(button);
+    return button;
+  });
+  let enabled = true;
+  overlayEl.appendChild(root);
+  enter(root, 'is-entering', 560);
+  return {
+    element: root,
+    get selection() { return new Set(selection); },
+    setEnabled(value) { enabled = Boolean(value); root.classList.toggle('is-locked', !enabled); },
+    /** After a wrong CHECK: wrong picks shake and clear, right picks stay. */
+    async shakeWrong(correctIds) {
+      const wrong = buttons.filter((b) => selection.has(b.dataset.card) && !correctIds.includes(b.dataset.card));
+      await Promise.all(wrong.map((b) => playClassAnimation(b, 'is-shaking', 520)));
+      for (const b of wrong) {
+        selection.delete(b.dataset.card);
+        b.classList.remove('is-selected');
+        b.classList.add('is-ruled-out');
+        b.disabled = true;                             // a wrong pick cannot be picked again
+        b.setAttribute('aria-pressed', 'false');
+      }
+    },
+    markResult(correctIds) {
+      for (const b of buttons) {
+        const right = correctIds.includes(b.dataset.card);
+        b.classList.toggle('is-correct', right);
+        b.classList.toggle('is-dimmed', !right);
+      }
+    },
+    remove: () => leave(root),
+  };
+}
+
+/* ---------- Sorting: drag each triangle card into its crate ---------- */
+
+function createSortBoard({ overlayEl, cards, bins, audio, onDrop, onAllSorted }) {
+  const root = element('div', 'ws-sort');
+  // One triangle at a time sits on the bench with its lengths in view; the rest wait in a small pile on
+  // the left; the crates stand along the bottom. Reading the lengths (and the tick marks) is the task.
+  const BENCH = Object.freeze({ left: 610, top: 0, width: 340, height: 340 });   // a square card on the bench
+  const DECK_TILT = [0, -10, 10];                   // the waiting cards sit behind it, tilted left and right (a card stack)
+  const BIN = Object.freeze({ width: 280, xs: [180, 640, 1100], top: 410 });
+  const PLACED = Object.freeze({ width: 130, height: 130 });
+  const cardEls = new Map();
+  const binEls = new Map();
+  let enabled = true;
+  let selected = null;
+  let current = null;
+
+  cards.forEach((card, index) => {
+    const node = element('div', 'ws-sort-card ws-interactive is-waiting');
+    node.dataset.card = card.id;
+    node.setAttribute('role', 'button');
+    node.setAttribute('tabindex', '0');
+    node.setAttribute('aria-label', `Triangle ${card.id}`);
+    const figure = buildTriangleFigure(card.spec, { width: 320, height: 320, labels: 'sides', ticks: true, pad: 14, strokeScale: 1.5, labelSize: 25 });
+    node.appendChild(figure.svg);
+    node.style.setProperty('--i', String(index));
+    node.style.zIndex = String(3 - index);
+    place(node, BENCH);
+    node.style.setProperty('--tilt', `${DECK_TILT[index % DECK_TILT.length]}deg`);
+    root.appendChild(node);
+    cardEls.set(card.id, { node, card, figure, placed: false });
+  });
+  bins.forEach((bin, index) => {
+    const node = element('div', 'ws-bin ws-interactive');
+    node.dataset.bin = bin.id;
+    node.setAttribute('role', 'button');
+    node.setAttribute('tabindex', '0');
+    node.setAttribute('aria-label', `${bin.label} crate`);
+    // Two layers: the crate's back (behind a dropped card) and its front panel with the name (in front of it),
+    // so a card dropped in sinks into the box.
+    node.innerHTML = `<img class="ws-bin__back" src="${ASSETS}crate-back.webp" alt="" draggable="false">`;
+    node.style.setProperty('--i', String(index));
+    place(node, { left: BIN.xs[index], top: BIN.top, width: BIN.width });
+    const front = element('div', 'ws-bin-front', `<img src="${ASSETS}crate-front.webp" alt="" draggable="false"><span class="ws-bin__label">${escapeHtml(bin.label)}</span>`);
+    front.style.setProperty('--i', String(index));
+    place(front, { left: BIN.xs[index], top: BIN.top, width: BIN.width });
+    root.append(node, front);
+    binEls.set(bin.id, { node, front, bin });
+  });
+
+  const scaleFactor = () => (root.getBoundingClientRect().width / root.offsetWidth) || 1;
+  /** The crate the dragged card is over: the one it overlaps most (its opening and the air just above count). */
+  function binUnder(cardNode) {
+    const c = cardNode.getBoundingClientRect();
+    let best = null;
+    let bestArea = 0;
+    for (const { node, bin } of binEls.values()) {
+      const r = node.getBoundingClientRect();
+      const top = r.top - r.height * 0.45;
+      const w = Math.min(c.right, r.right) - Math.max(c.left, r.left);
+      const h = Math.min(c.bottom, r.bottom) - Math.max(c.top, top);
+      if (w > 0 && h > 0 && w * h > bestArea) { bestArea = w * h; best = bin.id; }
+    }
+    return best;
+  }
+  function highlightBin(id) {
+    for (const { node, front, bin } of binEls.values()) { node.classList.toggle('is-over', bin.id === id); front.classList.toggle('is-over', bin.id === id); }
+  }
+  function select(id) {
+    selected = id;
+    for (const entry of cardEls.values()) entry.node.classList.toggle('is-selected', entry.card.id === id);
+  }
+  /** The next waiting triangle grows out of the pile onto the bench. */
+  function advance() {
+    const next = [...cardEls.values()].find((e) => !e.placed && e !== current);
+    current = next ?? null;
+    if (!next) return;
+    next.node.classList.remove('is-waiting');
+    next.node.classList.add('is-current');
+    next.node.style.zIndex = '4';
+    place(next.node, BENCH);
+    audio?.play('badge');
+  }
+
+  async function settleInto(entry, binId, { dropped = false } = {}) {
+    const bin = binEls.get(binId);
+    const k = bins.findIndex((b) => b.id === binId);
+    entry.placed = true;
+    // It stays where it was dropped (over its crate): no slide back to the bench.
+    entry.node.classList.remove('is-dragging', 'is-selected', 'is-current');
+    // The lesson's cue first: the equal sides light up (none on a scalene, all three on an equilateral).
+    const equal = entry.figure.measured.equalSides;
+    const bodies = entry.node.querySelectorAll('.ws-figure__body');
+    bodies.forEach((line, i) => { if (equal[i]) line.classList.add('is-lit'); });
+    audio?.play('snapEqual');
+    await new Promise((resolve) => setTimeout(resolve, prefersReducedMotion() ? 0 : 520));
+    // Then it shrinks to just above its crate's opening and sinks in, behind the front panel, its top showing.
+    // A card dropped on the crate stays low (no hop); a card sent from the bench with a tap flies over first.
+    const left = BIN.xs[k] + (BIN.width - PLACED.width) / 2;
+    entry.node.style.transform = '';
+    entry.node.classList.add('is-placed');
+    entry.node.classList.toggle('is-dropped-in', dropped);
+    entry.node.style.zIndex = '5';
+    place(entry.node, { left, top: dropped ? BIN.top - PLACED.height + 40 : BIN.top - PLACED.height - 30, width: PLACED.width, height: PLACED.height });
+    await new Promise((resolve) => setTimeout(resolve, prefersReducedMotion() ? 0 : 480));
+    entry.node.style.zIndex = '2';                                     // between the crate's back and its front
+    entry.node.classList.add('is-dropping');
+    place(entry.node, { left, top: BIN.top - 22 });
+    await new Promise((resolve) => setTimeout(resolve, prefersReducedMotion() ? 0 : 420));
+    entry.node.classList.remove('is-dropping');
+    bodies.forEach((line) => line.classList.remove('is-lit'));
+    bin.node.classList.add('is-filled');
+    audio?.play('snapRight');
+    playClassAnimation(bin.node, 'is-receiving', 520);
+    playClassAnimation(bin.front, 'is-receiving', 520);
+    playClassAnimation(bin.front.querySelector('.ws-bin__label'), 'is-pulse', 480);
+    await new Promise((resolve) => setTimeout(resolve, prefersReducedMotion() ? 0 : 260));
+    advance();
+    if (!current) onAllSorted?.();                // only once the last card is in its crate
+  }
+  async function bounceBack(entry) {
+    entry.node.classList.remove('is-dragging');
+    entry.node.style.transform = '';
+    audio?.play('softNo');
+    // Look again: the three lengths pulse one after another.
+    entry.node.querySelectorAll('.ws-figure__label--side').forEach((el, i) => setTimeout(() => playClassAnimation(el, 'is-pulse', 560), 260 + i * 140));
+    await playClassAnimation(entry.node, 'is-shaking', 520);
+  }
+  async function attempt(cardId, binId) {
+    const entry = cardEls.get(cardId);
+    if (!entry || entry.placed || entry !== current || !enabled) return;
+    const ok = onDrop?.(cardId, binId);
+    const dropped = Boolean(entry.node.style.transform);       // dragged onto the crate (not tapped there)
+    select(null);
+    highlightBin(null);
+    if (ok) await settleInto(entry, binId, { dropped });
+    else await bounceBack(entry);
+  }
+
+  for (const entry of cardEls.values()) {
+    const { node } = entry;
+    let drag = null;
+    node.addEventListener('pointerdown', (event) => {
+      if (!enabled || entry.placed || entry !== current) return;
+      event.preventDefault();
+      try { node.setPointerCapture(event.pointerId); } catch { /* older browsers */ }
+      drag = { id: event.pointerId, x: event.clientX, y: event.clientY, moved: false };
+      node.classList.add('is-dragging');
+      audio?.play('vertexPick');
+    });
+    node.addEventListener('pointermove', (event) => {
+      if (!drag || event.pointerId !== drag.id) return;
+      const k = scaleFactor();
+      const dx = (event.clientX - drag.x) / k;
+      const dy = (event.clientY - drag.y) / k;
+      if (Math.hypot(dx, dy) > 4) drag.moved = true;
+      node.style.transform = `translate(${dx.toFixed(1)}px, ${dy.toFixed(1)}px) scale(0.72)`;
+      highlightBin(binUnder(node));
+    });
+    const finish = async (event) => {
+      if (!drag || (event && event.pointerId !== drag.id)) return;
+      const { moved } = drag;
+      drag = null;
+      if (!moved) {                                  // a tap: pick it up; tapping a crate puts it there
+        node.classList.remove('is-dragging');
+        node.style.transform = '';
+        select(selected === entry.card.id ? null : entry.card.id);
+        return;
+      }
+      const target = binUnder(node);
+      if (target) await attempt(entry.card.id, target);
+      else {
+        node.classList.remove('is-dragging');
+        node.style.transform = '';
+        highlightBin(null);
+      }
+    };
+    node.addEventListener('pointerup', finish);
+    node.addEventListener('pointercancel', finish);
+    node.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); if (entry === current) select(selected === entry.card.id ? null : entry.card.id); }
+    });
+  }
+  for (const { node, bin } of binEls.values()) {
+    const choose = () => { if (selected) attempt(selected, bin.id); };
+    node.addEventListener('click', choose);
+    node.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); choose(); }
+    });
+  }
+
+  overlayEl.appendChild(root);
+  enter(root, 'is-entering', 560);
+  setTimeout(advance, prefersReducedMotion() ? 0 : 620);
+  return {
+    element: root,
+    setEnabled(value) { enabled = Boolean(value); root.classList.toggle('is-locked', !enabled); },
+    /**
+     * Overlay-space points for the ghost hand: it presses the card's blank lower edge (never the triangle)
+     * and carries it along the crates' openings, all three alike, so the hint never gives the answer.
+     */
+    ghostPath() {
+      if (!current) return null;
+      return [[BENCH.left + BENCH.width / 2, BENCH.top + BENCH.height - 26], ...BIN.xs.map((x) => [x + BIN.width / 2, BIN.top + 14])];
+    },
+    /** The triangle on the bench, for the ghost hand to carry a copy of. */
+    currentFigure: () => current?.figure.svg ?? null,
+    /** Client-space centres and which triangle is on the bench (for the automated play-through). */
+    targets() {
+      const centre = (node) => { const r = node.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; };
+      return { current: current?.card.id ?? null, cards: Object.fromEntries([...cardEls].map(([id, e]) => [id, centre(e.node)])), bins: Object.fromEntries([...binEls].map(([id, e]) => [id, centre(e.node)])) };
+    },
+    remove: () => leave(root),
+  };
+}
+
+/** After sorting: the three triangles in their categories with a tick each (PDF CFU01 success). */
+function createSortResult({ overlayEl, cards, bins }) {
+  const root = element('div', 'ws-sort-result');
+  bins.forEach((bin, index) => {
+    const card = cards.find((c) => c.answer === bin.id);
+    const panel = element('div', `ws-result-card ws-result-card--${bin.id}`);
+    // Its lengths and tick marks stay on the figure (that is why it belongs here); the name sits on the card's edge.
+    const figure = buildTriangleFigure(card.spec, { width: 360, height: 250, labels: 'sides', ticks: true, pad: 34 });
+    panel.append(element('span', 'ws-result-card__tick', ''), figure.svg, element('span', `ws-badge ws-badge--small ws-result-card__name`, escapeHtml(bin.label)));
+    panel.style.setProperty('--i', String(index));
+    place(panel, { left: 130 + index * 450, top: 90 });
+    root.appendChild(panel);
+  });
+  overlayEl.appendChild(root);
+  enter(root, 'is-entering', 700);
+  return { element: root, remove: () => leave(root) };
+}
+
+/* ---------- Two-way classifier (CFU: by sides and by angles): two rows under the triangle ---------- */
+
+function createDualCard({ overlayEl, prompt, groups, audio, onChange, at = { top: 388 } }) {
+  const card = element('section', 'ws-dual');
+  card.setAttribute('aria-label', prompt);
+  place(card, at);
+  const selections = {};
+  const groupEls = {};
+  let enabled = true;
+  for (const group of groups) {
+    const wrap = element('div', 'ws-group');
+    wrap.dataset.group = group.id;
+    wrap.innerHTML = `<span class="ws-group__label">${escapeHtml(group.label)}</span><div class="ws-group__options" role="radiogroup" aria-label="${escapeHtml(group.label)}"></div>`;
+    const list = wrap.querySelector('.ws-group__options');
+    const buttons = group.options.map((option) => {
+      const button = element('button', 'ws-option ws-option--pill ws-interactive', `<span class="ws-option__text">${escapeHtml(option)}</span>`);
+      button.type = 'button';
+      button.dataset.option = option;
+      button.setAttribute('role', 'radio');
+      button.setAttribute('aria-checked', 'false');
+      button.addEventListener('click', () => {
+        if (!enabled) return;
+        audio?.play('uiTap');
+        selections[group.id] = option;
+        for (const other of buttons) {
+          other.classList.toggle('is-selected', other === button);
+          other.setAttribute('aria-checked', String(other === button));
+        }
+        onChange?.({ ...selections });
+        focusNextGroup();
+      });
+      list.appendChild(button);
+      return button;
+    });
+    card.appendChild(wrap);
+    groupEls[group.id] = { wrap, buttons, group };
+  }
+  overlayEl.appendChild(card);
+  enter(card, 'is-entering', 560);
+  // One row is the focus at a time: the first is open, the next waits (dimmed) until the first has an answer.
+  function focusNextGroup() {
+    const rows = [...card.querySelectorAll('.ws-group')];
+    const firstOpen = rows.findIndex((row) => !row.querySelector('.is-selected'));
+    rows.forEach((row, k) => { row.classList.toggle('is-waiting', firstOpen >= 0 && k > firstOpen); row.classList.toggle('is-active', k === firstOpen); });
+  }
+  focusNextGroup();
+  return {
+    element: card,
+    get selections() { return { ...selections }; },
+    setEnabled(value) { enabled = Boolean(value); card.classList.toggle('is-locked', !enabled); },
+    markCorrect() {
+      for (const { buttons } of Object.values(groupEls)) for (const b of buttons) { b.disabled = true; if (b.classList.contains('is-selected')) b.classList.add('is-correct'); }
+    },
+    async markWrong(groupIds) {
+      await Promise.all(groupIds.map(async (id) => {
+        const { buttons } = groupEls[id];
+        const chosen = buttons.find((b) => b.classList.contains('is-selected'));
+        if (!chosen) return;
+        chosen.classList.add('is-incorrect');
+        chosen.classList.remove('is-selected');
+        chosen.disabled = true;                        // stays out of the next try
+        chosen.setAttribute('aria-checked', 'false');
+        delete selections[id];
+        await playClassAnimation(chosen, 'is-shaking', 520);
+      }));
+      onChange?.({ ...selections });
+    },
+    remove: () => leave(card),
+  };
+}
+
+/* ---------- Summary ---------- */
+
+/**
+ * The summary (PDF p48), told as a recap: each category pops up as one big card the beaver explains from
+ * behind, then shrinks into the collection row below; last comes the "both" card with its example.
+ */
+/** Adds `cls` to each element one after another (160 ms apart), each for `ms`. */
+function inTurn(list, cls, ms) {
+  [...(list ?? [])].forEach((el, i) => setTimeout(() => playClassAnimation(el, cls, ms), prefersReducedMotion() ? 0 : i * 160));
+}
+function createSummaryView({ overlayEl, screen }) {
+  const root = element('div', 'ws-summary');
+  root.innerHTML = `<div class="ws-summary__row" aria-label="${escapeHtml(LEARNING_COPY.summary.sidesTitle)}, ${escapeHtml(LEARNING_COPY.summary.anglesTitle)}"></div>`;
+  const row = root.querySelector('.ws-summary__row');
+  const items = [...screen.bySides, ...screen.byAngles];
+  // Collected cards gather in two columns: by sides on the left, by angles on the right (nothing shown until a card lands).
+  const SLOT = Object.freeze({ width: 168, height: 168, top: 58, step: 196, xs: [90, 1302] });   // square, flat cards
+  const sideCount = screen.bySides.length;
+  const slotAt = (index) => {
+    const col = index < sideCount ? 0 : 1;
+    const k = col === 0 ? index : index - sideCount;
+    return { left: SLOT.xs[col], top: SLOT.top + k * SLOT.step, col };
+  };
+  const slots = items.map((item, index) => {
+    const slot = element('div', `ws-summary__slot ws-summary__slot--${item.tone}`);
+    const at = slotAt(index);
+    place(slot, { left: at.left, top: at.top, width: SLOT.width, height: SLOT.height });
+    row.appendChild(slot);
+    return slot;
+  });
+  const titles = [LEARNING_COPY.summary.sidesTitle, LEARNING_COPY.summary.anglesTitle].map((text, col) => {
+    const chip = element('div', 'ws-summary__title', escapeHtml(text));
+    place(chip, { left: SLOT.xs[col] + SLOT.width / 2, top: SLOT.top - 54 });
+    row.appendChild(chip);
+    return chip;
+  });
+  overlayEl.appendChild(root);
+  const BIG = { left: 545, top: 110, width: 470, height: 470 };
+  const BOTH = { left: 560, top: 92, width: 440, height: 430 };
+  let big = null;
+
+  function figureFor(item, size) {
+    const [width, height] = size;
+    return buildTriangleFigure(item.spec, { width, height, labels: null, ticks: item.labels === 'sides', arcs: item.labels === 'angles', square: true, pad: Math.round(width * 0.08), strokeScale: width > 200 ? 1.3 : 0.9 }).svg;
+  }
+  return {
+    element: root,
+    /** Pops the big card for one category (the beaver peeks over its top edge from behind). */
+    popCard(index) {
+      const item = items[index];
+      big = element('div', `ws-summary__big ws-summary__big--${item.tone}`);
+      // The figure fills the card with its lengths or angles; the name is a tag on the card's bottom edge.
+      // The rule itself is said by the beaver (his bubble) while the figure shows it.
+      const figure = buildTriangleFigure(item.spec, { width: 430, height: 370, labels: item.labels, ticks: item.labels === 'sides', arcs: item.labels === 'angles', square: true, pad: 8, strokeScale: 1.7, labelSize: 27 }).svg;
+      big.append(figure, element('span', `ws-summary__tag ws-badge ws-badge--small ws-badge--${item.tone}`, escapeHtml(item.name)));
+      place(big, BIG);
+      root.appendChild(big);
+      enter(big, 'is-entering', 620);
+      return big;
+    },
+    /** The big card shrinks into its slot in the row and stays there as a small card. */
+    async collectCard(index) {
+      const item = items[index];
+      const slot = slots[index];
+      const card = big;
+      big = null;
+      if (!card) return;
+      const target = slotAt(index);
+      titles[target.col].classList.add('is-shown');
+      card.classList.add('is-collecting');
+      card.style.left = `${target.left}px`;
+      card.style.top = `${target.top}px`;
+      card.style.width = `${SLOT.width}px`;
+      card.style.height = `${SLOT.height}px`;
+      await new Promise((resolve) => setTimeout(resolve, prefersReducedMotion() ? 0 : 560));
+      card.remove();
+      slot.classList.add('is-filled');
+      slot.append(figureFor(item, [150, 122]), element('span', `ws-summary__slot-tag ws-badge ws-badge--small ws-badge--${item.tone}`, escapeHtml(item.name)));   // the same name tag, on the card's bottom edge
+      playClassAnimation(slot, 'is-receiving', 480);
+    },
+    /** The closing card: the example classified both ways, and the sentence that says so. */
+    popBothCard() {
+      big = element('div', 'ws-summary__big ws-summary__big--both');
+      const example = buildTriangleFigure(screen.example.spec, { width: 250, height: 170, labels: null, ticks: true, square: true, pad: 16, strokeScale: 1.3 }).svg;
+      const badges = element('div', 'ws-summary__badges', screen.example.badges.map((b) => `<span class="ws-badge ws-badge--${b.tone} ws-badge--small">${escapeHtml(b.text)}</span>`).join(''));
+      big.append(example, badges, element('p', 'ws-summary__both', escapeHtml(LEARNING_COPY.summary.both)));
+      place(big, BOTH);
+      root.appendChild(big);
+      enter(big, 'is-entering', 620);
+      return big;
+    },
+    /** Spoken-word cues on the open card: its name warms up, its figure pulses (Polygon recap style). */
+    pulseName() { const el = big?.querySelector('.ws-summary__tag'); if (el) playClassAnimation(el, 'is-pulse', 700); },
+    /** Word cues on the open card (dual coding): what he says lights up in the figure as he says it. */
+    lightSides() { inTurn(big?.querySelectorAll('.ws-figure__body'), 'is-lit', 900); },
+    pulseLengths() { inTurn(big?.querySelectorAll('.ws-figure__label--side'), 'is-pulse', 700); },
+    pulseEqual() {
+      if (!big) return;
+      const labels = [...big.querySelectorAll('.ws-figure__label--side')];
+      const count = (el) => labels.filter((x) => x.textContent === el.textContent).length;
+      inTurn(labels.filter((el) => count(el) > 1), 'is-pulse', 700);
+      inTurn(big.querySelectorAll('.ws-figure__tick'), 'is-pulse', 700);
+    },
+    pulseCorners() { inTurn(big?.querySelectorAll('.ws-figure__wedge'), 'is-pulse', 700); },
+    pulseSpecial() {
+      if (!big) return;
+      const special = big.querySelectorAll('.ws-figure__square, .ws-figure__wedge.ws-corner--obtuse');
+      inTurn(special.length ? special : big.querySelectorAll('.ws-figure__wedge'), 'is-pulse', 900);
+      inTurn(big.querySelectorAll('.ws-figure__label--angle'), 'is-pulse', 700);
+    },
+    /** Once every card is home, the row hops together towards the middle, one after another. */
+    gather() {
+      slots.forEach((slot, i) => {
+        const dx = slotAt(i).col === 0 ? 16 : -16;      // each column hops towards the middle
+        slot.animate?.([{ translate: '0 0' }, { translate: `${dx}px -14px`, offset: 0.45 }, { translate: '0 0' }],   // a hop towards the middle and back: the columns stay under their titles
+          { duration: prefersReducedMotion() ? 0 : 520, delay: prefersReducedMotion() ? 0 : i * 70, easing: 'cubic-bezier(0.3, 1.2, 0.5, 1)' });
+      });
+      return new Promise((resolve) => setTimeout(resolve, prefersReducedMotion() ? 0 : 440 + slots.length * 70));
+    },
+    remove: () => leave(root),
+  };
+}
+
+/* ---------- The ghost hand: shows the gesture after a moment of idling (Fishing Frenzy's hand nudge) ---------- */
+const HAND_SVG = `<svg class="ws-ghost__hand" viewBox="-4 -4 76 90" aria-hidden="true"><path d="M20 7c0-3.6 2.9-6.5 6.5-6.5S33 3.4 33 7v25.5l3.4-1.3c3.2-1.2 6.8.3 8.1 3.4l.3.7 2.7-1c3.2-1.1 6.7.4 8 3.6l.4 1 2-.6c3.3-1 6.8.8 7.8 4.1.2.7.3 1.4.3 2.1V58c0 11.6-9.4 21-21 21h-6.4c-7.8 0-15-4.3-18.6-11.3L2.6 47.4c-1.6-3.1-.4-6.9 2.7-8.5 2.8-1.5 6.2-.7 8.1 1.8L20 49V7z" fill="#fff" stroke="#123b63" stroke-width="3.2" stroke-linejoin="round"/><path d="M33 33v12M45 35v10M55 38v8" stroke="#123b63" stroke-width="2.6" stroke-linecap="round" opacity=".55"/></svg>`;
+function createGhostHand({ hostEl }) {
+  const root = element('div', 'ws-ghost', `<span class="ws-ghost__card"></span><span class="ws-ghost__dot"></span><span class="ws-ghost__ring"></span>${HAND_SVG}`);
+  const cardEl = root.querySelector('.ws-ghost__card');
+  root.hidden = true;
+  hostEl.appendChild(root);
+  let anim = null;
+  const reduced = () => prefersReducedMotion();
+  const at = ([x, y], extra = {}) => ({ transform: `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`, ...extra });
+  /** Appear on the first point, press, travel through the rest, hold, fade. */
+  function dragFrames(pts) {
+    const step = 0.62 / Math.max(1, pts.length - 1);
+    const frames = [at(pts[0], { opacity: 0, offset: 0 }), at(pts[0], { opacity: 1, offset: 0.12 }), at(pts[0], { opacity: 1, offset: 0.22 })];
+    pts.slice(1).forEach((p, i) => frames.push(at(p, { opacity: 1, offset: 0.22 + step * (i + 1) })));
+    frames.push(at(pts[pts.length - 1], { opacity: 1, offset: 0.9 }), at(pts[pts.length - 1], { opacity: 0, offset: 1 }));
+    return frames;
+  }
+  function play(frames, duration, { pressed = false, carrying = false } = {}) {
+    anim?.cancel();
+    if (reduced()) return Promise.resolve();
+    root.hidden = false;
+    root.classList.toggle('is-dragging', pressed);
+    root.classList.toggle('is-carrying', carrying);
+    anim = root.animate(frames, { duration, easing: 'ease-in-out', fill: 'forwards' });
+    return anim.finished.then(() => { root.hidden = true; }).catch(() => {});
+  }
+  return {
+    element: root,
+    /** Press on `from`, carry a ghost of it (a corner) along `path`, let go at the end. */
+    drag(from, ...path) {
+      return play(dragFrames([from, ...path]), 1100 + 650 * path.length, { pressed: true });
+    },
+    /** The same gesture with a small see-through copy of a card (`figure`, an SVG) held above the finger. */
+    carry(figure, from, ...path) {
+      cardEl.replaceChildren(...(figure ? [figure.cloneNode(true)] : []));
+      return play(dragFrames([from, ...path]), 1100 + 650 * path.length, { pressed: true, carrying: true });
+    },
+    /** Point along the choices one after another (no tap: it never picks one). */
+    point(points) {
+      if (!points.length) return Promise.resolve();
+      const step = 0.8 / points.length;
+      const frames = [at(points[0], { opacity: 0, offset: 0 })];
+      points.forEach((p, i) => { frames.push(at(p, { opacity: 1, offset: 0.08 + step * i })); frames.push(at([p[0], p[1] + 10], { opacity: 1, offset: 0.08 + step * i + step * 0.45 })); });
+      frames.push(at(points[points.length - 1], { opacity: 0, offset: 1 }));
+      return play(frames, 900 * points.length + 600);
+    },
+    stop() { anim?.cancel(); anim = null; root.hidden = true; },
+    remove() { this.stop(); root.remove(); },
+  };
+}
+  return { WIDGET_IMAGES, createPillButton, createBadge, createLens, createGreatJob, createOptionCard, createMultiGrid, createSortBoard, createSortResult, createDualCard, createSummaryView, createGhostHand };
+});
+__define('js/learning/learning-flow.js', function () {
+/**
+ * Runs the Triangle Workshop from its content map, one screen at a time, on one cancellable timeline.
+ *
+ * Every screen moves through the same states (ENTERING → NARRATING / DEMONSTRATING → WAITING_FOR_INPUT /
+ * INTERACTING → CHECKING → FEEDBACK → REINFORCING → TRANSITIONING); the card's data-state gates pointer
+ * input, so only one state ever accepts it and animations never fight a tap. There are no NEXT buttons:
+ * a teaching screen moves on by itself once its line has been read, an interaction moves on at success,
+ * and the deck's own CHECK / CONTINUE buttons are the only ones the learner presses.
+ */
+const { LEARNING_SCREENS, LEARNING_COPY } = __require('js/learning/learning-content.js');
+const { layoutFromSpec, goalMet } = __require('js/learning/triangle-model.js');
+const { BOARD } = __require('js/learning/workshop-board.js');
+const { createPillButton, createBadge, createLens, createGreatJob, createOptionCard, createMultiGrid, createSortBoard, createSortResult, createDualCard, createSummaryView, createGhostHand } = __require('js/learning/workshop-widgets.js');
+const { createSequenceScope, wait, isAbortError, prefersReducedMotion } = __require('js/core/motion.js');
+const FRAME = Object.freeze({ center: { cx: 780, cy: 300 }, stack: { cx: 780, cy: 250 }, dual: { cx: 780, cy: 160 } });
+const DRAG_BOUNDS = Object.freeze({ left: 80, top: 40, right: BOARD.canvas.width - 80, bottom: BOARD.canvas.height - 40 });
+const SIDE_ORDER = [0, 2, 1];              // left, right, bottom: the deck's reading order (5 cm, 4 cm, 6 cm) and a clockwise walk
+const CORNER_ORDER = [0, 2, 1];            // top, right, left: clockwise
+/** The beaver appears only where he does something: measuring the shape, and explaining the summary cards. */
+const GUIDE_SCREENS = new Set(['measureSides', 'measureAngles', 'summary']);
+/** The summary's big card (surface px) and how far his head rises above it. */
+const SUMMARY_BIG = Object.freeze({ left: 545, top: 110, width: 470 });
+const SUMMARY_BOTH = Object.freeze({ left: 560, top: 92, width: 440 });
+const PEEK_HEAD = 184;                     // the peek sprite: hat top this far above the card's edge; his hands and the cut-off vest tuck behind the edge
+
+function abortError() {
+  const error = new Error('Sequence cancelled');
+  error.name = 'AbortError';
+  return error;
+}
+function withSignal(promise, signal) {
+  return new Promise((resolve, reject) => {
+    if (signal.aborted) { reject(abortError()); return; }
+    const onAbort = () => reject(abortError());
+    signal.addEventListener('abort', onAbort, { once: true });
+    promise.then((value) => { signal.removeEventListener('abort', onAbort); resolve(value); }, reject);
+  });
+}
+
+function createLearningFlow({ board, canvas, guide, audio, fx, gameState, qa = false, manual: manualAtStart = false }) {
+  let manual = manualAtStart;                // review aid: no auto-advance, every screen waits for Next (toggled live by the debug panel)
+  const scope = createSequenceScope();
+  let index = 0;
+  let stopped = false;
+  let pending = null;                        // a debug jump: the screen to run next, set while the current one is cancelled
+  let resolveNext = null;                    // manual mode: the Next tap the current screen is waiting for
+  const listeners = new Set();
+  const notify = () => { for (const fn of listeners) fn(); };
+  let current = null;
+  let state = 'ENTERING';
+  let live = {};                             // widgets of the running screen, for the QA hooks
+  const reduced = () => prefersReducedMotion();
+  const signal = () => scope.signal;
+  const pause = (ms) => wait(reduced() ? 0 : ms, scope.signal);
+
+  function setState(name) {
+    state = name;
+    board.setState(name);
+    gameState.update({ learningState: name });
+  }
+
+  /**
+   * The ghost hand: after `firstMs` without a touch it shows the gesture once, then again every few seconds
+   * while the learner idles; any touch on the card puts it away for a while. Returns a stop function.
+   */
+  function ghostGuide(show, { firstMs = 1400, everyMs = 5200, afterTouchMs = 7000 } = {}) {
+    stopGhost();
+    const hand = createGhostHand({ hostEl: board.overlayEl });
+    let timer = 0;
+    const schedule = (ms) => { clearTimeout(timer); timer = setTimeout(() => { if (state === 'INTERACTING' || state === 'WAITING_FOR_INPUT') show(hand); schedule(everyMs); }, ms); };
+    const onTouch = () => { hand.stop(); schedule(afterTouchMs); };
+    board.root.addEventListener('pointerdown', onTouch, true);
+    schedule(firstMs);
+    live.ghostStop = () => { clearTimeout(timer); board.root.removeEventListener('pointerdown', onTouch, true); hand.remove(); };
+    return live.ghostStop;
+  }
+  function stopGhost() { live.ghostStop?.(); live.ghostStop = null; }
+  /** An element's centre in overlay px (the card is scaled on the stage). */
+  function overlayPoint(el) {
+    const o = board.overlayEl.getBoundingClientRect();
+    const k = o.width / board.overlayEl.offsetWidth || 1;
+    const r = el.getBoundingClientRect();
+    return [(r.left + r.width / 2 - o.left) / k, (r.top + r.height / 2 - o.top) / k];
+  }
+  const pointAt = (selector) => (hand) => hand.point([...board.overlayEl.querySelectorAll(selector)].filter((el) => !el.disabled).map(overlayPoint));
+
+  async function clearOverlay() {
+    stopGhost();
+    const children = [...board.overlayEl.children];
+    if (!children.length) return;
+    if (!reduced()) {
+      children.forEach((child) => child.classList.add('is-leaving'));
+      await pause(420).catch(() => {});
+    }
+    children.forEach((child) => child.remove());
+    live = {};
+  }
+
+  /** The beaver steps in for the screens that are his to present, and away for the learner's own work. */
+  async function placeGuide(screen, { present = GUIDE_SCREENS.has(screen.kind) } = {}) {
+    board.setGuidePresent(present);
+    board.setGuidePeeking(false);
+    guide.setInstant(false);
+    guide.setRegistration('feet');
+    if (present) { await guide.home(); await guide.enter(); } else await guide.leave();
+  }
+
+  /* ---------- The triangle between screens: morph, keep, or place ---------- */
+  function frameFor(screen) {
+    return FRAME[screen.layout] ?? FRAME.center;
+  }
+  function classificationOf(requires) {
+    const m = canvas.measured;
+    return ['scalene', 'isosceles', 'equilateral'].includes(requires) ? m.bySides : m.byAngles;
+  }
+  /**
+   * How big this screen's triangle can be: as large as the room its layout leaves (the narration box above,
+   * the name row / answers below, the lengths outside), between 1x and 1.45x the base scale.
+   */
+  const ROOM = Object.freeze({ center: { w: 860, h: 410 }, stack: { w: 860, h: 380 }, dual: { w: 900, h: 250 } });
+  function fitZoom(screen) {
+    const room = ROOM[screen.layout] ?? ROOM.center;
+    const unit = layoutFromSpec(screen.triangle, { cx: 0, cy: 0, pxPerCm: 1 });
+    const w = Math.max(...unit.map((p) => p[0])) - Math.min(...unit.map((p) => p[0]));
+    const h = Math.max(...unit.map((p) => p[1])) - Math.min(...unit.map((p) => p[1]));
+    const base = canvas.basePxPerCm;
+    return Math.max(1, Math.min(1.45, room.w / (w * base), room.h / (h * base)));
+  }
+  async function prepareTriangle(screen) {
+    canvas.clearTools();
+    canvas.clearTones();
+    canvas.clearEmphasis();
+    canvas.clearChips();
+    canvas.clearHint();
+    canvas.setDrag({ enabled: false, goal: null });
+    if (!screen.triangle) {
+      canvas.setVisible({ sides: false, vertices: false }, { merge: false });
+      return;
+    }
+    const frame = frameFor(screen);
+    const shown = canvas.visible.sides;
+    const keepable = screen.keep && shown && (!screen.requires || classificationOf(screen.requires) === screen.requires);
+    if (!keepable) canvas.setZoom(screen.zoom ?? fitZoom(screen));        // a kept shape keeps its scale, so its lengths stay true
+    const target = layoutFromSpec(screen.triangle, { ...frame, pxPerCm: canvas.pxPerCm });
+    if (screen.kind === 'draw') {
+      // A screen that draws the triangle starts from an empty card: nothing is shown before the pen moves.
+      canvas.setVisible({ sides: false, vertices: false }, { merge: false, instant: true });
+      canvas.setPoints(target);
+      return;
+    }
+    if (keepable) {
+      // The learner's own shape stays; it only slides over if this screen frames it differently.
+      const points = canvas.points;
+      const xs = points.map((p) => p[0]);
+      const shift = frame.cx - (Math.min(...xs) + Math.max(...xs)) / 2;
+      if (Math.abs(shift) > 1) await canvas.morphTo(points.map(([x, y]) => [x + shift, y]), { duration: 600, signal: signal() });
+    } else if (shown) {
+      await canvas.morphTo(target, { duration: 1000, signal: signal() });
+    } else {
+      canvas.setPoints(target);
+    }
+    canvas.setVisible({ sides: true, vertices: true, ...(screen.show ?? {}) }, { merge: false });
+  }
+
+  /** What lights up on the summary card as each word of its rule is said. */
+  function summaryCues(item, view) {
+    const words = item.text.toLowerCase();
+    const cues = [{ phrase: item.name.split(' ')[0], run: () => view.pulseName() }];
+    if (/\bsides\b/.test(words)) cues.push({ phrase: 'sides', run: () => view.lightSides() });
+    if (/\bdifferent\b/.test(words)) cues.push({ phrase: 'different', run: () => view.pulseLengths() });
+    if (/\bequal\b/.test(words)) cues.push({ phrase: 'equal', run: () => view.pulseEqual() });
+    if (/\bangles\b/.test(words)) cues.push({ phrase: 'angles', run: () => view.pulseCorners() });
+    else if (/\bangle\b/.test(words)) cues.push({ phrase: 'angle', run: () => view.pulseCorners() });
+    if (words.includes('90°')) cues.push({ phrase: '90°', run: () => view.pulseSpecial() });
+    return cues;
+  }
+
+  /* ---------- Shared beats ---------- */
+  /** Speaks a line; `cues` ([{ phrase, run }]) fire the geometry's moves on the spoken word. */
+  async function narrate(text, options = {}) {
+    setState('NARRATING');
+    const line = board.narrate(text, options);
+    await withSignal(line.finished, signal());
+  }
+  /** A line the beaver says himself, in his speech bubble beside him (not the narration box). */
+  async function speakAsBeaver(text, focus = null) {
+    setState('NARRATING');
+    const line = board.speak(text, { focus });
+    await withSignal(line.finished, signal());
+  }
+  const fire = (fn) => () => { fn().catch(() => {}); };
+  /** Reading time after a line, then the screen moves on by itself (no button). In manual (debug) mode the
+   *  screen waits for the Next tap instead, at the end of every screen. */
+  async function settle(text = '') {
+    setState('REINFORCING');
+    if (manual) return;
+    await pause(1900 + Math.min(3400, String(text).length * 40));
+    setState('TRANSITIONING');
+  }
+  async function manualGate() {
+    if (!manual) return;
+    setState('WAITING_FOR_INPUT');
+    notify();
+    await withSignal(new Promise((resolve) => { resolveNext = resolve; }), signal());
+    resolveNext = null;
+    setState('TRANSITIONING');
+  }
+  function triangleBox() {
+    const points = canvas.points;
+    const xs = points.map((p) => p[0]);
+    const ys = points.map((p) => p[1]);
+    return { left: Math.min(...xs), right: Math.max(...xs), top: Math.min(...ys), bottom: Math.max(...ys), cx: (Math.min(...xs) + Math.max(...xs)) / 2 };
+  }
+  function badgeUnderTriangle(text, tone) {
+    const box = triangleBox();
+    audio.play('badge');
+    return createBadge({ overlayEl: board.overlayEl, text, tone, at: { left: Math.round(box.cx), top: Math.round(Math.min(box.bottom + 66, BOARD.canvas.height - 62)), center: true } });
+  }
+  /** A centred row under the triangle that chips join one after another (placed from the shape, not fixed). */
+  function rowUnderTriangle() {
+    const box = triangleBox();
+    const row = document.createElement('div');
+    row.className = 'ws-badge-row';
+    row.style.top = `${Math.round(Math.min(box.bottom + 66, BOARD.canvas.height - 70))}px`;
+    board.overlayEl.appendChild(row);
+    return { element: row, add: (widget) => { row.appendChild(widget.element); return widget; }, remove: () => row.remove() };
+  }
+  async function pulseLabelsInOrder(indices, gapMs = 640) {
+    for (const i of indices) {
+      canvas.pulseSide(i);
+      canvas.pulseSideLabel(i);
+      audio.play('bloop');
+      await pause(gapMs);
+    }
+  }
+  async function pulseAnglesInOrder(indices, gapMs = 640) {
+    for (const i of indices) {
+      canvas.pulseAngle(i);
+      audio.play('bloop');
+      await pause(gapMs);
+    }
+  }
+  function equalSideIndices() {
+    return canvas.measured.equalSides.map((equal, i) => (equal ? i : -1)).filter((i) => i >= 0);
+  }
+  /** Points the learner back at the measurements the answer rests on (also the only hint after a wrong try). */
+  async function reinforce(kind) {
+    setState('REINFORCING');
+    const m = canvas.measured;
+    if (kind === 'sides') await pulseLabelsInOrder(SIDE_ORDER);
+    else if (kind === 'angles') await pulseAnglesInOrder([0, 1, 2]);
+    else if (kind === 'equalSides') { canvas.emphasiseSides(equalSideIndices()); await pulseLabelsInOrder(equalSideIndices()); }
+    else if (kind === 'rightAngle') { canvas.emphasiseAngles([m.rightAt]); await pulseAnglesInOrder([m.rightAt]); }
+    else if (kind === 'obtuseAngle') { canvas.emphasiseAngles([m.obtuseAt]); await pulseAnglesInOrder([m.obtuseAt]); }
+    await pause(200);
+    canvas.clearEmphasis();
+  }
+  const FOOT = BOARD.canvas.height - 96;      // CHECK and CONTINUE always sit at the foot of the card
+  async function continueButton(top = FOOT) {
+    await pause(300);
+    setState('WAITING_FOR_INPUT');
+    let resolvePressed;
+    const pressed = new Promise((resolve) => { resolvePressed = resolve; });
+    const button = createPillButton({ overlayEl: board.overlayEl, text: LEARNING_COPY.continue, tone: 'green', at: { center: true, top }, onPress: () => { audio.play('uiTap'); resolvePressed(); } });
+    live.continue = button;
+    await withSignal(pressed, signal());
+    button.pressOnce();
+    setState('TRANSITIONING');
+    await button.remove();
+    live.continue = null;
+  }
+  /** Walks the beaver along a side as it is measured, clockwise round the shape, the tape running with him. */
+  async function measureSideWithGuide(i) {
+    // Corners run A (top), B (left), C (right): side i joins i and i + 1, so walking it backwards goes clockwise.
+    const start = canvas.points[(i + 1) % 3];
+    const end = canvas.points[i];
+    const d = [end[0] - start[0], end[1] - start[1]];
+    const l = Math.hypot(d[0], d[1]) || 1;
+    const dir = [d[0] / l, d[1] / l];
+    const flip = dir[0] < 0;
+    const rotate = (flip ? Math.atan2(dir[1], -dir[0]) : Math.atan2(dir[1], dir[0])) * (180 / Math.PI);
+    const n = canvas.outwardNormal(i);
+    const onSide = (p) => ({ x: BOARD.surface.left + p[0] + n[0] * 4, y: BOARD.surface.top + p[1] + n[1] * 4, scale: 0.42, flip, rotate });
+    guide.setInstant(false);
+    guide.setPose('walk');
+    await guide.moveTo(onSide(start));
+    guide.setInstant(true);
+    const hand = () => { const h = guide.handPoint(); return [h.x - BOARD.surface.left, h.y - BOARD.surface.top]; };
+    await canvas.measureSide(i, { signal: signal(), fromEnd: 1, hand, onProgress: (t, at) => guide.placeAt(onSide(at)) });
+    guide.setPose('walkStop');
+    await pause(600);
+  }
+
+  /* ---------- Screen kinds ---------- */
+  const runners = {
+    async draw(screen) {
+      setState('DEMONSTRATING');
+      await canvas.drawIn({ signal: signal() });
+      await narrate(screen.narration, { focus: screen.focus, cues: [{ phrase: 'triangle', run: () => { canvas.pulseAll(); canvas.sparkleVertices(); } }] });
+      await settle(screen.narration);
+    },
+
+    async count(screen) {
+      setState('DEMONSTRATING');
+      let counting = Promise.resolve();
+      const countSides = async () => {
+        for (const i of SIDE_ORDER) {
+          canvas.emphasiseSides([i]);
+          canvas.pulseSide(i);
+          audio.play('bloop');
+          await canvas.showCountChip(i, String(SIDE_ORDER.indexOf(i) + 1));
+          await pause(620);
+        }
+      };
+      const spoken = board.narrate(screen.narration, { focus: screen.focus, cues: [
+        { phrase: 'closed', run: () => { canvas.emphasiseSides([0, 1, 2]); canvas.pulseAll(); audio.play('clank', { variant: 2 }); setTimeout(() => canvas.clearEmphasis(), 500); } },
+        { phrase: '3', run: () => { counting = countSides(); } },
+        { phrase: 'triangle', run: () => { canvas.pulseAll(); canvas.sparkleVertices(); } },
+      ] });
+      await withSignal(spoken.finished, signal());
+      await withSignal(counting, signal());
+      await pause(400);
+      canvas.clearEmphasis();
+      await settle(screen.narration);
+      canvas.clearChips();
+    },
+
+    async morph(screen) {
+      setState('DEMONSTRATING');
+      const frame = frameFor(screen);
+      let morphing = Promise.resolve();
+      const morphAll = async () => {
+        for (const shape of screen.shapes) {
+          await canvas.morphTo(layoutFromSpec(shape, { ...frame, pxPerCm: canvas.pxPerCm }), { duration: 1300, signal: signal() });
+          await pause(700);
+        }
+      };
+      const spoken = board.narrate(screen.narration, { cues: [{ phrase: 'different', run: () => { morphing = morphAll(); } }] });
+      await withSignal(spoken.finished, signal());
+      await withSignal(morphing, signal());
+      await settle(screen.narration);
+    },
+
+    async measureSides(screen) {
+      setState('DEMONSTRATING');
+      await speakAsBeaver(screen.narration, screen.focus);          // he says it in his own bubble, then gets to work
+      for (const i of SIDE_ORDER) await measureSideWithGuide(i);
+      guide.setInstant(false);
+      guide.setPose('walk');
+      await guide.home();
+      guide.idle();
+      await settle(screen.narration);
+    },
+
+    async measureAngles(screen) {
+      setState('DEMONSTRATING');
+      // He says it first; then, corner by corner (clockwise), he walks up, sets the protractor he holds onto
+      // the corner (its flat edge along a side, its round side into the angle), the arc sweeps while the
+      // value counts up, and he lifts it off again.
+      await speakAsBeaver(screen.narration, screen.focus);
+      const centre = canvas.centroid();
+      const unit = (v) => { const l = Math.hypot(v[0], v[1]) || 1; return [v[0] / l, v[1] / l]; };
+      for (const i of CORNER_ORDER) {
+        const v = canvas.points[i];
+        const sides = [canvas.points[(i + 1) % 3], canvas.points[(i + 2) % 3]].map((q) => unit([q[0] - v[0], q[1] - v[1]]));
+        const inward = unit([centre[0] - v[0], centre[1] - v[1]]);
+        const pose = guide.pickToolPose(sides);
+        const at = (back, rotate) => ({ x: BOARD.surface.left + v[0] - inward[0] * back, y: BOARD.surface.top + v[1] - inward[1] * back, scale: 0.5, flip: pose.flip, rotate: pose.flip ? -rotate : rotate });
+        guide.setInstant(false);
+        guide.setRegistration('feet');
+        guide.setPose('walk');
+        await guide.moveTo({ x: BOARD.surface.left + v[0] - inward[0] * 70, y: BOARD.surface.top + v[1] - inward[1] * 70 + 40, scale: 0.5, flip: pose.flip, rotate: 0 });
+        guide.setInstant(true);
+        guide.setRegistration('tool');
+        guide.setPose(pose.frameName);
+        guide.placeAt(at(34, 0));                    // the protractor just off the corner...
+        guide.setInstant(false);
+        await pause(40);
+        guide.placeAt(at(0, pose.rotate));           // ...then set onto it, turned to lie along the side
+        await pause(560);
+        await canvas.measureAngle(i, { signal: signal() });
+        await pause(500);
+        guide.placeAt(at(34, 0));                    // and lifted off
+        await pause(460);
+        guide.setInstant(true);
+        guide.setRegistration('feet');
+        guide.setPose('walkStop');
+        guide.placeAt({ x: BOARD.surface.left + v[0] - inward[0] * 70, y: BOARD.surface.top + v[1] - inward[1] * 70 + 40, scale: 0.5, flip: pose.flip, rotate: 0 });
+        guide.setInstant(false);
+      }
+      guide.setPose('walk');
+      await guide.home();
+      guide.idle();
+      await settle(screen.narration);
+    },
+
+    async compare90(screen) {
+      setState('DEMONSTRATING');
+      const eachAngle = async () => { for (const i of CORNER_ORDER) { canvas.emphasiseAngles([i]); canvas.pulseAngle(i); audio.play('bloop'); await pause(760); } };
+      const spoken = board.narrate(screen.narration, { focus: screen.focus, cues: [
+        { phrase: 'All three angles', run: fire(eachAngle) },
+        { phrase: 'acute', run: () => { canvas.emphasiseAngles([0, 1, 2]); canvas.pulseAngle(0); canvas.pulseAngle(1); canvas.pulseAngle(2); audio.play('badge'); } },
+      ] });
+      await withSignal(spoken.finished, signal());
+      await pause(300);
+      canvas.clearEmphasis();
+      await settle(screen.narration);
+    },
+
+    async question(screen) {
+      const { question } = screen;
+      let resolveAnswer = null;
+      const optionsTop = Math.round(Math.min(556, Math.max(430, triangleBox().bottom + 84)));   // under the shape and its labels
+      const card = createOptionCard({
+        overlayEl: board.overlayEl, prompt: question.prompt, options: question.options, audio, at: { top: optionsTop },
+        onSelect: (option) => resolveAnswer?.(option),
+      });
+      live.card = card;
+      await narrate(question.prompt);
+      ghostGuide(pointAt('.ws-option--pill'), { firstMs: 6000 });
+      for (;;) {
+        setState('WAITING_FOR_INPUT');
+        card.setEnabled(true);
+        const option = await withSignal(new Promise((resolve) => { resolveAnswer = resolve; }), signal());
+        resolveAnswer = null;
+        setState('CHECKING');
+        card.setEnabled(false);
+        if (option === question.correct) {
+          audio.play('correct');
+          card.markCorrect(option);
+          await reinforce(question.reinforce);
+          await pause(500);
+          break;
+        }
+        audio.play('softNo');
+        await card.markIncorrect(option);
+        await reinforce(question.reinforce);        // the hint after a wrong try: the measurements, again
+      }
+      setState('TRANSITIONING');
+      await card.remove();
+    },
+
+    async discover(screen) {
+      setState('DEMONSTRATING');
+      const m = canvas.measured;
+      const highlight = async () => {
+        if (screen.tones) {
+          for (const i of SIDE_ORDER) {
+            canvas.setTone(i, screen.tones[SIDE_ORDER.indexOf(i)]);
+            canvas.pulseSide(i);
+            canvas.pulseSideLabel(i);
+            audio.play('bloop');
+            await pause(520);
+          }
+        }
+        if (screen.highlightEqual) {
+          const equal = equalSideIndices();
+          canvas.emphasiseSides(equal);
+          await pulseLabelsInOrder(equal, 480);
+        }
+        if (screen.highlightAngles) {
+          const which = screen.highlightAngles === 'right' ? [m.rightAt] : screen.highlightAngles === 'obtuse' ? [m.obtuseAt] : screen.highlightAngles;
+          canvas.emphasiseAngles(which);
+          await pulseAnglesInOrder(which, 480);
+        }
+      };
+      const cues = [
+        { phrase: screen.cues?.highlight ?? screen.narration.split(' ')[0], run: fire(highlight) },
+        { phrase: screen.cues?.name ?? screen.badge.toLowerCase(), run: () => { live.badge = badgeUnderTriangle(screen.badge, screen.tone); canvas.sparkleVertices(); } },
+      ];
+      await narrate(screen.narration, { focus: screen.focus, cues });
+      if (!live.badge) live.badge = badgeUnderTriangle(screen.badge, screen.tone);
+      await settle(screen.narration);
+      canvas.clearEmphasis();
+    },
+
+    async drag(screen) {
+      await narrate(screen.narration);
+      if (screen.instruction) {                  // the question is read first; then the box swaps to the instruction
+        await pause(700);
+        await narrate(screen.instruction);
+      }
+      setState('INTERACTING');
+      let resolveDone;
+      const done = new Promise((resolve) => { resolveDone = resolve; });
+      let hintTimer = 0;
+      const showHint = () => { if (!canvas.isDragging) canvas.showHint(screen.hintVertex ?? 0); };
+      canvas.setDrag({
+        enabled: true, goal: screen.goal, bounds: DRAG_BOUNDS, silentSnaps: Boolean(screen.silentSnaps),
+        onChange: () => {},
+        onRelease: (m, { goalMet: met }) => { if (met) resolveDone(m); },
+      });
+      // Teaching screens show the ghost corner at once; checkpoints only after a while without success.
+      if (screen.hintAfterMs) hintTimer = setTimeout(showHint, screen.hintAfterMs);
+      else showHint();
+      ghostGuide((hand) => { const path = canvas.ghostPath(screen.hintVertex ?? 0); if (path && !canvas.isDragging) hand.drag(...path); }, { firstMs: screen.hintAfterMs ? 8000 : 1600 });
+      try {
+        await withSignal(done, signal());
+      } finally {
+        clearTimeout(hintTimer);
+        canvas.setDrag({ enabled: false, goal: null });
+        canvas.clearHint();
+        stopGhost();
+      }
+      setState('FEEDBACK');
+      canvas.sparkleVertices();
+      const m = canvas.measured;
+      if (screen.success?.final) {
+        await this.finalSuccess(screen);
+        return;
+      }
+      audio.play('correct');
+      if (screen.goal === 'isosceles' || screen.goal === 'equilateral') {
+        canvas.emphasiseSides(equalSideIndices());
+        await pulseLabelsInOrder(equalSideIndices(), 300);
+      } else if (screen.goal === 'right') {
+        canvas.emphasiseAngles([m.rightAt]);
+        await pulseAnglesInOrder([m.rightAt], 300);
+      } else if (screen.goal === 'obtuse') {
+        canvas.emphasiseAngles([m.obtuseAt]);
+        await pulseAnglesInOrder([m.obtuseAt], 300);
+      }
+      if (screen.success) {
+        await narrate(screen.success.narration, { cues: [{ phrase: screen.success.name ?? screen.success.badge.toLowerCase(), run: () => { live.badge = badgeUnderTriangle(screen.success.badge, screen.success.tone); canvas.sparkleVertices(); } }] });
+        if (!live.badge) live.badge = badgeUnderTriangle(screen.success.badge, screen.success.tone);
+        await settle(screen.success.narration);
+      } else {
+        await pause(1100);          // the next screen names what the learner just made
+      }
+      canvas.clearEmphasis();
+    },
+
+    /** The right-angled isosceles triangle: each condition is shown and named in turn, then the celebration. */
+    async finalSuccess(screen) {
+      const m = canvas.measured;
+      audio.play('snapRight');
+      canvas.emphasiseSides(equalSideIndices());
+      await pulseLabelsInOrder(equalSideIndices(), 320);
+      live.row = rowUnderTriangle();
+      audio.play('badge');
+      live.badgeA = live.row.add(createBadge({ overlayEl: board.overlayEl, text: screen.success.badges[0].text, tone: screen.success.badges[0].tone, at: {} }));
+      await pause(760);
+      canvas.emphasiseAngles([m.rightAt]);
+      await pulseAnglesInOrder([m.rightAt], 320);
+      audio.play('badge');
+      live.badgeB = live.row.add(createBadge({ overlayEl: board.overlayEl, text: screen.success.badges[1].text, tone: screen.success.badges[1].tone, at: {} }));
+      await pause(700);
+      audio.play('celebration');
+      fx.confetti(70);
+      await narrate(screen.success.narration, { focus: 'sides and angles', cues: [
+        { phrase: 'sides', run: () => { canvas.emphasiseSides(equalSideIndices()); equalSideIndices().forEach((i) => canvas.pulseSideLabel(i)); } },
+        { phrase: 'angles', run: () => { canvas.clearEmphasis(); canvas.emphasiseAngles([m.rightAt]); canvas.pulseAngle(m.rightAt); live.greatJob = live.row.add(createGreatJob({ overlayEl: board.overlayEl, at: {} })); canvas.sparkleVertices(); } },
+      ] });
+      await settle(screen.success.narration);
+      canvas.clearEmphasis();
+    },
+
+    async sort(screen) {
+      await narrate(screen.narration);
+      setState('INTERACTING');
+      let resolveDone;
+      const done = new Promise((resolve) => { resolveDone = resolve; });
+      const sorter = createSortBoard({
+        overlayEl: board.overlayEl, cards: screen.cards, bins: screen.bins, audio,
+        onDrop: (cardId, binId) => screen.cards.find((c) => c.id === cardId)?.answer === binId,
+        onAllSorted: () => resolveDone(),
+      });
+      live.sorter = sorter;
+      ghostGuide((hand) => { const path = sorter.ghostPath(); if (path) hand.carry(sorter.currentFigure(), ...path); }, { firstMs: 2200 });
+      await withSignal(done, signal());
+      stopGhost();
+      setState('FEEDBACK');
+      sorter.setEnabled(false);
+      audio.play('tada');
+      await pause(1400);                        // all three cards rest in their crates for a moment
+      await sorter.remove();
+      live.sorter = null;
+      live.result = createSortResult({ overlayEl: board.overlayEl, cards: screen.cards, bins: screen.bins });
+      await narrate(screen.success);
+      await continueButton();
+    },
+
+    async multi(screen) {
+      await narrate(screen.narration);
+      setState('INTERACTING');
+      let resolveChecked;
+      let checked = new Promise((resolve) => { resolveChecked = resolve; });
+      const grid = createMultiGrid({ overlayEl: board.overlayEl, cards: screen.cards, audio, onChange: (selection) => check.setEnabled(selection.size > 0) });
+      const check = createPillButton({ overlayEl: board.overlayEl, text: LEARNING_COPY.check, tone: 'yellow', at: { center: true, top: FOOT }, enabled: false, onPress: () => { audio.play('uiTap'); resolveChecked(); } });
+      live.grid = grid;
+      live.check = check;
+      ghostGuide(pointAt('.ws-pick'), { firstMs: 6000 });
+      for (;;) {
+        await withSignal(checked, signal());
+        setState('CHECKING');
+        grid.setEnabled(false);
+        check.setEnabled(false);
+        const picked = [...grid.selection].sort();
+        const correct = [...screen.correct].sort();
+        if (picked.join() === correct.join()) break;
+        audio.play('softNo');
+        await grid.shakeWrong(screen.correct);
+        checked = new Promise((resolve) => { resolveChecked = resolve; });
+        setState('INTERACTING');
+        grid.setEnabled(true);
+        check.setEnabled(grid.selection.size > 0);
+      }
+      setState('FEEDBACK');
+      audio.play('correct');
+      grid.markResult(screen.correct);
+      await check.remove();
+      live.check = null;
+      await narrate(screen.success);
+      await continueButton();
+    },
+
+    async dual(screen) {
+      await narrate(screen.narration);
+      setState('INTERACTING');
+      let resolveChecked;
+      let checked = new Promise((resolve) => { resolveChecked = resolve; });
+      const bothChosen = (s) => screen.groups.every((g) => s[g.id]);
+      const card = createDualCard({ overlayEl: board.overlayEl, prompt: screen.prompt, groups: screen.groups, audio, at: { top: 372 }, onChange: (s) => check.setEnabled(bothChosen(s)) });
+      const check = createPillButton({ overlayEl: board.overlayEl, text: LEARNING_COPY.check, tone: 'yellow', at: { center: true, top: FOOT }, enabled: false, onPress: () => { audio.play('uiTap'); resolveChecked(); } });
+      live.card = card;
+      live.check = check;
+      ghostGuide(pointAt('.ws-dual .ws-option--pill'), { firstMs: 6000 });
+      for (;;) {
+        await withSignal(checked, signal());
+        setState('CHECKING');
+        card.setEnabled(false);
+        check.setEnabled(false);
+        const picks = card.selections;
+        const wrong = screen.groups.filter((g) => picks[g.id] !== g.correct).map((g) => g.id);
+        if (!wrong.length) break;
+        audio.play('softNo');
+        await card.markWrong(wrong);
+        checked = new Promise((resolve) => { resolveChecked = resolve; });
+        setState('INTERACTING');
+        card.setEnabled(true);
+        check.setEnabled(bothChosen(card.selections));
+      }
+      setState('FEEDBACK');
+      audio.play('correct');
+      card.markCorrect();
+      await pause(600);
+      await Promise.all([card.remove(), check.remove()]);
+      live.card = null;
+      live.check = null;
+      // Sides first, then the angle: both classification systems, each on its word.
+      const m = canvas.measured;
+      live.row = rowUnderTriangle();
+      const chip = (b) => { audio.play('badge'); return live.row.add(createBadge({ overlayEl: board.overlayEl, text: b.text, tone: b.tone, at: {} })); };
+      await narrate(screen.success.narration, { cues: [
+        { phrase: 'scalene', run: () => { canvas.emphasiseSides([0, 1, 2]); fire(() => pulseLabelsInOrder(SIDE_ORDER, 240))(); live.badgeA = chip(screen.success.badges[0]); } },
+        { phrase: 'obtuse-angled', run: () => { canvas.clearEmphasis(); canvas.emphasiseAngles([m.obtuseAt]); canvas.pulseAngle(m.obtuseAt); live.badgeB = chip(screen.success.badges[1]); canvas.sparkleVertices(); } },
+      ] });
+      await settle(screen.success.narration);
+      canvas.clearEmphasis();
+    },
+
+    async dualReveal(screen) {
+      setState('DEMONSTRATING');
+      const m = canvas.measured;
+      live.row = rowUnderTriangle();
+      const chip = (b) => { audio.play('badge'); return live.row.add(createBadge({ overlayEl: board.overlayEl, text: b.text, tone: b.tone, at: {} })); };
+      await narrate(screen.narration, { focus: screen.focus, cues: [
+        // "isosceles": the two equal sides light up (the rest steps back) and its name pops under the shape
+        { phrase: 'isosceles', run: () => { canvas.emphasiseSides(equalSideIndices()); equalSideIndices().forEach((i) => canvas.pulseSideLabel(i)); live.badgeA = chip(screen.badges[0]); } },
+        // "right angled": now the 90° corner lights up and its name joins the first
+        { phrase: 'right angled', run: () => { canvas.clearEmphasis(); canvas.emphasiseAngles([m.rightAt]); canvas.pulseAngle(m.rightAt); live.badgeB = chip(screen.badges[1]); canvas.sparkleVertices(); } },
+      ] });
+      await settle(screen.narration);
+      canvas.clearEmphasis();
+    },
+
+    async lenses(screen) {
+      setState('DEMONSTRATING');
+      const m = canvas.measured;
+      let lensA = null;
+      let lensB = null;
+      live.row = rowUnderTriangle();
+      const lensChip = (k) => { audio.play('badge'); return live.row.add(createLens({ overlayEl: board.overlayEl, title: screen.lenses[k].title, result: screen.lenses[k].result, tone: screen.lenses[k].tone, at: {} })); };
+      const spoken = board.narrate(screen.narration, { focus: screen.focus, cues: [
+        { phrase: 'sides', run: () => { lensA = lensChip(0); canvas.emphasiseSides(equalSideIndices()); equalSideIndices().forEach((i) => canvas.pulseSideLabel(i)); } },
+        { phrase: 'angles', run: () => { canvas.clearEmphasis(); lensB = lensChip(1); canvas.emphasiseAngles([m.rightAt]); canvas.pulseAngle(m.rightAt); } },
+      ] });
+      await withSignal(spoken.finished, signal());
+      lensA ??= lensChip(0);
+      lensB ??= lensChip(1);
+      await pause(700);
+      canvas.clearEmphasis();
+      // The two lenses merge into the two names, in the same row under the shape.
+      await Promise.all([lensA.merge(), lensB.merge()]);
+      await Promise.all([lensA.remove(), lensB.remove()]);
+      audio.play('badge');
+      live.badgeA = live.row.add(createBadge({ overlayEl: board.overlayEl, text: 'ISOSCELES', tone: 'isosceles', at: {} }));
+      await pause(200);
+      audio.play('badge');
+      live.badgeB = live.row.add(createBadge({ overlayEl: board.overlayEl, text: 'RIGHT-ANGLED', tone: 'right', at: {} }));
+      await settle(screen.narration);
+    },
+
+    /**
+     * The recap (PDF p48): each category pops up as one big card, the beaver pops up behind it with
+     * only his head showing and explains it, then the card shrinks into the row; last, the "both" card.
+     */
+    async summary(screen) {
+      setState('DEMONSTRATING');
+      await guide.leave();
+      await narrate(LEARNING_COPY.summary.heading);
+      await settle(LEARNING_COPY.summary.heading);
+      board.hideNarration();                 // from here the beaver explains each card in his own bubble
+      const view = createSummaryView({ overlayEl: board.overlayEl, screen });
+      live.summary = view;
+      const items = [...screen.bySides, ...screen.byAngles];
+      // Registered on his hat: `peek` rests his hands on the card's top edge, `duck` hides him behind the card.
+      const headX = (card) => BOARD.surface.left + card.left + Math.round(card.width * 0.3);
+      const peek = (card) => ({ x: headX(card), y: BOARD.surface.top + card.top - PEEK_HEAD, scale: 0.9, flip: false, rotate: 0 });
+      const duck = (card) => ({ x: headX(card), y: BOARD.surface.top + card.top + 60, scale: 0.9, flip: false, rotate: 0 });
+      const rise = async (card) => { guide.element.classList.remove('is-ducked'); guide.setPose('peek'); await guide.moveTo(peek(card)); };
+      const sink = async (card) => { await guide.moveTo(duck(card)); guide.element.classList.add('is-ducked'); };
+      // His bubble opens to the right of his head, its tail at his mouth.
+      const say = (card, text, cues = null) => {
+        setState('NARRATING');
+        const line = board.speak(text, { tip: { x: headX(card) + 150, y: BOARD.surface.top + card.top - 70 }, cues, holdMs: 700 });
+        return withSignal(line.finished, signal());
+      };
+      board.setGuidePeeking(true);
+      board.setGuidePresent(true);
+      guide.setRegistration('head');
+      guide.setInstant(true);
+      guide.setPose('peek');
+      guide.placeAt(duck(SUMMARY_BIG));
+      guide.setInstant(false);
+      guide.element.classList.add('is-ducked');
+      guide.element.hidden = false;
+      for (let i = 0; i < items.length; i += 1) {
+        view.popCard(i);
+        audio.play('badge');
+        await pause(300);
+        await rise(SUMMARY_BIG);
+        // He names it (the name glows) and gives its rule (the figure lights up on the rule's first word).
+        await say(SUMMARY_BIG, `${items[i].name}. ${items[i].text}`, summaryCues(items[i], view));
+        await pause(500);
+        await sink(SUMMARY_BIG);
+        audio.play('snapEqual');
+        await view.collectCard(i);            // the card flies to its column: sides on the left, angles on the right
+        await pause(240);
+      }
+      await view.gather();
+      audio.play('correct');
+      view.popBothCard();
+      audio.play('badge');
+      await pause(300);
+      await rise(SUMMARY_BOTH);
+      await say(SUMMARY_BOTH, LEARNING_COPY.summary.both);
+      await pause(400);
+      setState('WAITING_FOR_INPUT');
+      let resolvePressed;
+      const pressed = new Promise((resolve) => { resolvePressed = resolve; });
+      const button = createPillButton({ overlayEl: board.overlayEl, text: LEARNING_COPY.summary.cta, tone: 'green', at: { center: true, top: FOOT }, onPress: () => { audio.play('uiTap'); resolvePressed(); } });
+      live.cta = button;
+      await withSignal(pressed, signal());
+      button.pressOnce();
+      setState('TRANSITIONING');
+      await sink(SUMMARY_BOTH);
+      await Promise.all([button.remove(), view.remove()]);
+      board.setGuidePeeking(false);
+      guide.element.classList.remove('is-ducked');
+      await guide.leave();
+    },
+  };
+
+  async function runScreen(screen) {
+    current = screen;
+    gameState.update({ learningScreen: screen.id });
+    board.cancelCues();
+    await clearOverlay();
+    board.clearNarration();
+    board.narrationEl.hidden = true;               // it opens with the screen's first line, never empty
+    await Promise.all([prepareTriangle(screen), screen.kind === 'summary' ? Promise.resolve() : placeGuide(screen)]);
+    const runner = runners[screen.kind];
+    if (!runner) throw new Error(`Unknown learning screen kind: ${screen.kind}`);
+    notify();
+    await runner.call(runners, screen);
+    await manualGate();
+  }
+
+  /* ---------- QA hooks (?qa=1 or DEBUG_MODE): read-only state and client-space targets ---------- */
+  function installHooks() {
+    const client = (point) => canvas.toClient(point[0], point[1]);
+    window.__learning = {
+      state: () => ({
+        id: current?.id ?? null,
+        kind: current?.kind ?? null,
+        state,
+        index,
+        total: LEARNING_SCREENS.length,
+        narration: board.narrationText,
+        badges: [...board.overlayEl.querySelectorAll('.ws-badge')].map((b) => b.textContent),
+        guide: guide.isPresent ? guide.pose : null,
+        measured: canvas.measured,
+        points: canvas.points,
+      }),
+      dragTarget(vertexIndex) {
+        const goal = current?.goal;
+        if (!goal) return null;
+        const i = vertexIndex ?? current.hintVertex ?? 0;
+        const from = canvas.points[i];
+        return { index: i, from: client(from), to: client(canvas.solutionFor(goal, i, DRAG_BOUNDS)) };
+      },
+      vertexClient: (i) => client(canvas.points[i]),
+      sortTargets: () => live.sorter?.targets() ?? null,
+      buttons: () => [...board.overlayEl.querySelectorAll('button')].map((b) => { const r = b.getBoundingClientRect(); return { text: b.textContent.trim() || b.getAttribute('aria-label'), option: b.dataset.option ?? b.dataset.card ?? null, x: r.left + r.width / 2, y: r.top + r.height / 2, disabled: b.disabled, cls: b.className }; }),
+    };
+  }
+
+  return {
+    get state() { return state; },
+    get current() { return current; },
+    async run(startId) {
+      if (qa) installHooks();
+      index = startId ? Math.max(0, LEARNING_SCREENS.findIndex((s) => s.id === startId)) : 0;
+      while (index < LEARNING_SCREENS.length && !stopped) {
+        const screen = LEARNING_SCREENS[index];
+        setState('ENTERING');
+        try {
+          await runScreen(screen);
+        } catch (error) {
+          if (stopped) return false;
+          if (pending === null && isAbortError(error)) return false;
+          if (pending === null) console.error(`[learning] screen ${screen.id} failed; moving on:`, error);
+        }
+        if (pending !== null) {                 // a debug jump: cancel left the current screen, go where it points
+          index = pending;
+          pending = null;
+          continue;
+        }
+        index += 1;
+      }
+      notify();
+      return !stopped;
+    },
+    /* ---- Debug navigation (?debug=1): jump anywhere; Next and Back replay a screen from its start ---- */
+    get index() { return index; },
+    get screens() { return LEARNING_SCREENS; },
+    onChange(listener) { listeners.add(listener); return () => listeners.delete(listener); },
+    /** Turns the review mode on or off while running; turning it off releases a screen waiting for Next. */
+    setManual(on) {
+      manual = Boolean(on);
+      if (!manual) resolveNext?.();
+    },
+    get manual() { return manual; },
+    jumpTo(target) {
+      const i = typeof target === 'string' ? LEARNING_SCREENS.findIndex((s) => s.id === target) : target;
+      if (i < 0 || i >= LEARNING_SCREENS.length || stopped) return;
+      pending = i;
+      board.cancelCues();
+      board.stopVoice();
+      canvas.setDrag({ enabled: false, goal: null });
+      scope.cancel();                         // the running screen stops; run() picks up `pending`
+    },
+    next() {
+      if (resolveNext) { resolveNext(); return; }   // waiting at the end of a screen: move on normally
+      this.jumpTo(index + 1);
+    },
+    back() {
+      this.jumpTo(Math.max(0, index - 1));
+    },
+    stop() {
+      stopped = true;
+      scope.cancel();
+      board.cancelCues();
+      canvas.setDrag({ enabled: false, goal: null });
+      if (window.__learning) delete window.__learning;
+    },
+  };
+}
+  return { createLearningFlow };
+});
+__define('js/learning/debug-panel.js', function () {
+/**
+ * TEMPORARY review aid (?debug=1): a small panel over the stage with a screen list, Back and Next.
+ * With it on, the lesson never moves on by itself: every screen plays its dialogue and animation and
+ * then waits for Next; Back replays the previous screen from its start; the list jumps anywhere.
+ */
+function createDebugPanel({ hostEl, flow }) {
+  const panel = document.createElement('div');
+  panel.className = 'ws-debug';
+  panel.innerHTML = `
+    <button type="button" class="ws-debug__btn" data-act="back" aria-label="Back">◀ Back</button>
+    <select class="ws-debug__select" aria-label="Jump to a screen"></select>
+    <button type="button" class="ws-debug__btn ws-debug__btn--next" data-act="next" aria-label="Next">Next ▶</button>
+    <span class="ws-debug__state"></span>`;
+  const select = panel.querySelector('.ws-debug__select');
+  const stateEl = panel.querySelector('.ws-debug__state');
+  for (const screen of flow.screens) {
+    const option = document.createElement('option');
+    option.value = screen.id;
+    option.textContent = `${screen.id} · ${screen.kind}`;
+    select.appendChild(option);
+  }
+  select.addEventListener('change', () => flow.jumpTo(select.value));
+  panel.querySelector('[data-act="back"]').addEventListener('click', () => flow.back());
+  panel.querySelector('[data-act="next"]').addEventListener('click', () => flow.next());
+  const render = () => {
+    const current = flow.current;
+    if (current && select.value !== current.id) select.value = current.id;
+    stateEl.textContent = `${flow.index + 1}/${flow.screens.length} · ${flow.state}`;
+    panel.classList.toggle('is-waiting', flow.state === 'WAITING_FOR_INPUT');
+  };
+  const off = flow.onChange(render);
+  const timer = setInterval(render, 300);
+  hostEl.appendChild(panel);
+  render();
+  return { element: panel, destroy() { clearInterval(timer); off(); panel.remove(); } };
+}
+  return { createDebugPanel };
+});
+__define('js/screens/learning-screen.js', function () {
+const { DEBUG_MODE } = __require('js/config.js');
+const { createSequenceScope, wait, isAbortError } = __require('js/core/motion.js');
+const { zoomToCab } = __require('js/screens/story-screens.js');
+const { createWorkshopBoard, BOARD } = __require('js/learning/workshop-board.js');
+const { createTriangleCanvas } = __require('js/learning/triangle-canvas.js');
+const { createBeaverGuide } = __require('js/learning/beaver-guide.js');
+const { createLearningFlow } = __require('js/learning/learning-flow.js');
+const { createDebugPanel } = __require('js/learning/debug-panel.js');
+const { LEARNING_COPY } = __require('js/learning/learning-content.js');
+/**
+ * The Triangle Workshop: the operator takes the learner into his workshop. The crane pauses, he climbs
+ * down from the cab, the lesson card rises, and the lesson runs (js/learning/). When it is done the card
+ * lowers, he climbs back into the cab, and the scene carries on (`learningNext`). Same page, same scene.
+ *
+ * URL options: ?lesson=L07 begins at that screen; ?qa=1 exposes window.__learning for the play-through;
+ * ?debug=1 (or the D key) adds the review panel.
+ */
+function createLearningScreen({ els, audio, voice, camera, triangles, feedback, builder, fx, gameState, screenManager, learningNext = 'how-to-play' }) {
+  const scope = createSequenceScope();
+  const params = new URLSearchParams(location.search);
+  const startLesson = params.get('lesson');
+  const qa = params.get('qa') === '1' || DEBUG_MODE;
+  const debug = params.get('debug') === '1';          // TEMPORARY review aid: screen list, Back / Next, no auto-advance
+  let board = null;
+  let canvas = null;
+  let guide = null;
+  let flow = null;
+  let debugPanel = null;
+  let onKey = null;
+  let backdrop = null;
+
+  /** The world cross-fades to the quiet workshop: the canal, crane and yard go, the wall and floor come. */
+  async function enterWorkshop() {
+    backdrop = new Image();
+    backdrop.className = 'learning-backdrop';
+    backdrop.src = BOARD.backdrop;
+    backdrop.alt = '';
+    backdrop.draggable = false;
+    els.workshop.prepend(backdrop);
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    backdrop.classList.add('is-on');
+    els.crane.classList.add('is-away');
+    els.platform.classList.add('is-away');
+    await wait(900, scope.signal);
+  }
+  async function leaveWorkshop() {
+    backdrop?.classList.remove('is-on');
+    els.crane.classList.remove('is-away');
+    els.platform.classList.remove('is-away');
+    await wait(900, scope.signal).catch(() => {});
+    backdrop?.remove();
+    backdrop = null;
+  }
+
+  async function say(text) {
+    const anchor = await zoomToCab({ camera, builder, signal: scope.signal, duration: 1000 }).catch(() => null);
+    const line = feedback.showBubble(text, { anchor });
+    await line.finished;
+    await feedback.hideBubble();
+  }
+
+  async function run() {
+    try {
+      camera.reset(600).catch(() => {});
+      builder.show();
+      await triangles.clearIntroPile();                         // the yard empties as the scene changes
+      builder.hide();                                           // he climbs down from the cab...
+      await enterWorkshop();                                    // ...and the scene settles into his workshop
+      board = createWorkshopBoard({ hostEl: els.workshop, voice, audio });
+      board.root.classList.add('is-lowered');
+      guide = createBeaverGuide({ hostEl: board.guideHostEl, x: BOARD.guide.x, groundY: BOARD.guide.groundY });
+      canvas = createTriangleCanvas({ host: board.stageEl, width: BOARD.canvas.width, height: BOARD.canvas.height, audio });
+      await board.rise({ signal: scope.signal });
+      flow = createLearningFlow({ board, canvas, guide, audio, fx, gameState, qa, manual: debug });
+      board.talker = guide;
+      if (debug) debugPanel = createDebugPanel({ hostEl: els.hud, flow });
+      // TEMPORARY review aid: the D key shows / hides the screen list with Back and Next (same as ?debug=1).
+      onKey = (event) => {
+        if (event.key !== 'd' && event.key !== 'D') return;
+        if (event.target && /input|textarea|select/i.test(event.target.tagName)) return;
+        if (debugPanel) { debugPanel.destroy(); debugPanel = null; flow?.setManual(false); }
+        else if (flow) { debugPanel = createDebugPanel({ hostEl: els.hud, flow }); flow.setManual(true); }
+      };
+      window.addEventListener('keydown', onKey);
+      const completed = await flow.run(startLesson);
+      if (!completed) return;
+      // Back to the bridge: the board goes down, he climbs back into the cab, the frames come back.
+      await wait(400, scope.signal);
+      await Promise.all([board.lower({ signal: scope.signal }), guide.leave()]);
+      await leaveWorkshop();
+      builder.show();
+      builder.cheer();
+      await say(LEARNING_COPY.beaver.leave);
+      await camera.reset(900, scope.signal).catch(() => {});
+      triangles.showIntroPile();
+      await wait(500, scope.signal);
+      if (screenManager.currentName === 'learning') screenManager.go(learningNext);
+    } catch (error) {
+      if (!isAbortError(error)) console.error('[learning]', error);
+    }
+  }
+
+  return {
+    async enter() {
+      run();
+    },
+    async exit() {
+      scope.cancel();
+      flow?.stop();
+      flow = null;
+      debugPanel?.destroy();
+      debugPanel = null;
+      if (onKey) { window.removeEventListener('keydown', onKey); onKey = null; }
+      board?.destroy();
+      board = null;
+      guide?.destroy();
+      guide = null;
+      canvas = null;
+      backdrop?.remove();
+      backdrop = null;
+      els.crane.classList.remove('is-away');
+      els.platform.classList.remove('is-away');
+      builder.show();
+      await feedback.hideBubble();
+      if (!triangles.pileItems().length) triangles.showIntroPile();
+      voice.stop();
+    },
+  };
+}
+  return { createLearningScreen };
+});
+__define('js/screens/hook-screen.js', function () {
+const { createSequenceScope, wait, isAbortError } = __require('js/core/motion.js');
+const { bridgeSeatTarget } = __require('js/gameplay/placement-controller.js');
+const { zoomToCab } = __require('js/screens/story-screens.js');
+const { LEARNING_COPY } = __require('js/learning/learning-content.js');
+const HOOK_COPY = Object.freeze({
+  /** Why he is stuck (the standalone build says it here; the game says it on its own story screen). */
+  framesLine: "I have all these triangular frames, but I can't remember which ones go where!",
+  /** The deck's own line ("Triangles.pdf" H8), without its space framing. */
+  learnFirst: 'We must identify them! But to do that we need to learn about triangles first.',
+});
+const TRY_PILE_INDEX = 1;          // the acute frame in the yard: the operator's hopeful first pick
+const TRY_TARGET_X = 960;          // the middle spot on the deck
+
+/**
+ * The hook before the workshop: the operator gets on with the bridge, lifts a frame from the yard and
+ * sets it on the glowing spot, and it does not fit: it shakes loose and drops into the canal. He looks
+ * at the frames left in the yard (all triangles, all different) and sees what he needs first: to learn
+ * about triangles. In the standalone build he also says why he is stuck (the game said it already).
+ */
+function createHookScreen({ audio, camera, crane, claw, triangles, bridge, feedback, builder, fx, screenManager, nextScreen = 'learning', sayFramesLine = false }) {
+  const scope = createSequenceScope();
+
+  async function say(text) {
+    const anchor = await zoomToCab({ camera, builder, signal: scope.signal, duration: 1000 }).catch(() => null);
+    const line = feedback.showBubble(text, { anchor });
+    await line.finished;
+    await feedback.hideBubble();
+  }
+
+  async function tryAFrame() {
+    const item = triangles.pileItems()[TRY_PILE_INDEX];
+    if (!item) return;
+    const grab = { x: item.homeCenterX - item.width / 2 + item.grabX * item.width, y: item.baseY - item.baseOffset + item.grabY };
+    bridge.showDemoSpots?.();
+    await crane.glideTo(grab.x, { signal: scope.signal });
+    await crane.pickUp({ ...item, id: 'hook', grabStageX: grab.x, grabStageY: grab.y }, { signal: scope.signal });
+    builder.nod();
+    await wait(300, scope.signal);
+    const released = await crane.transportToBridge((scale) => bridgeSeatTarget(item, TRY_TARGET_X, scale), { signal: scope.signal });
+    if (!released) return;
+    triangles.placeInWorld(item, released.left, released.top, released.scale);
+    await triangles.seat(item);
+    bridge.hideDemoSpots?.();
+    // It does not fit: a wobble, the alarm, and it drops into the canal.
+    audio.play('incorrect');
+    setTimeout(() => audio.play('wahwah'), 350);
+    builder.worry();
+    crane.alarm(true);
+    await triangles.rejectShake(item);
+    camera.shake(7, 340);
+    await claw.react();
+    await crane.liftAway({ signal: scope.signal });
+    const homeTrip = crane.returnHome({ signal: scope.signal }).catch(() => {});
+    await wait(300, scope.signal);
+    const falling = triangles.dropIntoWater(item);
+    setTimeout(() => fx.splash(TRY_TARGET_X, 760), 760);
+    await falling;
+    crane.alarm(false);
+    await homeTrip;
+  }
+
+  async function run() {
+    try {
+      camera.reset(600).catch(() => {});
+      builder.show();
+      triangles.showIntroPile();
+      triangles.enterPlatform?.();
+      await wait(700, scope.signal);
+      await tryAFrame();
+      if (sayFramesLine) await say(HOOK_COPY.framesLine);
+      // He looks at the frames left in the yard: all triangles, all different.
+      await camera.focus({ x: 960, y: 880, scale: 1.12, pull: 0.5, duration: 1100, signal: scope.signal }).catch(() => {});
+      builder.point();
+      await triangles.focusPulseSequence(scope.signal).catch(() => {});
+      await wait(300, scope.signal);
+      await say(HOOK_COPY.learnFirst);
+      await wait(250, scope.signal);
+      await say(LEARNING_COPY.beaver.enter);
+      await camera.reset(800, scope.signal).catch(() => {});
+      if (screenManager.currentName === 'hook') screenManager.go(nextScreen);
+    } catch (error) {
+      if (!isAbortError(error)) console.error('[hook]', error);
+    }
+  }
+
+  return {
+    async enter() { run(); },
+    async exit() {
+      scope.cancel();
+      bridge.hideDemoSpots?.();
+      crane.alarm(false);
+      crane.discardCargo();
+      await feedback.hideBubble();
+    },
+  };
+}
+  return { createHookScreen };
+});
 __define('js/app.js', function () {
-const { DEBUG_MODE, DRONE_INTRO, SKIP_TO_END_BUTTON } = __require('js/config.js');
+const { DEBUG_MODE, DRONE_INTRO, SKIP_TO_END_BUTTON, LEARNING_SECTION } = __require('js/config.js');
 const { STAGE } = __require('js/data/layout.js');
 const { LEVELS } = __require('js/data/levels.js');
 const { createGameState } = __require('js/core/game-state.js');
@@ -6320,6 +10577,11 @@ const { createMeetBuilderScreen, createHelpNeededScreen } = __require('js/screen
 const { createHowToPlayScreen } = __require('js/screens/how-to-play-screen.js');
 const { createGameplayScreen } = __require('js/screens/gameplay-screen.js');
 const { createCompletionScreen } = __require('js/screens/completion-screen.js');
+const { createLearningScreen } = __require('js/screens/learning-screen.js');
+const { createHookScreen } = __require('js/screens/hook-screen.js');
+const { BOARD } = __require('js/learning/workshop-board.js');
+const { GUIDE_IMAGES } = __require('js/learning/beaver-guide.js');
+const { WIDGET_IMAGES } = __require('js/learning/workshop-widgets.js');
 // The canal backdrop is the page's own <img> (the production build serves it as AVIF with a WebP
 // fallback through <picture>), so boot waits on that element instead of fetching it a second time.
 const CRITICAL_IMAGES = [
@@ -6359,6 +10621,7 @@ const CRITICAL_IMAGES = [
   'assets/images/kit/replay-button.png',
   ...TOWN_LIFE_IMAGES,
   ...BRIDGE_SHOT_IMAGES,
+  ...(LEARNING_SECTION ? [BOARD.backdrop, ...GUIDE_IMAGES, ...WIDGET_IMAGES] : []),
 ].map((src) => ({ key: src, src }));
 
 function queryElements() {
@@ -6366,7 +10629,7 @@ function queryElements() {
   return {
     viewport: byId('viewport'), stage: byId('stage'), world: byId('world'), shake: byId('shake'),
     water: byId('water'), bridge: byId('bridge'), placed: byId('placed'), platform: byId('platform'),
-    crane: byId('crane'), fx: byId('fx'), hud: byId('hud'), overlays: byId('overlays'),
+    crane: byId('crane'), fx: byId('fx'), workshop: byId('workshop'), hud: byId('hud'), overlays: byId('overlays'),
     controls: byId('controls'), mute: byId('mute'), debug: byId('debug'), loader: byId('loader'),
   };
 }
@@ -6471,10 +10734,14 @@ async function boot() {
     onComplete: () => screenManager.go('complete'),
   });
 
-  const context = { els, gameState, audio, voice, camera, input, fx, claw, crane, triangles, bridge, placement, feedback, builder, screenManager, levelEngine };
+  // ?start=learning (or any screen name) goes there straight from Start: a review aid and the QA entry point.
+  const startScreen = new URLSearchParams(location.search).get('start');
+  const context = { els, gameState, audio, voice, camera, input, fx, claw, crane, triangles, bridge, placement, feedback, builder, screenManager, levelEngine, startScreen };
   screenManager.register('title', createTitleScreen(context));
   screenManager.register('meet-builder', createMeetBuilderScreen(context));
   screenManager.register('help-needed', createHelpNeededScreen(context));
+  screenManager.register('hook', createHookScreen(context));
+  screenManager.register('learning', createLearningScreen(context));
   screenManager.register('how-to-play', createHowToPlayScreen(context));
   screenManager.register('gameplay', createGameplayScreen(context));
   screenManager.register('complete', createCompletionScreen(context));
