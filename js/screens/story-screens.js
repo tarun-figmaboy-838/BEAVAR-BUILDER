@@ -1,4 +1,5 @@
 import { COPY } from '../data/copy.js';
+import { LEARNING_SECTION } from '../config.js';
 import { createSequenceScope, wait } from '../core/motion.js';
 
 const CAB_ZOOM = 2.1;
@@ -65,7 +66,7 @@ export function createHelpNeededScreen({ camera, triangles, feedback, builder, s
       await camera.focus({ x: 960, y: 880, scale: 1.12, pull: 0.5, duration: 1300, signal: scope.signal }).catch(() => {});
       await triangles.focusPulseSequence(scope.signal).catch(() => {});
       await wait(500, scope.signal);
-      screenManager.go('how-to-play');
+      screenManager.go(LEARNING_SECTION ? 'hook' : 'how-to-play');
     } catch {
       /* the screen was left early */
     }

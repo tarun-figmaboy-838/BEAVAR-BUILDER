@@ -147,6 +147,63 @@ const SOUNDS = {
       [523, 659, 784, 1047].forEach((f, i) => tone({ t0: t0 + 0.05 + i * 0.11, type: 'triangle', freq: f, duration: 0.32, gain: 0.07, release: 0.2 }));
     },
   },
+  /* ---- Triangle Workshop (js/learning): quiet, short, never over the narration ---- */
+  /** The drafting board rising on its hydraulics: a low hum that settles with a click. */
+  panelRise: {
+    minInterval: 0.5,
+    play: ({ tone, noise, t0 }) => {
+      tone({ t0, type: 'sawtooth', freq: 70, freqEnd: 120, duration: 0.8, gain: 0.04, release: 0.3 });
+      noise({ t0, duration: 0.8, gain: 0.03, filter: 'lowpass', freq: 500, release: 0.3 });
+      noise({ t0: t0 + 0.82, duration: 0.04, gain: 0.16, filter: 'bandpass', freq: 1800, q: 2 });
+    },
+  },
+  /** A side being drawn or traced: a soft pencil sweep. */
+  drawLine: { minInterval: 0.2, play: ({ noise, t0 }) => noise({ t0, duration: 0.42, gain: 0.07, filter: 'bandpass', freq: 1800, freqEnd: 2600, q: 1.2, attack: 0.03, release: 0.25 }) },
+  /** A measurement lands on its tag: a tape click and a small bright tone. */
+  measure: {
+    minInterval: 0.15,
+    play: ({ tone, noise, t0 }) => {
+      noise({ t0, duration: 0.03, gain: 0.14, filter: 'bandpass', freq: 3200, q: 2 });
+      tone({ t0: t0 + 0.02, type: 'sine', freq: 880, freqEnd: 1180, duration: 0.14, gain: 0.07, release: 0.1 });
+    },
+  },
+  /** A corner picked up to drag. */
+  vertexPick: { minInterval: 0.15, play: ({ tone, t0 }) => tone({ t0, type: 'sine', freq: 520, freqEnd: 700, duration: 0.08, gain: 0.06 }) },
+  /** Two sides become equal: a double click that settles. */
+  snapEqual: {
+    minInterval: 0.2,
+    play: ({ tone, noise, t0 }) => {
+      noise({ t0, duration: 0.025, gain: 0.14, filter: 'bandpass', freq: 2400, q: 2 });
+      tone({ t0, type: 'triangle', freq: 660, duration: 0.07, gain: 0.07 });
+      tone({ t0: t0 + 0.08, type: 'triangle', freq: 880, duration: 0.12, gain: 0.07, release: 0.1 });
+    },
+  },
+  /** A right angle locks in: a firmer click with a ping. */
+  snapRight: {
+    minInterval: 0.2,
+    play: ({ tone, noise, t0 }) => {
+      noise({ t0, duration: 0.035, gain: 0.2, filter: 'bandpass', freq: 1900, q: 2 });
+      tone({ t0, type: 'square', freq: 440, freqEnd: 330, duration: 0.06, gain: 0.05 });
+      tone({ t0: t0 + 0.05, type: 'sine', freq: 1320, duration: 0.3, gain: 0.06, release: 0.26 });
+    },
+  },
+  /** A wrong pick: a soft, neutral two-note nudge (no buzzer). */
+  softNo: {
+    minInterval: 0.4,
+    play: ({ tone, t0 }) => {
+      tone({ t0, type: 'sine', freq: 392, freqEnd: 370, duration: 0.14, gain: 0.07 });
+      tone({ t0: t0 + 0.16, type: 'sine', freq: 330, freqEnd: 311, duration: 0.2, gain: 0.07, release: 0.15 });
+    },
+  },
+  /** A category is named: a two-note chime. */
+  badge: {
+    minInterval: 0.3,
+    play: ({ tone, t0 }) => {
+      tone({ t0, type: 'sine', freq: 880, duration: 0.18, gain: 0.07 });
+      tone({ t0: t0 + 0.12, type: 'sine', freq: 1319, duration: 0.42, gain: 0.07, release: 0.35 });
+      tone({ t0: t0 + 0.12, type: 'triangle', freq: 1760, duration: 0.3, gain: 0.02, release: 0.25 });
+    },
+  },
   controlPress: {
     minInterval: 0.05,
     play: ({ tone, noise, t0 }) => {

@@ -1,0 +1,448 @@
+/* ---------- Triangle Workshop (js/learning): the learning section, inside the game world ----------
+   The board lives in the world layer (the camera can still cut to the cab), between the placed frames
+   and the yard platform. Stage px throughout; the stage scales as one. Keyframes are prefixed ws-. */
+.workshop-layer { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
+.workshop-layer > .workshop { pointer-events: auto; }
+
+/* ----- The quiet workshop behind the lesson (assets/images/workshop/learning-backdrop.webp) ----- */
+.learning-backdrop { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 900ms var(--ease-out); pointer-events: none; }
+.learning-backdrop.is-on { opacity: 1; }
+.crane { transition: opacity 700ms var(--ease-out); }
+.crane.is-away { opacity: 0; pointer-events: none; }
+
+/* ----- The lesson card: a wide, simple panel with thin borders over the workshop wall ----- */
+/* The card keeps its 1600 × 820 coordinate system (BOARD in workshop-board.js) and is shown 10% bigger. */
+.workshop { position: absolute; left: 80px; top: 69px; width: 1760px; height: 902px; transform-origin: 50% 100%; }
+.workshop.is-lowered { transform: translateY(60px) scale(0.98); opacity: 0; }
+.workshop.is-rising { animation: ws-rise 900ms var(--ease-out) both; }
+.workshop.is-lowering { animation: ws-lower 700ms var(--ease-in) forwards; }
+.workshop__card {
+  position: absolute; left: 0; top: 0; width: 1600px; height: 820px; transform: scale(1.1); transform-origin: 0 0;
+  background: url("../assets/images/workshop/card-frame.webp") center / 100% 100% no-repeat;   /* flat generated frame: navy edge, gold line, corner screws */
+}
+/* The narration box: at the top of the card, as wide as its words, never a bar of empty space. */
+.ws-narration {
+  position: absolute; left: 50%; top: 26px; translate: -50% 0; z-index: 4;
+  width: max-content; max-width: 1520px; padding: 14px 38px 15px; border-radius: 22px; text-align: center; white-space: nowrap;
+  background: #1d3a5f; color: #fff8ec; font-family: var(--font-display);
+  box-shadow: 0 6px 16px rgba(29, 58, 95, 0.25);
+}
+.ws-narration__text { margin: 0; font-size: 31px; line-height: 1.22; }
+.ws-narration.is-swapping { animation: instruction-boing 550ms cubic-bezier(0.2, 1.8, 0.4, 1) both; }
+
+/* The drawing surface: the live canvas and the screen's widgets over it. */
+.workshop__surface { position: absolute; left: 20px; top: 150px; width: 1560px; height: 640px; }
+.ws-stage { position: absolute; left: 0; top: 0; width: 1560px; height: 640px; }
+.ws-canvas { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; touch-action: none; -webkit-user-select: none; user-select: none; }
+.ws-overlay { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
+.ws-overlay > * { pointer-events: auto; }
+.ws-overlay > .is-leaving { animation: ws-fade-out 300ms var(--ease-in) forwards !important; pointer-events: none !important; }
+/* One state owns the input: taps only in WAITING_FOR_INPUT / INTERACTING, drags only in INTERACTING. */
+.workshop:not([data-state="WAITING_FOR_INPUT"]):not([data-state="INTERACTING"]) .ws-interactive { pointer-events: none !important; }
+.workshop:not([data-state="INTERACTING"]) .ws-canvas { pointer-events: none; }
+/* The beaver: in front at the bottom-left, or behind the summary's big card with only his head showing. */
+.workshop__guide { position: absolute; left: 0; top: 0; width: 0; height: 0; z-index: 3; }
+.workshop.is-peeking .workshop__guide { z-index: 1; }
+.ws-pill--center { left: 50%; translate: -50% 0; }
+.ws-pill.is-entering { animation: cta-enter 480ms var(--ease-back) both; }
+
+/* ----- Name badges, GREAT JOB, lenses ----- */
+.ws-badge {
+  /* The game's name tag: navy with the card frame's gold line and white letters (the narration box's colours). */
+  display: inline-flex; align-items: center; justify-content: center; padding: 8px 28px 7px; white-space: nowrap; text-align: center;
+  background: linear-gradient(180deg, #1c4a7c 0%, #12345f 100%); border: 3px solid #f6c21a; border-radius: 999px; color: #fff;
+  font-family: var(--font-display); font-size: 28px; font-weight: 800; line-height: 1.1; letter-spacing: 1px;
+  box-shadow: 0 4px 0 #0b223f, 0 8px 14px rgba(11, 34, 63, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+.ws-badge { position: absolute; pointer-events: none; }
+.ws-badge--centred { translate: -50% 0; }
+/* The same families as text on white (summary slots, lenses, result cards): darker, readable. */
+.ws-summary__slot--scalene, .ws-result-card--scalene .ws-result-card__name { --badge: #8e24aa; } .ws-summary__slot--isosceles, .ws-lens--isosceles { --badge: #1565c0; }
+.ws-summary__slot--equilateral { --badge: #2e7d32; } .ws-summary__slot--acute { --badge: #c45f00; } .ws-summary__slot--right, .ws-lens--right { --badge: #c62828; } .ws-summary__slot--obtuse { --badge: #a86f00; }
+.ws-summary__big--scalene { --badge: #8e24aa; } .ws-summary__big--isosceles { --badge: #1565c0; } .ws-summary__big--equilateral { --badge: #2e7d32; }
+.ws-summary__big--acute { --badge: #c45f00; } .ws-summary__big--right { --badge: #c62828; } .ws-summary__big--obtuse { --badge: #a86f00; }
+.ws-badge--small { position: static; padding: 5px 24px 4px; font-size: 22px; border-width: 3px; }
+.ws-badge.is-entering { animation: ws-badge-in 640ms cubic-bezier(0.2, 1.7, 0.4, 1) both; }
+.ws-greatjob {
+  position: absolute; display: inline-flex; align-items: center; gap: 12px; padding: 10px 22px; border-radius: 14px; white-space: nowrap;
+  background: linear-gradient(#3bc26a, #1f8a44); color: #fff; border: 3px solid #fff; box-shadow: 0 6px 0 #11592b;
+  font-family: var(--font-display); font-size: 25px; letter-spacing: 1px;
+}
+.ws-greatjob__tick { position: relative; width: 28px; height: 28px; border-radius: 50%; background: #fff; flex: none; }
+.ws-greatjob__tick::after { content: ""; position: absolute; left: 10px; top: 5px; width: 7px; height: 13px; border: solid #1f8a44; border-width: 0 4px 4px 0; transform: rotate(40deg); }
+.ws-greatjob.is-entering { animation: ws-badge-in 620ms cubic-bezier(0.2, 1.6, 0.4, 1) both; }
+.ws-lens {
+  position: absolute; display: inline-flex; align-items: center; gap: 12px; width: max-content; padding: 10px 22px; border-radius: 999px;
+  background: linear-gradient(180deg, #1c4a7c 0%, #12345f 100%); border: 3px solid #f6c21a; color: #fff; font-family: var(--font-display);
+  box-shadow: 0 4px 0 #0b223f, 0 8px 14px rgba(11, 34, 63, 0.25);
+}
+.ws-lens__title { font-size: 17px; letter-spacing: 1.5px; color: #ffe27a; }
+.ws-lens__arrow { font-size: 24px; color: #f6c21a; }
+.ws-lens__result { font-size: 24px; color: #fff; font-weight: 700; }
+.ws-lens.is-entering { animation: ws-slide-in-right 560ms var(--ease-out) both; }
+.ws-lens.is-merging { animation: ws-merge 700ms var(--ease-in) forwards; }
+
+/* ----- Answer options under the triangle: a centred row of pills, every one alike until it is checked ----- */
+.ws-options-row { position: absolute; left: 50%; translate: -50% 0; display: flex; gap: 22px; justify-content: center; }
+.ws-options-row.is-entering .ws-option--pill { animation: ws-pop-in 520ms var(--ease-back) both; animation-delay: calc(var(--i) * 90ms); }
+.ws-dual { position: absolute; left: 50%; translate: -50% 0; display: flex; flex-direction: row; gap: 40px; align-items: stretch; }
+.ws-dual.is-entering { animation: ws-fade-up 480ms var(--ease-out) both; }
+.ws-dual .ws-group {
+  /* Each way of classifying is its own card (Fishing Frenzy's shape card); its name sits on the card's top edge. */
+  position: relative; margin: 0; display: flex; flex-direction: column; align-items: center; padding: 36px 22px 22px;
+  background: linear-gradient(180deg, #ffffff 0%, #eef6ff 100%); border: 4px solid #fff; border-radius: 22px;
+  box-shadow: 0 0 0 3px #8db9ee, 0 8px 0 3px #5b8fd6, 0 14px 20px rgba(18, 59, 99, 0.16);
+}
+.ws-dual .ws-group__label { position: absolute; left: 50%; top: -24px; translate: -50% 0; margin: 0; padding: 7px 24px 6px; border-radius: 999px; background: #fff8e3; border: 4px solid #f0b000; box-shadow: 0 3px 10px rgba(110, 70, 0, 0.16); font-family: var(--font-display); font-size: 21px; font-weight: 800; letter-spacing: 0.6px; color: #6b4300; white-space: nowrap; }
+.ws-dual .ws-group__options { display: flex; gap: 12px; }
+.ws-option.is-shaking { animation: ws-shake 520ms ease-in-out; }
+.ws-option:disabled { cursor: default; }
+.ws-group { margin-top: 10px; }
+.ws-group__label { display: block; margin: 0 0 8px 4px; font-size: 17px; letter-spacing: 2px; color: #1d6fb8; }
+
+/* ----- Multi-select cards ----- */
+.ws-grid { position: absolute; inset: 0; }
+.ws-pick, .ws-sort-card, .ws-result-card {
+  /* Fishing Frenzy's shape card: white to ice-blue, white border, blue rim and a raised blue base. */
+  background: linear-gradient(180deg, #ffffff 0%, #eef6ff 100%); border: 4px solid #fff; border-radius: 20px;
+  box-shadow: 0 0 0 3px #8db9ee, 0 8px 0 3px #5b8fd6, 0 14px 20px rgba(18, 59, 99, 0.18);
+}
+.ws-pick {
+  position: absolute; width: 330px; height: 290px; padding: 0; cursor: pointer;
+  transition: transform 160ms var(--ease-out), box-shadow 160ms, background 160ms, opacity 300ms, filter 300ms;
+}
+.ws-pick svg { position: absolute; left: 6px; top: 16px; }
+@media (hover: hover) { .ws-pick:not(:disabled):not(.is-selected):hover { transform: translateY(-4px); box-shadow: 0 0 0 3px #6ea6ea, 0 11px 0 3px #4b80cc, 0 18px 24px rgba(18, 59, 99, 0.22); } }
+.ws-pick:active { transform: translateY(5px); box-shadow: 0 0 0 3px #6ea6ea, 0 3px 0 3px #4b80cc, 0 5px 9px rgba(18, 59, 99, 0.18); }
+.ws-pick.is-selected { transform: translateY(-4px); background: linear-gradient(180deg, #fffdf2 0%, #fff3c4 100%); box-shadow: 0 0 0 4px #f0b000, 0 8px 0 4px #c98a00, 0 0 22px 4px rgba(255, 196, 0, 0.45); }
+.ws-pick.is-correct { background: linear-gradient(180deg, #f2fffb 0%, #d4f6ec 100%); box-shadow: 0 0 0 4px #16a98b, 0 8px 0 4px #0b6e66, 0 0 24px 6px rgba(51, 207, 173, 0.45); }
+.ws-pick.is-dimmed { opacity: 0.5; filter: grayscale(1); }
+.ws-pick__tick { position: absolute; right: 12px; top: 12px; width: 40px; height: 40px; border-radius: 50%; background: #f0b000; border: 3px solid #fff; box-shadow: 0 2px 4px rgba(110, 70, 0, 0.3); opacity: 0; transform: scale(0.4); transition: opacity 160ms, transform 220ms var(--ease-back); }
+.ws-pick__tick::after { content: ""; position: absolute; left: 12px; top: 5px; width: 9px; height: 17px; border: solid #fff; border-width: 0 4px 4px 0; transform: rotate(40deg); }
+.ws-pick.is-selected .ws-pick__tick, .ws-pick.is-correct .ws-pick__tick { opacity: 1; transform: scale(1); }
+.ws-pick.is-correct .ws-pick__tick { background: #16a98b; }
+.ws-pick.is-shaking { animation: ws-shake 520ms ease-in-out; }
+.ws-grid.is-entering .ws-pick { animation: ws-pop-in 560ms var(--ease-back) both; animation-delay: calc(var(--i) * 110ms); }
+
+/* ----- Sorting into crates: one triangle on the bench, a pile waiting, three crates below ----- */
+.ws-sort { position: absolute; inset: 0; }
+.ws-sort-card {
+  position: absolute; width: 340px; height: 340px; border-radius: 22px; cursor: grab; touch-action: none; overflow: hidden;
+  transition: rotate 420ms var(--ease-out), scale 420ms var(--ease-out), transform 320ms var(--ease-out), left 520ms var(--ease-out), top 520ms var(--ease-out), width 520ms var(--ease-out), height 520ms var(--ease-out), box-shadow 200ms, border-width 300ms;
+}
+.ws-sort-card svg { position: absolute; left: 6px; top: 6px; width: 320px; height: 320px; transition: width 520ms var(--ease-out), height 520ms var(--ease-out), left 520ms var(--ease-out), top 520ms var(--ease-out), opacity 300ms; }
+.ws-sort-card.is-waiting { cursor: default; rotate: var(--tilt, 0deg); scale: 0.97; }   /* behind the bench card, tilted left / right */
+.ws-sort-card.is-waiting svg { opacity: 0; }
+.ws-sort-card.is-dragging { transition: none; cursor: grabbing; z-index: 6 !important; box-shadow: 0 18px 28px rgba(6, 24, 48, 0.35); }
+.ws-sort-card.is-selected { box-shadow: 0 0 0 4px #f0b000, 0 8px 0 4px #c98a00, 0 0 22px 4px rgba(255, 196, 0, 0.45); }
+.ws-sort-card.is-placed { width: 130px; height: 130px; cursor: default; border-width: 3px; animation: ws-collect-arc 520ms ease-in-out both; }
+.ws-sort-card.is-placed svg { width: 118px; height: 118px; left: 2px; top: 2px; }
+.ws-sort-card.is-placed.is-dropped-in { animation: none; }   /* dropped on its crate: it sinks straight in, no hop */
+.ws-sort-card.is-shaking { animation: ws-shake 520ms ease-in-out; }
+.ws-figure__body.is-lit, .ws-sort-card .ws-figure__body.is-lit { stroke: #ffd000; filter: drop-shadow(0 0 4px #ffb020) drop-shadow(0 0 10px rgba(255, 176, 32, 0.9)); }   /* the equal sides light up on a right drop */
+.ws-figure__label.is-pulse { animation: ws-glow-pulse 700ms ease-out; }
+.ws-sort.is-entering .ws-sort-card, .ws-sort.is-entering .ws-bin, .ws-sort.is-entering .ws-bin-front { animation: ws-pop-in 560ms var(--ease-back) both; animation-delay: calc(var(--i) * 110ms); }
+.ws-bin, .ws-bin-front { position: absolute; height: 196px; text-align: center; font-family: var(--font-display); }
+.ws-bin { z-index: 1; cursor: pointer; }
+.ws-bin-front { z-index: 3; pointer-events: none; }
+.ws-bin img, .ws-bin-front img { position: absolute; left: 50%; top: 0; width: 260px; height: auto; translate: -50% 0; transform-origin: 50% 100%; transition: transform 200ms var(--ease-out), filter 200ms; }
+.ws-bin img { filter: drop-shadow(0 6px 8px rgba(6, 24, 48, 0.3)); }
+.ws-bin.is-over img, .ws-bin-front.is-over img { transform: scale(1.05); filter: brightness(1.08) drop-shadow(0 0 10px rgba(255, 214, 60, 0.9)); }
+.ws-bin.is-receiving img, .ws-bin-front.is-receiving img { animation: ws-receive 520ms var(--ease-out); }
+.ws-sort-card.is-dropping { transition: top 420ms cubic-bezier(0.5, 0, 0.75, 0); }       /* falls in */
+.ws-bin__label {   /* painted on the crate's navy plate: the plate is the tag */
+  position: absolute; z-index: 2; left: 50%; top: 96px; translate: -50% 0; width: 188px; height: 44px; display: flex; align-items: center; justify-content: center;
+  color: #fff; font-family: var(--font-display); font-size: 22px; font-weight: 800; letter-spacing: 1px; text-shadow: 0 2px 0 rgba(4, 18, 50, 0.6); white-space: nowrap;
+}
+.ws-bin__label.is-pulse { animation: ws-glow-pulse 700ms ease-out; }
+.ws-sort-result { position: absolute; inset: 0; }
+.ws-result-card { position: absolute; width: 400px; height: 300px; padding: 10px 16px 0; text-align: center; font-family: var(--font-display); color: #123b63; overflow: visible; }
+.ws-result-card svg { display: block; margin: 4px auto 0; width: 360px; height: 250px; }
+.ws-result-card .ws-result-card__name { position: absolute; left: 50%; bottom: -26px; translate: -50% 0; }   /* the name chip straddles the card's bottom edge */
+.ws-result-card__tick { position: absolute; right: 12px; top: 12px; width: 40px; height: 40px; border-radius: 50%; background: #16a98b; border: 3px solid #fff; box-shadow: 0 2px 4px rgba(11, 110, 102, 0.3); }
+.ws-result-card__tick::after { content: ""; position: absolute; left: 12px; top: 5px; width: 9px; height: 17px; border: solid #fff; border-width: 0 4px 4px 0; transform: rotate(40deg); }
+.ws-sort-result.is-entering .ws-result-card { animation: ws-pop-in 600ms var(--ease-back) both; animation-delay: calc(var(--i) * 140ms); }
+
+/* ----- Summary ----- */
+.ws-summary { position: absolute; inset: 0; font-family: var(--font-display); color: var(--color-navy); }
+.ws-summary__big {
+  position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 64px 34px 30px;
+  background: url("../assets/images/workshop/summary-card.webp") center / 100% 100% no-repeat;   /* flat generated square card: navy edge, gold line, ribbon tab */
+  text-align: center; overflow: hidden; z-index: 2;
+  transition: left 560ms var(--ease-in), top 560ms var(--ease-in), width 560ms var(--ease-in), height 560ms var(--ease-in), opacity 300ms ease 300ms;
+}
+.ws-summary__big.is-entering { animation: ws-card-enter 420ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.ws-summary__big.is-collecting { opacity: 0; animation: ws-collect-arc 560ms ease-in-out both; }   /* flies to its slot on a small upward arc */
+.ws-summary__big svg.is-pulse { animation: ws-glow-pulse 700ms ease-out; }
+.ws-summary__big.is-collecting > * { opacity: 0; transition: opacity 200ms; }
+.ws-summary__badges { display: flex; gap: 10px; justify-content: center; }
+.ws-summary__both { margin: 4px 0 0; font-family: var(--font-display); font-size: 25px; font-weight: 700; line-height: 1.25; text-align: center; color: #123b63; text-wrap: balance; }
+.ws-summary__row { position: absolute; inset: 0; pointer-events: none; }
+.ws-summary__slot {
+  position: absolute; border-radius: 18px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  opacity: 0; transform: scale(0.8); transition: opacity 300ms, transform 360ms var(--ease-back);
+}
+.ws-summary__slot svg { display: block; margin-top: -4px; }
+.ws-summary__slot.is-filled { opacity: 1; transform: none; background: #fff; border: 4px solid var(--badge, #8db9ee); box-shadow: 0 6px 14px rgba(18, 59, 99, 0.14); }   /* flat: a collected card is not a button */
+.ws-summary__slot.is-receiving { animation: ws-receive 480ms var(--ease-out); }
+
+/* ----- The live triangle (SVG) ----- */
+.ws-hidden { opacity: 0 !important; pointer-events: none !important; }
+.ws-side, .ws-angle, .ws-side-label, .ws-vertex, .ws-tick, .ws-angle__arc, .ws-angle__square, .ws-angle__label { transition: opacity 260ms var(--ease-out); }
+/* Each line is a strong theme colour; its deeper shade makes a tight edge glow (no black outline, no halo band). */
+.ws-tri { --tone: #ff8f1f; --tone-deep: #c45f00; }
+.ws-side[data-tone="orange"], .ws-side-label[data-tone="orange"] { --tone: #ff8f1f; --tone-deep: #c45f00; }
+.ws-side[data-tone="green"], .ws-side-label[data-tone="green"] { --tone: #3bc26a; --tone-deep: #1f8a44; }
+.ws-side[data-tone="purple"], .ws-side-label[data-tone="purple"] { --tone: #a35ff0; --tone-deep: #6a2fc0; }
+.ws-side[data-tone="blue"], .ws-side-label[data-tone="blue"] { --tone: #2f8fe6; --tone-deep: #1565c0; }
+.ws-side__body {
+  fill: none; stroke: var(--tone); stroke-width: 18; stroke-linecap: round; transition: stroke 320ms, stroke-width 320ms, filter 320ms;
+  filter: drop-shadow(0 0 2px var(--tone-deep)) drop-shadow(0 0 2px var(--tone-deep)) drop-shadow(0 4px 5px rgba(70, 35, 0, 0.22));
+}
+.ws-tick { stroke: #10243a; stroke-width: 6; stroke-linecap: round; }
+/* While some sides / angles are named, the others step back (Fishing Frenzy's focusing rule). */
+.ws-tri.is-focusing .ws-side:not(.is-emphasis) .ws-side__body, .ws-tri.is-focusing .ws-angle:not(.is-emphasis) .ws-angle__arc,
+.ws-tri.is-focusing .ws-angle:not(.is-emphasis) .ws-angle__square, .ws-tri.is-focusing .ws-angle:not(.is-emphasis) .ws-angle__label { opacity: 0.42; }
+.ws-tri.is-focusing .ws-angle:not(.is-emphasis) .ws-angle__wedge { opacity: 0.35; }
+.ws-side__body, .ws-angle__arc, .ws-angle__square, .ws-angle__label { transition: opacity 300ms var(--ease-out); }
+.ws-trace-glow { fill: none; stroke: #ffd000; stroke-width: 10; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; filter: drop-shadow(0 0 4px #ffb020) drop-shadow(0 0 12px rgba(255, 176, 32, 0.9)); }   /* the gold light that runs along a named line */
+.ws-tri.is-drawing .ws-side__body { filter: drop-shadow(0 0 3px var(--tone-deep)) drop-shadow(0 0 8px #ffd000) drop-shadow(0 0 16px rgba(255, 176, 32, 0.8)); }   /* the pen glows while a side is drawn */
+.ws-side.is-emphasis .ws-side__body { stroke-width: 24; filter: drop-shadow(0 0 3px var(--tone-deep)) drop-shadow(0 0 12px var(--tone)) drop-shadow(0 0 24px var(--tone)) brightness(1.08); }
+.ws-side.is-pulse .ws-side__body { animation: ws-stroke-pulse 640ms var(--ease-out); }
+.ws-angle.is-pulse .ws-angle__arc, .ws-angle.is-pulse .ws-angle__square { animation: ws-arc-pulse 640ms var(--ease-out); }
+.ws-tri.is-closed .ws-side__body { animation: ws-flash 620ms ease-out; }
+/* Corners: a white dot with an orange bolt. When a corner can be dragged the dot breathes; the one to drag pulses and glows. */
+.ws-vertex__hit { fill: transparent; pointer-events: all; }
+.ws-vertex__point { transform-box: fill-box; transform-origin: center; transition: filter 200ms; filter: drop-shadow(0 3px 3px rgba(70, 35, 0, 0.3)); }
+.ws-vertex__plate { fill: #fff; stroke: #c45f00; stroke-width: 5; transition: fill 160ms, stroke 160ms; }
+.ws-vertex__bolt { fill: #ff8f1f; }
+.ws-canvas.is-draggable .ws-vertex { cursor: grab; }
+.ws-canvas.is-draggable .ws-vertex__point { animation: ws-point-breathe 1.5s ease-in-out infinite; }
+.ws-vertex.is-hinted .ws-vertex__point { animation: ws-point-pulse 0.95s ease-in-out infinite; filter: drop-shadow(0 0 5px rgba(255, 143, 31, 1)) drop-shadow(0 0 16px rgba(255, 143, 31, 0.8)); }
+.ws-vertex.is-hinted .ws-vertex__plate { fill: #ffd23f; }
+.ws-spark { fill: #ffd23f; stroke: #c45f00; stroke-width: 1.5; animation: ws-spark-fly 640ms var(--ease-out) forwards; }
+.ws-vertex.is-dragging { cursor: grabbing; }
+.ws-vertex.is-dragging .ws-vertex__point { animation: none; transform: scale(1.18); }
+.ws-vertex.is-dragging .ws-vertex__plate { fill: #ffd23f; stroke: #c45f00; }
+.ws-vertex.is-pop .ws-vertex__point { animation: ws-vertex-pop 420ms var(--ease-back); }
+/* Angles: theme blue; an obtuse one turns red. */
+/* Each corner has its own colour so the three angles are told apart at a glance; an obtuse one is red. */
+.ws-angle { --angle: #1565c0; }
+.ws-angle[data-hue="1"] { --angle: #00796b; }
+.ws-angle[data-hue="2"] { --angle: #ad1457; }
+.ws-angle.is-obtuse { --angle: #d8463b; }
+.ws-angle__wedge { fill: var(--angle); fill-opacity: 0.45; transition: opacity 260ms, fill 300ms, fill-opacity 300ms; }   /* a solid colour slice between the sides (drawn under them), rimmed by the arc */
+.ws-angle.is-emphasis .ws-angle__wedge { fill-opacity: 0.62; }
+.ws-angle__arc { fill: none; stroke: var(--angle); stroke-width: 6; stroke-linecap: round; transition: stroke 300ms; }
+.ws-angle__square { fill: none; stroke: var(--angle); stroke-width: 7; stroke-linejoin: round; transition: stroke 300ms; }
+.ws-angle__label { font-family: var(--font-display); font-size: 30px; font-weight: 700; fill: var(--angle); paint-order: stroke; stroke: #fff; stroke-width: 7px; stroke-linejoin: round; text-anchor: middle; dominant-baseline: central; transition: fill 300ms; }
+.ws-angle.is-emphasis .ws-angle__arc, .ws-angle.is-emphasis .ws-angle__square { stroke-width: 10; filter: drop-shadow(0 0 4px var(--angle)) drop-shadow(0 0 14px var(--angle)); }
+.ws-angle.is-emphasis .ws-angle__label { font-size: 34px; }
+.ws-angle.is-pulse .ws-angle__label { animation: ws-glow-pulse 700ms ease-out; }
+.ws-angle__label.is-pop { animation: ws-glow-in 700ms ease-out both; }   /* the value appears where it stays, with a glow */
+/* Side lengths: just the number, outlined in white; it takes the side's colour when the sides are coloured. */
+.ws-side-label__text { font-family: var(--font-display); font-size: 31px; font-weight: 700; fill: #10243a; paint-order: stroke; stroke: #fff; stroke-width: 8px; stroke-linejoin: round; text-anchor: middle; dominant-baseline: central; transition: fill 300ms; }
+.ws-side-label[data-tone] .ws-side-label__text { fill: var(--tone-deep); }
+.ws-side-label.is-pulse { animation: ws-glow-pulse 700ms ease-out; }
+.ws-side-label.is-pop { animation: ws-glow-in 700ms ease-out both; }
+.ws-tape-strip { transition: opacity 400ms; filter: drop-shadow(0 3px 4px rgba(60, 40, 0, 0.3)); }
+.ws-tape-strip__band { fill: #f7c531; stroke: #5a4310; stroke-width: 1.5; }
+.ws-tape-strip__hook { fill: #5a4310; }
+.ws-tape-strip__lead { stroke: #f7c531; stroke-width: 8; stroke-linecap: round; filter: drop-shadow(0 1px 1px rgba(122, 90, 16, 0.35)); transition: opacity 300ms; }   /* up from the side to his hand */
+.ws-tape-strip__lead.is-leaving { opacity: 0; }
+.ws-tape-strip.is-leaving { opacity: 0; }
+/* The drag hint: a dashed arrow from the pulsing corner to a dashed target. */
+.ws-hint { animation: ws-hint-bob 1.3s ease-in-out infinite; }
+.ws-hint__line { stroke: #1565c0; stroke-width: 5; stroke-dasharray: 11 9; stroke-linecap: round; }
+.ws-hint__ghost { fill: rgba(21, 101, 192, 0.14); stroke: #1565c0; stroke-width: 4; stroke-dasharray: 6 5; }
+.ws-hint__arrow { fill: #1565c0; }
+.ws-coin__text { font-family: var(--font-display); font-size: 46px; font-weight: 700; fill: #10243a; paint-order: stroke; stroke: #fff; stroke-width: 8px; stroke-linejoin: round; text-anchor: middle; dominant-baseline: central; }
+.ws-coin.is-pop .ws-coin__text { animation: ws-vertex-pop 500ms var(--ease-back); transform-box: fill-box; transform-origin: center; }
+
+/* ----- Static figures (checkpoint cards, sorting cards, summary) ----- */
+.ws-figure { display: block; overflow: visible; }
+.ws-figure__edge { fill: none; stroke: #c45f00; stroke-linecap: round; }      /* the deeper shade edges the orange line, as on the big triangle */
+.ws-figure__body { fill: none; stroke: #ff8f1f; stroke-linecap: round; }
+.ws-figure__node { fill: #fff; stroke: #c45f00; stroke-width: 3; }
+.ws-figure__tick { stroke: #10243a; stroke-width: 4; stroke-linecap: round; }
+.ws-figure__wedge { fill: #1565c0; fill-opacity: 0.45; }
+.ws-figure__arc { fill: none; stroke: #1565c0; stroke-width: 4; stroke-linecap: round; }
+.ws-figure__square { fill: none; stroke: #1565c0; stroke-width: 4; }
+.ws-figure__label { font-family: var(--font-display); font-weight: 700; text-anchor: middle; dominant-baseline: central; paint-order: stroke; stroke: #fff; stroke-width: 4px; stroke-linejoin: round; }
+.ws-figure__label--side { font-size: 19px; fill: #1d3a5f; }
+.ws-figure__label--angle { font-size: 19px; fill: #1565c0; }
+
+/* ----- The beaver (assets/images/workshop/beaver-*.webp, stepped frames) ----- */
+.guide { position: absolute; width: 0; height: 0; pointer-events: none; }
+.guide { transition: left 520ms var(--ease-out), top 520ms var(--ease-out); }
+.guide.is-instant, .guide.is-instant .guide__pivot { transition: none; }
+.guide__pivot { position: absolute; left: 0; top: 0; width: 0; height: 0; transform-origin: 0 0; transition: transform 520ms var(--ease-out); }
+.guide.is-walking .guide__body { animation: ws-guide-steps 130ms ease-in-out 4 alternate; }
+.guide__body { position: absolute; left: 0; top: 0; width: 0; height: 0; transform-origin: 0 0; animation: ws-breathe 3.4s ease-in-out infinite; }
+.guide__frame { position: absolute; opacity: 0; filter: drop-shadow(0 8px 6px rgba(40, 30, 10, 0.28)); }   /* frames switch at once: a cross-fade showed two poses */
+.guide__frame.is-on { opacity: 1; }
+.guide.is-talking .guide__body { animation: ws-guide-talk 320ms ease-in-out infinite alternate; }
+.guide.is-entering { animation: ws-guide-enter 640ms var(--ease-back) both; }
+.guide.is-entering .guide__body { animation: ws-guide-steps 175ms ease-in-out 4 alternate; }
+.guide.is-leaving { animation: ws-guide-leave 500ms var(--ease-in) forwards; }
+
+/* ----- Keyframes ----- */
+@keyframes ws-rise { 0% { transform: translateY(70px) scale(0.98); opacity: 0; } 70% { opacity: 1; } 100% { transform: translateY(0) scale(1); opacity: 1; } }
+@keyframes ws-lower { 0% { transform: translateY(0) scale(1); opacity: 1; } 100% { transform: translateY(70px) scale(0.98); opacity: 0; } }
+@keyframes ws-shake { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-9px); } 40% { transform: translateX(8px); } 60% { transform: translateX(-5px); } 80% { transform: translateX(3px); } }
+@keyframes ws-pop-in { 0% { opacity: 0; transform: scale(0.72) translateY(10px); } 60% { opacity: 1; transform: scale(1.04) translateY(-2px); } 100% { opacity: 1; transform: scale(1) translateY(0); } }
+@keyframes ws-fade-up { 0% { opacity: 0; transform: translateY(8px); } 100% { opacity: 1; transform: translateY(0); } }
+@keyframes ws-fade-out { 0% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes ws-slide-in-right { 0% { opacity: 0; transform: translateX(60px); } 100% { opacity: 1; transform: translateX(0); } }
+@keyframes ws-merge { 0% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(0.85) translateX(-30px); } }
+@keyframes ws-receive { 0% { transform: scale(1); } 40% { transform: scale(0.96, 0.92); } 100% { transform: scale(1); } }
+@keyframes ws-point-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.14); } }
+@keyframes ws-vertex-pop { 0% { transform: scale(0.2); } 60% { transform: scale(1.3); } 100% { transform: scale(1); } }
+@keyframes ws-opt-good { 0% { transform: scale(1); } 45% { transform: scale(1.07); } 100% { transform: scale(1); } }
+@keyframes ws-glow-pulse { 0%, 100% { filter: none; } 40% { filter: drop-shadow(0 0 5px rgba(255, 170, 40, 0.95)) drop-shadow(0 0 12px rgba(255, 170, 40, 0.7)); } }
+@keyframes ws-glow-in { 0% { opacity: 0; filter: none; } 35% { opacity: 1; filter: drop-shadow(0 0 5px rgba(255, 170, 40, 0.95)) drop-shadow(0 0 12px rgba(255, 170, 40, 0.7)); } 100% { opacity: 1; filter: none; } }
+@keyframes ws-card-enter { 0% { opacity: 0; transform: scale(0.82) translateY(14px); } 62% { opacity: 1; transform: scale(1.03) translateY(0); } 100% { opacity: 1; transform: scale(1) translateY(0); } }
+@keyframes ws-collect-arc { 0% { translate: 0 0; } 50% { translate: 0 -40px; } 100% { translate: 0 0; } }
+@keyframes ws-stroke-pulse { 0% { stroke-width: 18; } 45% { stroke-width: 27; filter: drop-shadow(0 0 3px var(--tone-deep)) drop-shadow(0 0 14px var(--tone)) brightness(1.15); } 100% { stroke-width: 18; } }
+@keyframes ws-arc-pulse { 0% { stroke-width: 7; } 45% { stroke-width: 12; filter: drop-shadow(0 0 10px var(--angle)); } 100% { stroke-width: 7; } }
+@keyframes ws-flash { 0% { filter: brightness(1); } 30% { filter: brightness(1.45) drop-shadow(0 0 4px var(--tone-deep)) drop-shadow(0 0 16px var(--tone)); } 100% { filter: brightness(1); } }
+@keyframes ws-hint-bob { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(3px, -4px); } }
+@keyframes ws-point-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.45); } }
+@keyframes ws-spark-fly { 0% { transform: translate(0, 0) scale(1); opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)) scale(0.3); opacity: 0; } }
+@keyframes ws-badge-in { 0% { opacity: 0; transform: scale(0.5) translateY(14px); } 60% { opacity: 1; transform: scale(1.08) translateY(-2px); } 100% { transform: scale(1) translateY(0); } }
+@keyframes ws-breathe { 0%, 100% { transform: scale(1, 1); } 50% { transform: translateY(-1.5px) scale(1.005, 1.012); } }
+@keyframes ws-guide-talk { from { transform: translateY(0) scale(1, 1); } to { transform: translateY(-2px) scale(1.01, 0.99); } }
+@keyframes ws-guide-enter { 0% { opacity: 0; transform: translateY(70px) scale(0.55); } 62% { opacity: 1; transform: translateY(-12px) scale(1.06); } 100% { opacity: 1; transform: translateY(0) scale(1); } }   /* he pops up from his feet */
+@keyframes ws-guide-steps { from { transform: translateY(0) rotate(-2deg); } to { transform: translateY(-7px) rotate(2deg); } }
+@keyframes ws-guide-leave { 0% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(70px) scale(0.55); } }   /* and sinks away the same way */
+
+@media (prefers-reduced-motion: reduce) {
+  .workshop *, .guide, .guide * { animation: none !important; transition: none !important; }
+  .workshop.is-lowered { opacity: 0; }
+}
+
+/* Standalone build: the replay button after the workshop (the painted button, breathing like Start). */
+.learning-replay { position: absolute; left: 50%; top: 860px; width: 160px; height: 174px; transform: translate(-50%, -50%); display: grid; place-items: center; border-radius: 50%; }
+.learning-replay img { width: 112%; max-width: none; margin: -6% -6% -12% -6%; height: auto; display: block; filter: drop-shadow(0 14px 14px rgba(6, 24, 48, 0.35)); animation: start-breathe 1.7s ease-in-out infinite; }
+.learning-replay:active img { animation: none; transform: translateY(8px) scale(0.96); }
+
+/* TEMPORARY review aid (?debug=1): the screen list with Back / Next. */
+.ws-debug { position: absolute; left: 50%; bottom: 14px; translate: -50% 0; z-index: 60; display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 14px; background: rgba(9, 29, 51, 0.85); border: 2px solid rgba(255, 255, 255, 0.5); color: #fff; font-family: var(--font-display); font-size: 18px; pointer-events: auto; }
+.ws-debug__btn { padding: 8px 16px; border-radius: 999px; background: #f2b400; color: #2a1a05; font-family: var(--font-display); font-size: 18px; border: 2px solid #fff; }
+.ws-debug__btn:active { transform: translateY(2px); }
+.ws-debug.is-waiting .ws-debug__btn--next { box-shadow: 0 0 0 4px rgba(255, 214, 60, 0.7); }
+.ws-debug__select { padding: 6px 10px; border-radius: 10px; font: 16px var(--font-body); color: #10243a; }
+.ws-debug__state { min-width: 170px; opacity: 0.85; font-size: 15px; font-family: var(--font-body); }
+
+/* The ghost hand: a white glove that shows the gesture; while it drags, a ghost of the corner / card rides under its finger. */
+.ws-ghost { position: absolute; left: 0; top: 0; z-index: 8; pointer-events: none; will-change: transform, opacity; }
+.ws-ghost__hand { position: absolute; left: -26px; top: -5px; width: 68px; height: 80px; filter: drop-shadow(0 6px 6px rgba(18, 59, 99, 0.3)); }
+.ws-ghost__dot { position: absolute; left: -16px; top: -16px; width: 32px; height: 32px; border-radius: 50%; background: rgba(255, 210, 63, 0.55); border: 3px dashed #c45f00; opacity: 0; transition: opacity 200ms; }
+.ws-ghost.is-dragging .ws-ghost__dot { opacity: 1; }
+/* Carrying a card: a small see-through copy of it rides just above the finger (no corner dot). */
+.ws-ghost__card { position: absolute; left: -62px; top: -132px; width: 124px; height: 124px; border-radius: 16px; overflow: hidden; opacity: 0;
+  background: linear-gradient(180deg, #ffffff 0%, #eef6ff 100%); border: 3px solid #fff; box-shadow: 0 0 0 2px #8db9ee, 0 10px 18px rgba(18, 59, 99, 0.22); }
+.ws-ghost__card svg { display: block; width: 100%; height: 100%; }
+.ws-ghost.is-carrying .ws-ghost__card { opacity: 0.85; }
+.ws-ghost.is-carrying .ws-ghost__dot { display: none; }
+.ws-ghost__ring { position: absolute; left: -22px; top: -22px; width: 44px; height: 44px; border-radius: 50%; border: 3px solid rgba(255, 255, 255, 0.9); opacity: 0; }
+.ws-ghost.is-dragging .ws-ghost__ring { animation: ws-ghost-press 900ms ease-out infinite; }
+@keyframes ws-ghost-press { 0% { opacity: 0.9; transform: scale(0.6); } 100% { opacity: 0; transform: scale(1.6); } }
+
+.ws-sort-card.is-placed .ws-figure__label--side { font-size: 0; }
+
+/* Focus: while the shape's sides or angles are being named, the other UI steps back; a chip that has just
+   appeared is the focus, so the rest of the overlay steps back until it settles. */
+.ws-overlay > * { transition: opacity 300ms var(--ease-out), filter 300ms var(--ease-out); }
+.workshop.is-shape-focus .ws-overlay > *:not(.is-fresh):not(.ws-ghost):not(:has(.is-fresh)) { opacity: 0.35; filter: saturate(0.6); }
+.ws-overlay:has(> .is-fresh) > *:not(.is-fresh):not(.ws-ghost):not(.ws-badge-row) { opacity: 0.4; filter: saturate(0.6); }
+.ws-badge-row:has(> .is-fresh) > *:not(.is-fresh) { opacity: 0.45; }
+.ws-badge-row { position: absolute; left: 50%; translate: -50% 0; display: flex; align-items: center; gap: 16px; }
+.ws-badge-row > .ws-badge, .ws-badge-row > .ws-greatjob { position: static; translate: none; }
+
+.ws-badge-row > .ws-lens { position: static; }
+/* Both-ways checkpoint: rows of equal width, one row in focus at a time. */
+.ws-dual .ws-group { transition: opacity 300ms var(--ease-out), filter 300ms var(--ease-out); }
+.ws-dual .ws-group.is-waiting { opacity: 0.45; filter: saturate(0.5); }
+
+.ws-corner--0 { --corner: #1565c0; } .ws-corner--1 { --corner: #00796b; } .ws-corner--2 { --corner: #ad1457; } .ws-corner--obtuse { --corner: #d8463b; }
+.ws-figure__wedge.ws-corner--0, .ws-figure__wedge.ws-corner--1, .ws-figure__wedge.ws-corner--2, .ws-figure__wedge.ws-corner--obtuse { fill: var(--corner); fill-opacity: 0.45; }
+.ws-figure__arc[class*="ws-corner--"], .ws-figure__square[class*="ws-corner--"] { stroke: var(--corner); stroke-width: 4; fill: none; }
+.ws-figure__label--angle[class*="ws-corner--"] { fill: var(--corner); }
+
+.ws-ghost__hand { overflow: visible; }
+
+/* ---------- Buttons and answer states: Polygon's button kit (assets/images/workshop/btn-ui*.webp, made in Figma) ----------
+   One picture per colour, 3-sliced: caps keep their proportion, the middle stretches, and the same pill drawn again
+   behind the label (::before) hides the slice seams. Gold acts (answers, CHECK), blue moves on (CONTINUE), green is
+   a right answer, red a wrong one. */
+.ws-option.ws-option--pill, .ws-pill {
+  position: relative; isolation: isolate; display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  height: 72px; padding: 0 8px; white-space: nowrap; cursor: pointer;
+  background: none; border: 0 solid transparent; border-width: 0 40px; border-radius: 0;
+  border-image: var(--pill) 0 var(--cap) 0 var(--cap) fill stretch;
+  font-family: var(--font-display); font-weight: 800; font-size: 27px; letter-spacing: 0.3px; color: #fff;
+  filter: drop-shadow(0 4px 0 var(--drop)); text-shadow: 0 2px 0 var(--shade);
+  transition: transform 90ms, filter 90ms, opacity 160ms;
+  --pill: url("../assets/images/workshop/btn-uiPrimary.webp"); --cap: 82; --shade: rgba(255, 244, 200, 0.7); --drop: rgba(140, 80, 0, 0.35);
+}
+.ws-option.ws-option--pill::before, .ws-pill::before {
+  content: ''; position: absolute; z-index: -1; pointer-events: none; top: 0; bottom: 0; left: -41px; right: -41px;
+  border-style: solid; border-width: 0 40px; border-image: inherit;
+}
+.ws-option.ws-option--pill, .ws-pill--yellow { color: #5a2a00; text-shadow: 0 1px 0 var(--shade); }
+.ws-pill { position: absolute; }
+.ws-pill--green { --pill: url("../assets/images/workshop/btn-uiNav.webp"); --cap: 83; --shade: rgba(12, 70, 140, 0.55); --drop: rgba(10, 60, 120, 0.35); color: #fff; }
+.ws-option.ws-option--pill.is-correct { --pill: url("../assets/images/workshop/btn-uiSuccess.webp"); --cap: 83; --shade: rgba(20, 90, 30, 0.5); --drop: rgba(20, 90, 30, 0.35); color: #fff; text-shadow: 0 2px 0 var(--shade); animation: ws-opt-good 600ms ease-out both; }
+.ws-option.ws-option--pill.is-incorrect { --pill: url("../assets/images/workshop/btn-uiDanger.webp"); --cap: 83; --shade: rgba(130, 20, 20, 0.5); --drop: rgba(130, 20, 20, 0.35); color: #fff; text-shadow: 0 2px 0 var(--shade); }
+.ws-option.ws-option--pill.is-selected { filter: drop-shadow(0 0 3px #fff) drop-shadow(0 0 10px rgba(255, 196, 0, 0.95)) drop-shadow(0 4px 0 var(--drop)); transform: translateY(2px); }
+@media (hover: hover) { .ws-option.ws-option--pill:not(:disabled):not(.is-selected):hover, .ws-pill:not(:disabled):hover { transform: translateY(-3px); filter: brightness(1.05) drop-shadow(0 6px 0 var(--drop)); } }
+.ws-option.ws-option--pill:active:not(:disabled), .ws-pill:active:not(:disabled) { transform: translateY(4px); filter: drop-shadow(0 0 0 transparent) brightness(0.94); }
+.ws-option.ws-option--pill:disabled:not(.is-correct):not(.is-incorrect), .ws-pill:disabled { opacity: 0.55; cursor: default; }
+
+/* Both-ways checkpoint: Polygon's smaller pill, so both rows and CHECK fit under the shape. */
+.ws-dual .ws-option.ws-option--pill { height: 60px; font-size: 24px; border-width: 0 33px; min-width: 150px; }
+.ws-dual .ws-option.ws-option--pill::before { left: -34px; right: -34px; border-width: 0 33px; }
+
+/* The beaver's own lines use the game's speech bubble (components.css), inside the card, above everything. */
+.workshop__card > .speech-bubble.ws-say { z-index: 7; max-width: 440px; }
+/* Card angle values: the corner's colour, one shade deeper so small numbers stay readable on white (>= 4.5:1). */
+.ws-figure__label--angle.ws-corner--0 { fill: #0d4fa3; } .ws-figure__label--angle.ws-corner--1 { fill: #00695c; }
+.ws-figure__label--angle.ws-corner--2 { fill: #8e1047; } .ws-figure__label--angle.ws-corner--obtuse { fill: #b3261e; }
+
+/* Side lengths: equal lengths share a colour, different lengths differ (a toned side keeps its own colour). */
+.ws-side-label[data-hue="0"] .ws-side-label__text, .ws-figure__label--side.ws-sidehue--0 { fill: #b45309; }
+.ws-side-label[data-hue="1"] .ws-side-label__text, .ws-figure__label--side.ws-sidehue--1 { fill: #1b6e38; }
+.ws-side-label[data-hue="2"] .ws-side-label__text, .ws-figure__label--side.ws-sidehue--2 { fill: #5b2bb5; }
+.ws-side-label[data-tone][data-hue] .ws-side-label__text { fill: var(--tone-deep); }
+
+/* A wrong answer stays out: greyed, red-tinted, not tappable. */
+.ws-option.ws-option--pill.is-incorrect:disabled { --pill: url("../assets/images/workshop/btn-uiDanger.webp"); --cap: 83; color: #fff; opacity: 0.6; filter: grayscale(0.35); cursor: not-allowed; }
+.ws-pick.is-ruled-out { opacity: 0.45; filter: grayscale(1); cursor: not-allowed; }
+
+/* The summary's two columns: a gold title chip over each, shown when its first card lands. */
+.ws-summary__title { position: absolute; translate: -50% 0; padding: 7px 22px 6px; border-radius: 999px; background: #fff8e3; border: 4px solid #f0b000;
+  box-shadow: 0 3px 10px rgba(110, 70, 0, 0.16); font-family: var(--font-display); font-size: 21px; font-weight: 800; letter-spacing: 0.6px; color: #6b4300; white-space: nowrap;
+  opacity: 0; transform: translateY(8px); transition: opacity 300ms, transform 360ms var(--ease-back); }
+.ws-summary__title.is-shown { opacity: 1; transform: none; }
+/* The closing "both ways" card wears the same shape-card look as the collected cards. */
+.ws-summary__big.ws-summary__big--both { --badge: #1d3a5f; gap: 10px; padding: 60px 30px 30px; }
+
+/* Ducked behind a summary card he is hidden, so he never hangs in the air once the card has flown away. */
+.guide { transition: left 520ms var(--ease-out), top 520ms var(--ease-out), opacity 180ms; }
+.guide.is-ducked { opacity: 0; }
+
+/* The summary's big card: the figure fills it; the name tag sits on the middle of its bottom edge. */
+.ws-summary__big:not(.ws-summary__big--both) { overflow: visible; justify-content: center; padding: 50px 18px 34px; }
+.ws-summary__big svg.ws-figure { overflow: visible; }
+.ws-summary__tag { position: absolute !important; left: 50%; bottom: -24px; translate: -50% 0; font-size: 27px; padding: 7px 28px 6px; }
+.ws-summary__tag.is-pulse { animation: ws-glow-pulse 700ms ease-out; }
+.ws-summary__big.is-collecting .ws-summary__tag { opacity: 0; }
+.ws-figure__wedge.is-pulse, .ws-figure__square.is-pulse, .ws-figure__tick.is-pulse { animation: ws-glow-pulse 700ms ease-out; }
+.ws-figure__wedge.is-pulse { fill-opacity: 0.75 !important; }
+
+/* A collected card keeps its name tag, on the middle of its bottom edge. */
+.ws-summary__slot { overflow: visible; justify-content: flex-start; padding-top: 10px; }
+.ws-summary__slot-tag { position: absolute !important; left: 50%; bottom: -17px; translate: -50% 0; font-size: 17px; padding: 4px 14px 3px; border-width: 2px; }
+
+.ws-tri.is-instant, .ws-tri.is-instant * { transition: none !important; }

@@ -15,7 +15,7 @@ const escapeHtml = (value) => value.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '
  * it is read out. The words of the `focus` phrase are the key words: gold, nothing behind them. Screen readers get the whole line at once. The layout is final from the first frame
  * (hidden words still take their place), so the box never grows while the words appear.
  */
-function revealWords(element, text, totalMs, focus = null, { times = null, rate = 1, started = null } = {}) {
+export function revealWords(element, text, totalMs, focus = null, { times = null, rate = 1, started = null } = {}) {
   element.textContent = '';
   const screenReaderCopy = document.createElement('span');
   screenReaderCopy.className = 'visually-hidden';
@@ -51,7 +51,7 @@ function revealWords(element, text, totalMs, focus = null, { times = null, rate 
 }
 
 /** Narrows `box` to the widest line its words wrapped to (CSS alone cannot shrink a wrapped box). */
-function hugWords(box, textEl) {
+export function hugWords(box, textEl) {
   const words = [...textEl.querySelectorAll('.reveal-line .w')];
   if (!words.length) return;
   const lines = new Map();

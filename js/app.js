@@ -1,4 +1,4 @@
-import { DEBUG_MODE, DRONE_INTRO, SKIP_TO_END_BUTTON } from './config.js';
+import { DEBUG_MODE, DRONE_INTRO, SKIP_TO_END_BUTTON, LEARNING_SECTION } from './config.js';
 import { STAGE } from './data/layout.js';
 import { LEVELS } from './data/levels.js';
 import { createGameState } from './core/game-state.js';
@@ -29,6 +29,11 @@ import { createMeetBuilderScreen, createHelpNeededScreen } from './screens/story
 import { createHowToPlayScreen } from './screens/how-to-play-screen.js';
 import { createGameplayScreen } from './screens/gameplay-screen.js';
 import { createCompletionScreen } from './screens/completion-screen.js';
+import { createLearningScreen } from './screens/learning-screen.js';
+import { createHookScreen } from './screens/hook-screen.js';
+import { BOARD } from './learning/workshop-board.js';
+import { GUIDE_IMAGES } from './learning/beaver-guide.js';
+import { WIDGET_IMAGES } from './learning/workshop-widgets.js';
 
 // The canal backdrop is the page's own <img> (the production build serves it as AVIF with a WebP
 // fallback through <picture>), so boot waits on that element instead of fetching it a second time.
@@ -69,6 +74,7 @@ const CRITICAL_IMAGES = [
   'assets/images/kit/replay-button.png',
   ...TOWN_LIFE_IMAGES,
   ...BRIDGE_SHOT_IMAGES,
+  ...(LEARNING_SECTION ? [BOARD.backdrop, ...GUIDE_IMAGES, ...WIDGET_IMAGES] : []),
 ].map((src) => ({ key: src, src }));
 
 function queryElements() {
@@ -76,7 +82,7 @@ function queryElements() {
   return {
     viewport: byId('viewport'), stage: byId('stage'), world: byId('world'), shake: byId('shake'),
     water: byId('water'), bridge: byId('bridge'), placed: byId('placed'), platform: byId('platform'),
-    crane: byId('crane'), fx: byId('fx'), hud: byId('hud'), overlays: byId('overlays'),
+    crane: byId('crane'), fx: byId('fx'), workshop: byId('workshop'), hud: byId('hud'), overlays: byId('overlays'),
     controls: byId('controls'), mute: byId('mute'), debug: byId('debug'), loader: byId('loader'),
   };
 }
@@ -181,10 +187,14 @@ async function boot() {
     onComplete: () => screenManager.go('complete'),
   });
 
-  const context = { els, gameState, audio, voice, camera, input, fx, claw, crane, triangles, bridge, placement, feedback, builder, screenManager, levelEngine };
+  // ?start=learning (or any screen name) goes there straight from Start: a review aid and the QA entry point.
+  const startScreen = new URLSearchParams(location.search).get('start');
+  const context = { els, gameState, audio, voice, camera, input, fx, claw, crane, triangles, bridge, placement, feedback, builder, screenManager, levelEngine, startScreen };
   screenManager.register('title', createTitleScreen(context));
   screenManager.register('meet-builder', createMeetBuilderScreen(context));
   screenManager.register('help-needed', createHelpNeededScreen(context));
+  screenManager.register('hook', createHookScreen(context));
+  screenManager.register('learning', createLearningScreen(context));
   screenManager.register('how-to-play', createHowToPlayScreen(context));
   screenManager.register('gameplay', createGameplayScreen(context));
   screenManager.register('complete', createCompletionScreen(context));

@@ -21,7 +21,7 @@ const CAPTION_MS = 2600;
  * Start sends the drone on its flight over the town (with the deck's subline as a caption); it lands
  * on the live site and the story begins. Any tap or key during the flight skips to the landing.
  */
-export function createTitleScreen({ els, audio, voice, camera, builder, screenManager }) {
+export function createTitleScreen({ els, audio, voice, camera, builder, screenManager, startScreen = null }) {
   let button = null;
   let card = null;
   let caption = null;
@@ -100,7 +100,7 @@ export function createTitleScreen({ els, audio, voice, camera, builder, screenMa
         button = null;
         card = null;
         if (flight) await fly();
-        screenManager.go('meet-builder');
+        screenManager.go(startScreen ?? 'meet-builder');
       });
       button.classList.add('is-entering');
       button.addEventListener('animationend', () => button?.classList.remove('is-entering'), { once: true });

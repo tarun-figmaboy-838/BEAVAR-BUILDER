@@ -12,3 +12,9 @@ export const DRONE_INTRO = false;
 /** TEMPORARY (review aid): a "Skip to end" button that builds the whole bridge and jumps to the ending. Set false to remove. */
 export const SKIP_TO_END_BUTTON = true;
 
+
+/**
+ * The Triangle Workshop (js/learning/): after "Your help is needed" the operator takes the learner into his
+ * workshop on the yard to explore triangles before the crane game. false skips straight to "How to play".
+ */
+export const LEARNING_SECTION = true;
