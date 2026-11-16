@@ -37,11 +37,14 @@ def syllables(word):
 
 def envelope(path):
     with tempfile.TemporaryDirectory() as tmp:
-        wav_path = os.path.join(tmp, "clip.wav")
-        subprocess.run(["afconvert", path, wav_path, "-f", "WAVE", "-d", "LEI16@16000", "-c", "1"], check=True, capture_output=True)
-        with wave.open(wav_path) as wav:
-            rate = wav.getframerate()
-            samples = array.array("h", wav.readframes(wav.getnframes()))
+        # Raw 16-bit little-endian PCM ("caff" container, read past its header): works for MP3 and AAC clips
+        # alike (AAC otherwise decodes to WAVE_FORMAT_EXTENSIBLE, which the wave module cannot read).
+        raw_path = os.path.join(tmp, "clip.caf")
+        subprocess.run(["afconvert", path, raw_path, "-f", "caff", "-d", "LEI16@16000", "-c", "1"], check=True, capture_output=True)
+        rate = 16000
+        data = open(raw_path, "rb").read()
+        at = data.find(b"data")                  # CAF: 'data' chunk = 4-byte type, 8-byte size, 4-byte edit count, then samples
+        samples = array.array("h", data[at + 16:at + 16 + ((len(data) - at - 16) // 2) * 2])
     step = rate * FRAME_MS // 1000
     return [math.sqrt(sum(s * s for s in samples[i:i + step]) / max(1, len(samples[i:i + step]))) for i in range(0, len(samples), step)]
 

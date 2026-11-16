@@ -1,183 +1,693 @@
 [
-  {
-    "id": "vo001",
-    "speaker": "builder",
-    "line": "I have all these triangular frames, but I can't remember which ones go where!",
-    "spoken": "I have all these triangular frames, but I can't remember which ones go where!",
-    "where": [
-      "G0.1 Meet the Builder"
-    ],
-    "seconds": 5.57
-  },
-  {
-    "id": "vo002",
-    "speaker": "builder",
-    "line": "Can you help me choose the right frames?",
-    "spoken": "Can you help me choose the right frames?",
-    "where": [
-      "G0.2 Your Help Is Needed"
-    ],
-    "seconds": 2.9
-  },
-  {
-    "id": "vo003",
-    "speaker": "narrator",
-    "line": "Use the crane to pick the triangle we need and place it on the bridge.",
-    "spoken": "Use the crane to pick the triangle we need and place it on the bridge.",
-    "where": [
-      "G0.3 How to Play: intro"
-    ],
-    "seconds": 5.06
-  },
-  {
-    "id": "vo004",
-    "speaker": "narrator",
-    "line": "Move the crane",
-    "spoken": "Move the crane.",
-    "where": [
-      "G0.3 step 1"
-    ],
-    "seconds": 1.49
-  },
-  {
-    "id": "vo005",
-    "speaker": "narrator",
-    "line": "Pick the triangle",
-    "spoken": "Pick the triangle.",
-    "where": [
-      "G0.3 step 2"
-    ],
-    "seconds": 1.82
-  },
-  {
-    "id": "vo006",
-    "speaker": "narrator",
-    "line": "Place it on the bridge",
-    "spoken": "Place it on the bridge.",
-    "where": [
-      "G0.3 step 3"
-    ],
-    "seconds": 2.18
-  },
-  {
-    "id": "vo007",
-    "speaker": "builder",
-    "line": "Let's do a practice round first!",
-    "spoken": "Let's do a practice round first!",
-    "where": [
-      "G0.3 call to action"
-    ],
-    "seconds": 2.45
-  },
-  {
-    "id": "vo009",
-    "speaker": "narrator",
-    "line": "Choose a triangle with exactly 2 equal sides.",
-    "spoken": "Choose a triangle with exactly two equal sides.",
-    "where": [
-      "Task 1"
-    ],
-    "seconds": 4.1
-  },
-  {
-    "id": "vo010",
-    "speaker": "narrator",
-    "line": "Choose an equilateral triangle.",
-    "spoken": "Choose an equilateral triangle.",
-    "where": [
-      "Task 2",
-      "Task 3"
-    ],
-    "seconds": 2.66
-  },
-  {
-    "id": "vo011",
-    "speaker": "narrator",
-    "line": "Choose a triangle where all 3 sides have different lengths.",
-    "spoken": "Choose a triangle where all three sides have different lengths.",
-    "where": [
-      "Task 4"
-    ],
-    "seconds": 4.85
-  },
-  {
-    "id": "vo012",
-    "speaker": "narrator",
-    "line": "Choose an acute-angled triangle.",
-    "spoken": "Choose an acute-angled triangle.",
-    "where": [
-      "Task 5"
-    ],
-    "seconds": 3.02
-  },
-  {
-    "id": "vo013",
-    "speaker": "narrator",
-    "line": "Choose a triangle with one 90° angle.",
-    "spoken": "Choose a triangle with one ninety degree angle.",
-    "where": [
-      "Task 6"
-    ],
-    "seconds": 3.86
-  },
-  {
-    "id": "vo014",
-    "speaker": "narrator",
-    "line": "Choose a triangle with one angle greater than 90°.",
-    "spoken": "Choose a triangle with one angle greater than ninety degrees.",
-    "where": [
-      "Task 7"
-    ],
-    "seconds": 4.78
-  },
-  {
-    "id": "vo015",
-    "speaker": "narrator",
-    "line": "Great choice!",
-    "spoken": "Great choice!",
-    "where": [
-      "Correct placement"
-    ],
-    "seconds": 1.66
-  },
-  {
-    "id": "vo016",
-    "speaker": "narrator",
-    "line": "That frame does not fit.",
-    "spoken": "That frame does not fit.",
-    "where": [
-      "Incorrect placement"
-    ],
-    "seconds": 2.57
-  },
-  {
-    "id": "vo018",
-    "speaker": "narrator",
-    "line": "Excellent work! Our bridge is complete.",
-    "spoken": "Excellent work! Our bridge is complete.",
-    "where": [
-      "Completion banner (PDF p18)"
-    ],
-    "seconds": 3.53
-  },
-  {
-    "id": "vo019",
-    "speaker": "narrator",
-    "line": "BRIDGE BUILT! Great work, Engineer!",
-    "spoken": "Bridge built! Great work, Engineer!",
-    "where": [
-      "Celebration banner (PDF p19)"
-    ],
-    "seconds": 3.5
-  },
-  {
-    "id": "vo020",
-    "speaker": "builder",
-    "line": "The bridge is complete! Now the people of both towns can visit each other!",
-    "spoken": "The bridge is complete! Now the people of both towns can visit each other!",
-    "where": [
-      "Celebration (PDF p19)"
-    ],
-    "seconds": 5.18
-  }
+ {
+  "id": "vo001",
+  "speaker": "builder",
+  "line": "I have all these triangular frames, but I can't remember which ones go where!",
+  "spoken": "I have all these triangular frames, but I can't remember which ones go where!",
+  "where": [
+   "G0.1 Meet the Builder"
+  ],
+  "seconds": 5.57
+ },
+ {
+  "id": "vo002",
+  "speaker": "builder",
+  "line": "Can you help me choose the right frames?",
+  "spoken": "Can you help me choose the right frames?",
+  "where": [
+   "G0.2 Your Help Is Needed"
+  ],
+  "seconds": 2.9
+ },
+ {
+  "id": "vo003",
+  "speaker": "narrator",
+  "line": "Use the crane to pick the triangle we need and place it on the bridge.",
+  "spoken": "Use the crane to pick the triangle we need and place it on the bridge.",
+  "where": [
+   "G0.3 How to Play: intro"
+  ],
+  "seconds": 5.06
+ },
+ {
+  "id": "vo004",
+  "speaker": "narrator",
+  "line": "Move the crane",
+  "spoken": "Move the crane.",
+  "where": [
+   "G0.3 step 1"
+  ],
+  "seconds": 1.49
+ },
+ {
+  "id": "vo005",
+  "speaker": "narrator",
+  "line": "Pick the triangle",
+  "spoken": "Pick the triangle.",
+  "where": [
+   "G0.3 step 2"
+  ],
+  "seconds": 1.82
+ },
+ {
+  "id": "vo006",
+  "speaker": "narrator",
+  "line": "Place it on the bridge",
+  "spoken": "Place it on the bridge.",
+  "where": [
+   "G0.3 step 3"
+  ],
+  "seconds": 2.18
+ },
+ {
+  "id": "vo007",
+  "speaker": "builder",
+  "line": "Let's do a practice round first!",
+  "spoken": "Let's do a practice round first!",
+  "where": [
+   "G0.3 call to action"
+  ],
+  "seconds": 2.45
+ },
+ {
+  "id": "vo009",
+  "speaker": "narrator",
+  "line": "Choose a triangle with exactly 2 equal sides.",
+  "spoken": "Choose a triangle with exactly two equal sides.",
+  "where": [
+   "Task 1"
+  ],
+  "seconds": 4.1
+ },
+ {
+  "id": "vo010",
+  "speaker": "narrator",
+  "line": "Choose an equilateral triangle.",
+  "spoken": "Choose an equilateral triangle.",
+  "where": [
+   "Task 2",
+   "Task 3"
+  ],
+  "seconds": 2.66
+ },
+ {
+  "id": "vo011",
+  "speaker": "narrator",
+  "line": "Choose a triangle where all 3 sides have different lengths.",
+  "spoken": "Choose a triangle where all three sides have different lengths.",
+  "where": [
+   "Task 4"
+  ],
+  "seconds": 4.85
+ },
+ {
+  "id": "vo012",
+  "speaker": "narrator",
+  "line": "Choose an acute-angled triangle.",
+  "spoken": "Choose an acute-angled triangle.",
+  "where": [
+   "Task 5"
+  ],
+  "seconds": 3.02
+ },
+ {
+  "id": "vo013",
+  "speaker": "narrator",
+  "line": "Choose a triangle with one 90° angle.",
+  "spoken": "Choose a triangle with one ninety degree angle.",
+  "where": [
+   "Task 6"
+  ],
+  "seconds": 3.86
+ },
+ {
+  "id": "vo014",
+  "speaker": "narrator",
+  "line": "Choose a triangle with one angle greater than 90°.",
+  "spoken": "Choose a triangle with one angle greater than ninety degrees.",
+  "where": [
+   "Task 7"
+  ],
+  "seconds": 4.78
+ },
+ {
+  "id": "vo015",
+  "speaker": "narrator",
+  "line": "Great choice!",
+  "spoken": "Great choice!",
+  "where": [
+   "Correct placement"
+  ],
+  "seconds": 1.66
+ },
+ {
+  "id": "vo016",
+  "speaker": "narrator",
+  "line": "That frame does not fit.",
+  "spoken": "That frame does not fit.",
+  "where": [
+   "Incorrect placement"
+  ],
+  "seconds": 2.57
+ },
+ {
+  "id": "vo018",
+  "speaker": "narrator",
+  "line": "Excellent work! Our bridge is complete.",
+  "spoken": "Excellent work! Our bridge is complete.",
+  "where": [
+   "Completion banner (PDF p18)"
+  ],
+  "seconds": 3.53
+ },
+ {
+  "id": "vo019",
+  "speaker": "narrator",
+  "line": "BRIDGE BUILT! Great work, Engineer!",
+  "spoken": "Bridge built! Great work, Engineer!",
+  "where": [
+   "Celebration banner (PDF p19)"
+  ],
+  "seconds": 3.5
+ },
+ {
+  "id": "vo020",
+  "speaker": "builder",
+  "line": "The bridge is complete! Now the people of both towns can visit each other!",
+  "spoken": "The bridge is complete! Now the people of both towns can visit each other!",
+  "where": [
+   "Celebration (PDF p19)"
+  ],
+  "seconds": 5.18
+ },
+ {
+  "id": "vo021",
+  "speaker": "builder",
+  "line": "We must identify them! But to do that we need to learn about triangles first.",
+  "spoken": "वी मस्ट आइडेंटिफाई देम! बट टू डू दैट वी नीड टू लर्न अबाउट ट्राएंगल्स फर्स्ट।",
+  "where": [
+   "Triangle Workshop Hook"
+  ],
+  "seconds": 6.08
+ },
+ {
+  "id": "vo022",
+  "speaker": "builder",
+  "line": "This is a triangle.",
+  "spoken": "दिस इज ए ट्रायंगल।",
+  "where": [
+   "Triangle Workshop L01"
+  ],
+  "seconds": 2.24
+ },
+ {
+  "id": "vo023",
+  "speaker": "builder",
+  "line": "A closed shape with 3 straight sides is called a triangle.",
+  "spoken": "ए क्लोज्ड शेप विद थ्री स्ट्रेट साइड्स इज कॉल्ड ए ट्रायंगल।",
+  "where": [
+   "Triangle Workshop L02"
+  ],
+  "seconds": 4.96
+ },
+ {
+  "id": "vo024",
+  "speaker": "builder",
+  "line": "Triangles can be of different types. Let's explore them!",
+  "spoken": "ट्राइऐंगल्स कैन बी ऑफ डिफरेंट टाइप्स। लेट्स एक्सप्लोर देम!",
+  "where": [
+   "Triangle Workshop L03"
+  ],
+  "seconds": 3.92
+ },
+ {
+  "id": "vo025",
+  "speaker": "builder",
+  "line": "Let's measure the sides of this triangle.",
+  "spoken": "लेट्स मेजर द साइड्स ऑफ दिस ट्रायंगल।",
+  "where": [
+   "Triangle Workshop L04"
+  ],
+  "seconds": 3.08
+ },
+ {
+  "id": "vo026",
+  "speaker": "builder",
+  "line": "What do you notice about the sides?",
+  "spoken": "वॉट डू यू नोटिस अबाउट द साइड्स?",
+  "where": [
+   "Triangle Workshop L05"
+  ],
+  "seconds": 2.56
+ },
+ {
+  "id": "vo027",
+  "speaker": "builder",
+  "line": "A triangle with all three sides different is called a scalene triangle.",
+  "spoken": "ए ट्राएंगल विद ऑल थ्री साइड्स डिफरेंट इज कॉल्ड ए स्केलीन ट्राएंगल।",
+  "where": [
+   "Triangle Workshop L06"
+  ],
+  "seconds": 5.12
+ },
+ {
+  "id": "vo028",
+  "speaker": "builder",
+  "line": "What if two sides were equal?",
+  "spoken": "वॉट इफ टू साइड्स वर इक्वल?",
+  "where": [
+   "Triangle Workshop L07"
+  ],
+  "seconds": 2.4
+ },
+ {
+  "id": "vo029",
+  "speaker": "builder",
+  "line": "A triangle with two equal sides is called an isosceles triangle.",
+  "spoken": "ए ट्रायंगल विद टू इक्वल साइड्स इज कॉल्ड एन आइसोसिलीज़ ट्रायंगल।",
+  "where": [
+   "Triangle Workshop L08"
+  ],
+  "seconds": 4.84
+ },
+ {
+  "id": "vo030",
+  "speaker": "builder",
+  "line": "Can you make all three sides equal?",
+  "spoken": "कैन यू मेक ऑल थ्री साइड्स इक्वल?",
+  "where": [
+   "Triangle Workshop L09"
+  ],
+  "seconds": 2.88
+ },
+ {
+  "id": "vo031",
+  "speaker": "builder",
+  "line": "A triangle with all three sides equal is called an equilateral triangle.",
+  "spoken": "A triangle with all three sides equal is called an equilateral triangle.",
+  "where": [
+   "Triangle Workshop L10"
+  ],
+  "seconds": 6.28
+ },
+ {
+  "id": "vo032",
+  "speaker": "builder",
+  "line": "Sort the triangles.",
+  "spoken": "सॉर्ट द ट्रायंगल्स.",
+  "where": [
+   "Triangle Workshop CFU01"
+  ],
+  "seconds": 1.77
+ },
+ {
+  "id": "vo033",
+  "speaker": "builder",
+  "line": "Great job! You sorted all the triangles.",
+  "spoken": "ग्रेट जॉब! यू सॉर्टेड ऑल द ट्राएंगल्स।",
+  "where": [
+   "Triangle Workshop CFU01"
+  ],
+  "seconds": 2.93
+ },
+ {
+  "id": "vo034",
+  "speaker": "builder",
+  "line": "Make this triangle isosceles.",
+  "spoken": "Make this triangle isosceles.",
+  "where": [
+   "Triangle Workshop CFU02"
+  ],
+  "seconds": 2.75
+ },
+ {
+  "id": "vo035",
+  "speaker": "builder",
+  "line": "Great! This triangle is isosceles.",
+  "spoken": "Great! This triangle is isosceles.",
+  "where": [
+   "Triangle Workshop CFU02"
+  ],
+  "seconds": 3.6
+ },
+ {
+  "id": "vo036",
+  "speaker": "builder",
+  "line": "Now let's measure the angles.",
+  "spoken": "Now let's measure the angles.",
+  "where": [
+   "Triangle Workshop L11"
+  ],
+  "seconds": 3.4
+ },
+ {
+  "id": "vo037",
+  "speaker": "builder",
+  "line": "What do you notice about the angles?",
+  "spoken": "What do you notice about the angles?",
+  "where": [
+   "Triangle Workshop L12"
+  ],
+  "seconds": 2.89
+ },
+ {
+  "id": "vo038",
+  "speaker": "builder",
+  "line": "All three angles are less than 90°. So they are acute angles.",
+  "spoken": "All three angles are less than 90 degrees. So they are acute angles.",
+  "where": [
+   "Triangle Workshop L13"
+  ],
+  "seconds": 7.07
+ },
+ {
+  "id": "vo039",
+  "speaker": "builder",
+  "line": "A triangle which has 3 acute angles is called an acute angled triangle.",
+  "spoken": "A triangle which has 3 acute angles is called an acute angled triangle.",
+  "where": [
+   "Triangle Workshop L14"
+  ],
+  "seconds": 7.23
+ },
+ {
+  "id": "vo040",
+  "speaker": "builder",
+  "line": "Can you make one angle exactly 90°?",
+  "spoken": "Can you make one angle exactly 90 degrees?",
+  "where": [
+   "Triangle Workshop L15"
+  ],
+  "seconds": 4.47
+ },
+ {
+  "id": "vo041",
+  "speaker": "builder",
+  "line": "A triangle with one angle equal to 90° is called a right angled triangle.",
+  "spoken": "A triangle with one angle equal to 90 degrees is called a right angled triangle.",
+  "where": [
+   "Triangle Workshop L16"
+  ],
+  "seconds": 6.56
+ },
+ {
+  "id": "vo042",
+  "speaker": "builder",
+  "line": "What if one of the angles was obtuse?",
+  "spoken": "What if one of the angles was obtuse?",
+  "where": [
+   "Triangle Workshop L17"
+  ],
+  "seconds": 3.27
+ },
+ {
+  "id": "vo043",
+  "speaker": "builder",
+  "line": "A triangle with one angle greater than 90° is called an obtuse-angled triangle.",
+  "spoken": "A triangle with one angle greater than 90 degrees is called an obtuse-angled triangle.",
+  "where": [
+   "Triangle Workshop L18"
+  ],
+  "seconds": 6.85
+ },
+ {
+  "id": "vo044",
+  "speaker": "builder",
+  "line": "Which of these are acute-angled triangles?",
+  "spoken": "Which of these are acute-angled triangles?",
+  "where": [
+   "Triangle Workshop CFU03"
+  ],
+  "seconds": 3.95
+ },
+ {
+  "id": "vo045",
+  "speaker": "builder",
+  "line": "Correct! Both A and D have only acute angles.",
+  "spoken": "Correct! Both A and D have only acute angles.",
+  "where": [
+   "Triangle Workshop CFU03"
+  ],
+  "seconds": 4.85
+ },
+ {
+  "id": "vo046",
+  "speaker": "builder",
+  "line": "Make this triangle right-angled.",
+  "spoken": "Make this triangle right-angled.",
+  "where": [
+   "Triangle Workshop CFU04"
+  ],
+  "seconds": 3.0
+ },
+ {
+  "id": "vo047",
+  "speaker": "builder",
+  "line": "A triangle with one 90° angle is right-angled.",
+  "spoken": "A triangle with one 90 degrees angle is right-angled.",
+  "where": [
+   "Triangle Workshop CFU04"
+  ],
+  "seconds": 4.77
+ },
+ {
+  "id": "vo048",
+  "speaker": "builder",
+  "line": "What type of triangle is this by its sides?",
+  "spoken": "What type of triangle is this by its sides?",
+  "where": [
+   "Triangle Workshop L19"
+  ],
+  "seconds": 4.14
+ },
+ {
+  "id": "vo049",
+  "speaker": "builder",
+  "line": "What type is this triangle by its angles?",
+  "spoken": "What type is this triangle by its angles?",
+  "where": [
+   "Triangle Workshop L20"
+  ],
+  "seconds": 3.78
+ },
+ {
+  "id": "vo050",
+  "speaker": "builder",
+  "line": "This triangle is both isosceles and right angled.",
+  "spoken": "This triangle is both isosceles and right angled.",
+  "where": [
+   "Triangle Workshop L21"
+  ],
+  "seconds": 4.8
+ },
+ {
+  "id": "vo051",
+  "speaker": "builder",
+  "line": "So a triangle can be classified by both its sides and its angles.",
+  "spoken": "So a triangle can be classified by both its sides and its angles.",
+  "where": [
+   "Triangle Workshop L22"
+  ],
+  "seconds": 6.41
+ },
+ {
+  "id": "vo052",
+  "speaker": "builder",
+  "line": "Classify the triangle.",
+  "spoken": "Classify the triangle.",
+  "where": [
+   "Triangle Workshop CFU05"
+  ],
+  "seconds": 2.02
+ },
+ {
+  "id": "vo053",
+  "speaker": "builder",
+  "line": "Correct! This triangle is scalene and obtuse-angled.",
+  "spoken": "Correct! This triangle is scalene and obtuse-angled.",
+  "where": [
+   "Triangle Workshop CFU05"
+  ],
+  "seconds": 4.69
+ },
+ {
+  "id": "vo054",
+  "speaker": "builder",
+  "line": "Make a right-angled isosceles triangle.",
+  "spoken": "Make a right-angled isosceles triangle.",
+  "where": [
+   "Triangle Workshop CFU06"
+  ],
+  "seconds": 3.2
+ },
+ {
+  "id": "vo055",
+  "speaker": "builder",
+  "line": "You can classify triangles by sides and angles!",
+  "spoken": "You can classify triangles by sides and angles!",
+  "where": [
+   "Triangle Workshop CFU06"
+  ],
+  "seconds": 3.99
+ },
+ {
+  "id": "vo056",
+  "speaker": "builder",
+  "line": "Let's summarise what we learned.",
+  "spoken": "Let's summarise what we learned.",
+  "where": [
+   "Triangle Workshop Summary"
+  ],
+  "seconds": 2.49
+ },
+ {
+  "id": "vo057",
+  "speaker": "builder",
+  "line": "Scalene. All sides are different.",
+  "spoken": "Scalene, all sides are different.",
+  "where": [
+   "Triangle Workshop Summary"
+  ],
+  "seconds": 3.56
+ },
+ {
+  "id": "vo058",
+  "speaker": "builder",
+  "line": "Isosceles. Two sides are equal.",
+  "spoken": "Isosceles. Two sides are equal.",
+  "where": [
+   "Triangle Workshop Summary"
+  ],
+  "seconds": 3.3
+ },
+ {
+  "id": "vo059",
+  "speaker": "builder",
+  "line": "Equilateral. All three sides are equal.",
+  "spoken": "Equilateral. All three sides are equal.",
+  "where": [
+   "Triangle Workshop Summary"
+  ],
+  "seconds": 4.23
+ },
+ {
+  "id": "vo060",
+  "speaker": "builder",
+  "line": "Acute-angled. All angles are less than 90°.",
+  "spoken": "Acute-angled. All angles are less than 90 degrees.",
+  "where": [
+   "Triangle Workshop Summary"
+  ],
+  "seconds": 4.97
+ },
+ {
+  "id": "vo061",
+  "speaker": "builder",
+  "line": "Right-angled. One angle is 90°.",
+  "spoken": "Right-angled. One angle is 90 degrees.",
+  "where": [
+   "Triangle Workshop Summary"
+  ],
+  "seconds": 4.27
+ },
+ {
+  "id": "vo062",
+  "speaker": "builder",
+  "line": "Obtuse-angled. One angle is greater than 90°.",
+  "spoken": "Obtuse-angled. One angle is greater than 90 degrees.",
+  "where": [
+   "Triangle Workshop Summary"
+  ],
+  "seconds": 5.02
+ },
+ {
+  "id": "vo063",
+  "speaker": "builder",
+  "line": "A triangle can be classified by both its sides and its angles.",
+  "spoken": "A triangle can be classified by both its sides and its angles.",
+  "where": [
+   "Triangle Workshop Summary"
+  ],
+  "seconds": 5.25
+ },
+ {
+  "id": "vo064",
+  "speaker": "builder",
+  "line": "You're ready!",
+  "spoken": "You're ready!",
+  "where": [
+   "Triangle Workshop Return"
+  ],
+  "seconds": 1.38
+ },
+ {
+  "id": "vo065",
+  "speaker": "builder",
+  "line": "Drag any vertex to make two sides equal.",
+  "spoken": "ड्रैग एनी वर्टेक्स टू मेक टू साइड्स इक्वल।",
+  "where": [
+   "Triangle workshop"
+  ],
+  "seconds": 3.76
+ },
+ {
+  "id": "vo066",
+  "speaker": "builder",
+  "line": "Drag a vertex until the three lengths match.",
+  "spoken": "ड्रैग ए वर्टेक्स अंटिल द थ्री लेंथ्स मैच।",
+  "where": [
+   "Triangle workshop"
+  ],
+  "seconds": 3.13
+ },
+ {
+  "id": "vo067",
+  "speaker": "builder",
+  "line": "Drag a vertex; angles change live.",
+  "spoken": "Drag a vertex; angles change live.",
+  "where": [
+   "Triangle workshop"
+  ],
+  "seconds": 4.09
+ },
+ {
+  "id": "vo068",
+  "speaker": "builder",
+  "line": "Drag any vertex to make any angle obtuse.",
+  "spoken": "Drag any vertex to make any angle obtuse.",
+  "where": [
+   "Triangle workshop"
+  ],
+  "seconds": 3.94
+ },
+ {
+  "id": "vo069",
+  "speaker": "builder",
+  "line": "Drag any vertex to create one 90° angle.",
+  "spoken": "Drag any vertex to create one 90 degrees angle.",
+  "where": [
+   "Triangle workshop"
+  ],
+  "seconds": 4.82
+ },
+ {
+  "id": "vo070",
+  "speaker": "builder",
+  "line": "Satisfy both conditions in one shape.",
+  "spoken": "Satisfy both conditions in one shape.",
+  "where": [
+   "Triangle workshop"
+  ],
+  "seconds": 3.31
+ },
+ {
+  "id": "vo071",
+  "speaker": "builder",
+  "line": "Let's explore triangles!",
+  "spoken": "Let's explore triangles!",
+  "where": [
+   "Triangle workshop"
+  ],
+  "seconds": 2.53
+ }
 ]
